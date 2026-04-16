@@ -16,11 +16,9 @@ import argparse
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+import structlog
 
-import structlog  # noqa: E402
-
-from scripts.import_portfolio import import_portfolio  # noqa: E402
+from scripts.import_portfolio import import_portfolio
 
 structlog.configure(
     processors=[

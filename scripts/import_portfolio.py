@@ -20,21 +20,19 @@ import sys
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+import structlog
 
-import structlog  # noqa: E402
-
-from domain.deduplication import DeduplicationService  # noqa: E402
-from domain.models import ImportJob  # noqa: E402
-from domain.portfolio_service import PortfolioService  # noqa: E402
-from domain.position_service import PositionService  # noqa: E402
-from extractors import get_extractor, list_source_types  # noqa: E402
-from normalizers.operations import OperationNormalizer  # noqa: E402
-from storage.repository.db import Database  # noqa: E402
-from storage.repository.import_jobs import ImportJobRepository  # noqa: E402
-from storage.repository.operations import OperationRepository  # noqa: E402
-from storage.repository.portfolios import PortfolioRepository  # noqa: E402
-from storage.repository.positions import PositionRepository  # noqa: E402
+from domain.deduplication import DeduplicationService
+from domain.models import ImportJob
+from domain.portfolio_service import PortfolioService
+from domain.position_service import PositionService
+from extractors import get_extractor, list_source_types
+from normalizers.operations import OperationNormalizer
+from storage.repository.db import Database
+from storage.repository.import_jobs import ImportJobRepository
+from storage.repository.operations import OperationRepository
+from storage.repository.portfolios import PortfolioRepository
+from storage.repository.positions import PositionRepository
 
 structlog.configure(
     processors=[

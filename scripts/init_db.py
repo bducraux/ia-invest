@@ -10,13 +10,9 @@ Usage::
 from __future__ import annotations
 
 import argparse
-import sys
 from pathlib import Path
 
-# Allow running from the project root without installing the package
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from storage.repository.db import Database  # noqa: E402
+from storage.repository.db import Database
 
 
 def main() -> None:

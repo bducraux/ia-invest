@@ -160,11 +160,11 @@ def infer_asset_type(asset_code: str) -> str:
 
     if len(code) >= 5 and code[-2:] in {"11"}:
         return "fii"  # e.g. HGLG11, XPML11
-    if len(code) >= 4 and code[:5] in {"NTNB", "NTNF", "LTN0", "LFT0"}:
+    if len(code) >= 5 and code[:5] in {"NTNB", "NTNF", "LTN0", "LFT0"}:
         return "treasury"
-    if len(code) == 5 and code[-1] in {"3", "4", "5", "6"}:
-        return "stock"
     if len(code) == 6 and code[-2:] in {"34", "35"}:
-        return "bdr"
+        return "bdr"  # e.g. AAPL34, MSFT35 — BDR check before generic stock
+    if len(code) in {5, 6} and code[-1] in {"3", "4", "5", "6"}:
+        return "stock"
 
     return "stock"  # default fallback

@@ -16,23 +16,43 @@ clientes como o Claude Desktop.
 
 ## Quickstart
 
-### 1. Instalar dependências
+### 1. Instalar o uv e sincronizar dependências
+
+Instale o uv (uma vez na máquina):
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -e ".[dev]"
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Sincronize o ambiente do projeto (cria/atualiza `.venv` automaticamente):
+
+```bash
+uv sync --extra dev
 ```
 
 ### 2. Inicializar o banco de dados
 
 ```bash
-python scripts/init_db.py
+uv run python scripts/init_db.py
 ```
 
 ### 3. Criar um portfólio
 
-Copie o template de manifesto:
+Gere um portfólio a partir do template (interativo):
+
+```bash
+uv run python scripts/create_portfolio.py
+```
+
+Ou informe o nome diretamente:
+
+```bash
+uv run python scripts/create_portfolio.py --name "Meu Portfólio"
+```
+
+O script cria `portfolios/<id>/` e ajusta `portfolio.yml` com o `id` e `name`.
+
+Fluxo manual (alternativo):
 
 ```bash
 cp portfolio.example.yml portfolios/meu-portfolio/portfolio.yml
@@ -54,22 +74,30 @@ cp ~/Downloads/nota-corretagem.pdf portfolios/meu-portfolio/inbox/
 ### 5. Importar portfólio
 
 ```bash
-python scripts/import_portfolio.py --portfolio meu-portfolio
+uv run python scripts/import_portfolio.py --portfolio meu-portfolio
 ```
 
 Importar todos os portfólios de uma vez:
 
 ```bash
-python scripts/import_all.py
+uv run python scripts/import_all.py
 ```
 
 ### 6. Iniciar servidor MCP
 
 ```bash
-python -m mcp_server.server
+uv run python -m mcp_server.server
 ```
 
 O servidor MCP ficará acessível para clientes como o Claude Desktop via stdin/stdout.
+
+### Comandos úteis com uv
+
+```bash
+uv run pytest
+uv run ruff check .
+uv run mypy .
+```
 
 ---
 

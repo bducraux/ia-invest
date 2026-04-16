@@ -35,6 +35,7 @@ dev = [
 
 [project.scripts]
 ia-invest-import = "scripts.import_all:main"
+ia-invest-create-portfolio = "scripts.create_portfolio:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

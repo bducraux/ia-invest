@@ -201,6 +201,10 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
+# User-generated portfolios (keep only folder placeholder in git)
+portfolios/*
+!portfolios/.gitkeep
+
 # Marimo
 marimo/_static/
 marimo/_lsp/

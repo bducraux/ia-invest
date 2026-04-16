@@ -44,13 +44,20 @@ Gere um portfólio a partir do template (interativo):
 uv run python scripts/create_portfolio.py
 ```
 
-Ou informe o nome diretamente:
+No modo interativo, você escolhe o tipo (`generic`, `renda-variavel`, `renda-fixa`, `cripto`) e o nome.
+
+Ou informe nome e tipo diretamente:
 
 ```bash
-uv run python scripts/create_portfolio.py --name "Meu Portfólio"
+uv run python scripts/create_portfolio.py --type renda-variavel --name "Meu Portfólio"
 ```
 
 O script cria `portfolios/<id>/` e ajusta `portfolio.yml` com o `id` e `name`.
+
+Para adicionar novos tipos de portfólio, basta criar uma nova pasta em
+`templates/<novo-tipo>/` contendo um `portfolio.yml` e as subpastas
+`{inbox,staging,processed,rejected,exports}`.
+Ela aparecerá automaticamente no menu interativo.
 
 Fluxo manual (alternativo):
 

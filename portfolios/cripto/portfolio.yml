@@ -1,0 +1,22 @@
+id: cripto
+name: Criptoativos
+description: Criptomoedas e tokens de exchanges descentralizadas e centralizadas
+base_currency: BRL
+status: active
+
+rules:
+  allowed_asset_types:
+    - crypto
+
+sources:
+  - type: binance_csv
+    enabled: true
+
+import:
+  move_processed_files: true
+  deduplicate_by:
+    - source
+    - external_id
+    - operation_date
+    - asset_code
+    - operation_type

@@ -1,0 +1,33 @@
+# Exemplo de manifesto de portfólio
+# Copie este arquivo para portfolios/<seu-portfolio>/portfolio.yml e ajuste conforme necessário.
+
+id: renda-variavel
+name: Renda Variável
+description: Carteira de ações, FIIs, ETFs e BDRs listados na B3
+base_currency: BRL
+status: active  # active | inactive | archived
+
+rules:
+  allowed_asset_types:
+    - stock
+    - fii
+    - etf
+    - bdr
+    # outros: bond, crypto, international, option, fund
+
+sources:
+  - type: b3_pdf
+    enabled: true
+  - type: broker_csv
+    enabled: true
+  # - type: binance_csv
+  #   enabled: false
+
+import:
+  move_processed_files: true
+  deduplicate_by:
+    - source
+    - external_id
+    - operation_date
+    - asset_code
+    - operation_type

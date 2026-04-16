@@ -9,7 +9,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-
 # ---------------------------------------------------------------------------
 # Portfolio
 # ---------------------------------------------------------------------------
@@ -27,22 +26,24 @@ class Portfolio:
     def allowed_asset_types(self) -> list[str]:
         if self.config is None:
             return []
-        return self.config.get("rules", {}).get("allowed_asset_types", [])
+        result = self.config.get("rules", {}).get("allowed_asset_types", [])
+        return list(result)
 
     @property
     def deduplicate_by(self) -> list[str]:
         if self.config is None:
             return ["source", "external_id", "operation_date", "asset_code", "operation_type"]
-        return self.config.get("import", {}).get(
+        result = self.config.get("import", {}).get(
             "deduplicate_by",
             ["source", "external_id", "operation_date", "asset_code", "operation_type"],
         )
+        return list(result)
 
     @property
     def move_processed_files(self) -> bool:
         if self.config is None:
             return True
-        return self.config.get("import", {}).get("move_processed_files", True)
+        return bool(self.config.get("import", {}).get("move_processed_files", True))
 
 
 # ---------------------------------------------------------------------------

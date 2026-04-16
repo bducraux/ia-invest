@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import pytest
 
+from domain.models import Operation, Portfolio, Position
 from storage.repository.db import Database
-from storage.repository.portfolios import PortfolioRepository
 from storage.repository.operations import OperationRepository
+from storage.repository.portfolios import PortfolioRepository
 from storage.repository.positions import PositionRepository
-from domain.models import Portfolio, Operation, Position
 
 
 @pytest.fixture

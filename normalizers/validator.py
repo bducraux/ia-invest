@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 from datetime import datetime
 
-
 _OPERATION_TYPES = {
     "buy", "sell", "dividend", "jcp", "rendimento", "amortization",
     "split", "split_bonus", "merge", "transfer_in", "transfer_out",
@@ -67,8 +66,8 @@ def parse_quantity(value: str | float | int | None) -> float:
 
     try:
         qty = float(raw)
-    except ValueError:
-        raise ValueError(f"Cannot parse quantity: '{value}'")
+    except ValueError as err:
+        raise ValueError(f"Cannot parse quantity: '{value}'") from err
 
     if qty < 0:
         raise ValueError(f"Quantity must not be negative: {qty}")
@@ -98,8 +97,8 @@ def parse_monetary_cents(value: str | float | int | None, field: str = "value") 
 
     try:
         amount = float(raw)
-    except ValueError:
-        raise ValueError(f"Cannot parse monetary {field}: '{value}'")
+    except ValueError as err:
+        raise ValueError(f"Cannot parse monetary {field}: '{value}'") from err
 
     return round(amount * 100)
 

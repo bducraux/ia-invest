@@ -5,7 +5,6 @@ from __future__ import annotations
 import pytest
 
 from normalizers.operations import OperationNormalizer
-from domain.models import NormalizationResult
 
 
 @pytest.fixture
@@ -13,8 +12,8 @@ def normalizer() -> OperationNormalizer:
     return OperationNormalizer()
 
 
-def _raw(overrides: dict | None = None) -> dict:
-    base = {
+def _raw(overrides: dict[str, object] | None = None) -> dict[str, object]:
+    base: dict[str, object] = {
         "source": "broker_csv",
         "external_id": "OP001",
         "asset_code": "PETR4",

@@ -1,16 +1,16 @@
 """Domain package — models and business-logic services."""
 
+from domain.deduplication import DeduplicationService
 from domain.models import (
-    Portfolio,
-    Operation,
-    Position,
     ImportJob,
     NormalizationError,
     NormalizationResult,
+    Operation,
+    Portfolio,
+    Position,
 )
 from domain.portfolio_service import PortfolioService
 from domain.position_service import PositionService
-from domain.deduplication import DeduplicationService
 
 __all__ = [
     "Portfolio",

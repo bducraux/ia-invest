@@ -52,7 +52,7 @@ class Database:
             self._conn.close()
             self._conn = None
 
-    def __enter__(self) -> "Database":
+    def __enter__(self) -> Database:
         return self
 
     def __exit__(self, *_: object) -> None:

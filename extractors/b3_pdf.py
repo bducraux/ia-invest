@@ -20,7 +20,7 @@ from typing import Any
 from extractors.base import BaseExtractor, ExtractionResult
 
 try:
-    import pdfplumber  # type: ignore[import-untyped]
+    import pdfplumber  # type: ignore[import-untyped,unused-ignore]
 
     _PDFPLUMBER_AVAILABLE = True
 except ImportError:

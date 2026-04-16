@@ -15,7 +15,7 @@ def _op(
     fees: int = 0,
     date: str = "2024-01-01",
     idx: int = 1,
-) -> dict:
+) -> dict[str, object]:
     return {
         "id": idx,
         "asset_code": asset_code,

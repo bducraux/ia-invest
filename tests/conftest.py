@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-import pytest
 from pathlib import Path
 
+import pytest
+
+from domain.models import Operation, Portfolio
 from storage.repository.db import Database
-from domain.models import Portfolio, Operation
 
 
 @pytest.fixture

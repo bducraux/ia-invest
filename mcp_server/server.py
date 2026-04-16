@@ -37,7 +37,6 @@ from mcp.server import Server
 from mcp.server.lowlevel.server import NotificationOptions
 from mcp.server.models import InitializationOptions
 
-from storage.repository.db import Database
 from mcp_server.tools.portfolios import (
     compare_portfolios,
     get_consolidated_summary,
@@ -46,6 +45,7 @@ from mcp_server.tools.portfolios import (
     get_portfolio_summary,
     list_portfolios,
 )
+from storage.repository.db import Database
 
 _DB_PATH = Path(os.environ.get("IA_INVEST_DB", "ia_invest.db"))
 
@@ -62,7 +62,7 @@ def _get_db() -> Database:
 # Tool definitions
 # ---------------------------------------------------------------------------
 
-@app.list_tools()
+@app.list_tools()  # type: ignore[no-untyped-call, untyped-decorator]
 async def handle_list_tools() -> list[types.Tool]:
     return [
         types.Tool(
@@ -156,7 +156,7 @@ async def handle_list_tools() -> list[types.Tool]:
 # Tool execution
 # ---------------------------------------------------------------------------
 
-@app.call_tool()
+@app.call_tool()  # type: ignore[untyped-decorator]
 async def handle_call_tool(
     name: str, arguments: dict[str, Any] | None
 ) -> list[types.TextContent]:

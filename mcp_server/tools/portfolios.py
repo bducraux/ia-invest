@@ -5,10 +5,10 @@ from __future__ import annotations
 from typing import Any
 
 from storage.repository.db import Database
+from storage.repository.import_jobs import ImportJobRepository
+from storage.repository.operations import OperationRepository
 from storage.repository.portfolios import PortfolioRepository
 from storage.repository.positions import PositionRepository
-from storage.repository.operations import OperationRepository
-from storage.repository.import_jobs import ImportJobRepository
 
 
 def list_portfolios(db: Database) -> list[dict[str, Any]]:

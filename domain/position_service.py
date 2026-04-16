@@ -12,7 +12,6 @@ from typing import Any
 
 from domain.models import Position
 
-
 _BUY_TYPES = {"buy", "transfer_in", "split_bonus"}
 _SELL_TYPES = {"sell", "transfer_out"}
 _INCOME_TYPES = {"dividend", "jcp", "rendimento", "amortization"}

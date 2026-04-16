@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import Any
 
 from domain.models import NormalizationResult
 
@@ -23,7 +24,7 @@ class BaseNormalizer(ABC):
     @abstractmethod
     def normalize(
         self,
-        raw_records: list[dict],
+        raw_records: list[dict[str, Any]],
         portfolio_id: str,
         import_job_id: int | None = None,
     ) -> NormalizationResult:

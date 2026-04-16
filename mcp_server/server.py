@@ -34,6 +34,7 @@ from typing import Any
 import mcp.server.stdio
 import mcp.types as types
 from mcp.server import Server
+from mcp.server.lowlevel.server import NotificationOptions
 from mcp.server.models import InitializationOptions
 
 from storage.repository.db import Database
@@ -212,7 +213,7 @@ async def main() -> None:
                 server_name="ia-invest",
                 server_version="0.1.0",
                 capabilities=app.get_capabilities(
-                    notification_options=None,
+                    notification_options=NotificationOptions(),
                     experimental_capabilities={},
                 ),
             ),

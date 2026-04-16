@@ -55,8 +55,9 @@ uv run python scripts/create_portfolio.py --type renda-variavel --name "Meu Port
 O script cria `portfolios/<id>/` e ajusta `portfolio.yml` com o `id` e `name`.
 
 Para adicionar novos tipos de portfólio, basta criar uma nova pasta em
-`templates/<novo-tipo>/` contendo um `portfolio.yml` e as subpastas
-`{inbox,staging,processed,rejected,exports}`.
+`templates/<novo-tipo>/` contendo apenas `portfolio.yml`.
+As subpastas `{inbox,staging,processed,rejected,exports}` são criadas
+automaticamente pelo script.
 Ela aparecerá automaticamente no menu interativo.
 
 Fluxo manual (alternativo):

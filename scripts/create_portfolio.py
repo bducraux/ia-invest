@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import argparse
 import re
-import shutil
 from pathlib import Path
 from typing import Any
 
@@ -76,6 +75,11 @@ def _write_manifest(manifest_path: Path, manifest: dict[str, Any]) -> None:
         yaml.safe_dump(manifest, fh, sort_keys=False, allow_unicode=True)
 
 
+def _create_runtime_dirs(portfolio_dir: Path) -> None:
+    for subdir in _REQUIRED_SUBDIRS:
+        (portfolio_dir / subdir).mkdir(parents=True, exist_ok=True)
+
+
 def _create_from_generic_template(
     target_dir: Path,
     *,
@@ -84,8 +88,7 @@ def _create_from_generic_template(
     description: str | None,
 ) -> None:
     target_dir.mkdir(parents=True, exist_ok=False)
-    for subdir in _REQUIRED_SUBDIRS:
-        (target_dir / subdir).mkdir(parents=True, exist_ok=True)
+    _create_runtime_dirs(target_dir)
 
     manifest: dict[str, Any] = {
         "id": portfolio_id,
@@ -123,10 +126,9 @@ def _create_from_template_dir(
     if not manifest_template.exists():
         raise FileNotFoundError(f"Template manifest not found: {manifest_template}")
 
-    shutil.copytree(template_dir, target_dir)
+    target_dir.mkdir(parents=True, exist_ok=False)
 
-    manifest_path = target_dir / "portfolio.yml"
-    with manifest_path.open(encoding="utf-8") as fh:
+    with manifest_template.open(encoding="utf-8") as fh:
         manifest = yaml.safe_load(fh) or {}
 
     manifest["id"] = portfolio_id
@@ -134,7 +136,8 @@ def _create_from_template_dir(
     if description is not None:
         manifest["description"] = description
 
-    _write_manifest(manifest_path, manifest)
+    _write_manifest(target_dir / "portfolio.yml", manifest)
+    _create_runtime_dirs(target_dir)
 
 
 def create_portfolio(

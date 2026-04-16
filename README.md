@@ -157,7 +157,7 @@ Cada portfólio é uma entidade lógica independente. Exemplos típicos:
 
 | Fonte            | Extractor               | Status     |
 |------------------|-------------------------|------------|
-| B3 PDF           | `B3PdfExtractor`        | ✅ Fase 2   |
+| B3 CSV/XLSX      | `B3CsvExtractor`        | ✅ Fase 2   |
 | CSV de corretora | `BrokerCsvExtractor`    | ✅ Fase 2   |
 | Binance CSV      | `BinanceCsvExtractor`   | ✅ Fase 2   |
 

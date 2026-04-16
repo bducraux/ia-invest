@@ -38,7 +38,7 @@ class BaseExtractor(ABC):
       normalizers are responsible for type coercion and validation.
     """
 
-    #: Unique identifier for this extractor, e.g. 'b3_pdf'.
+    #: Unique identifier for this extractor, e.g. 'b3_csv'.
     source_type: str = ""
 
     @abstractmethod

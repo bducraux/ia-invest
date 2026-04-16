@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS operations (
     import_job_id   INTEGER REFERENCES import_jobs(id),
 
     -- identification / deduplication
-    source          TEXT NOT NULL,              -- e.g. 'b3_pdf', 'binance_csv'
+    source          TEXT NOT NULL,              -- e.g. 'b3_csv', 'binance_csv'
     external_id     TEXT,                       -- original ID from source file
 
     -- asset

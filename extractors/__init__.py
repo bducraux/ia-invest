@@ -9,13 +9,13 @@ classes.  Use ``get_extractor(source_type)`` to retrieve the right one.
 
 from __future__ import annotations
 
-from extractors.b3_pdf import B3PdfExtractor
+from extractors.b3_csv import B3CsvExtractor
 from extractors.base import BaseExtractor, ExtractionResult
 from extractors.binance_csv import BinanceCsvExtractor
 from extractors.broker_csv import BrokerCsvExtractor
 
 _REGISTRY: dict[str, type[BaseExtractor]] = {
-    "b3_pdf": B3PdfExtractor,
+    "b3_csv": B3CsvExtractor,
     "broker_csv": BrokerCsvExtractor,
     "binance_csv": BinanceCsvExtractor,
 }
@@ -39,7 +39,7 @@ def list_source_types() -> list[str]:
 __all__ = [
     "BaseExtractor",
     "ExtractionResult",
-    "B3PdfExtractor",
+    "B3CsvExtractor",
     "BrokerCsvExtractor",
     "BinanceCsvExtractor",
     "get_extractor",

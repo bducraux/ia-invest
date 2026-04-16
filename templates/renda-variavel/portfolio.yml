@@ -12,7 +12,7 @@ rules:
     - bdr
 
 sources:
-  - type: b3_pdf
+  - type: b3_csv
     enabled: true
   - type: broker_csv
     enabled: true

@@ -52,6 +52,9 @@ export interface Position {
   unrealizedPnl: Cents;
   unrealizedPnlPct: number;
   weight: number;
+  quoteStatus: "live" | "cache_fresh" | "cache_stale" | "avg_fallback";
+  quoteSource: string;
+  quoteAgeSeconds?: number | null;
 }
 
 export interface Operation {

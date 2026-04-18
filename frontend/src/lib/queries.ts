@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 
 import {
   getPortfolioOperations,
@@ -39,5 +39,35 @@ export function usePortfolioOperations(
     queryKey: ["portfolio", portfolioId, "operations", params],
     queryFn: () => getPortfolioOperations(portfolioId as string, params),
     enabled: Boolean(portfolioId),
+  });
+}
+
+export function usePortfolioSummaries(portfolioIds: string[]) {
+  return useQueries({
+    queries: portfolioIds.map((portfolioId) => ({
+      queryKey: ["portfolio", portfolioId, "summary"],
+      queryFn: () => getPortfolioSummary(portfolioId),
+    })),
+  });
+}
+
+export function usePortfolioPositionsList(portfolioIds: string[], onlyOpen = true) {
+  return useQueries({
+    queries: portfolioIds.map((portfolioId) => ({
+      queryKey: ["portfolio", portfolioId, "positions", onlyOpen],
+      queryFn: () => getPortfolioPositions(portfolioId, onlyOpen),
+    })),
+  });
+}
+
+export function usePortfolioOperationsList(
+  portfolioIds: string[],
+  params: ListOperationsParams = {},
+) {
+  return useQueries({
+    queries: portfolioIds.map((portfolioId) => ({
+      queryKey: ["portfolio", portfolioId, "operations", params],
+      queryFn: () => getPortfolioOperations(portfolioId, params),
+    })),
   });
 }

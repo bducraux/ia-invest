@@ -18,9 +18,36 @@ export interface ListOperationsResponse {
   offset: number;
 }
 
+export interface QuoteRefreshResponse {
+  scope: "global" | "portfolio";
+  portfolios: string[];
+  totalAssets: number;
+  liveCount: number;
+  cacheFreshCount: number;
+  cacheStaleCount: number;
+  avgFallbackCount: number;
+  failedCount: number;
+}
+
 async function apiFetch<T>(path: string): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     method: "GET",
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`API ${response.status}: ${body || response.statusText}`);
+  }
+
+  return (await response.json()) as T;
+}
+
+async function apiPost<T>(path: string): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
     headers: {
       Accept: "application/json",
     },
@@ -77,4 +104,11 @@ export function getPortfolioOperations(
     offset: params.offset,
   });
   return apiFetch<ListOperationsResponse>(`/api/portfolios/${portfolioId}/operations${query}`);
+}
+
+export function refreshQuotes(portfolioId?: string): Promise<QuoteRefreshResponse> {
+  if (portfolioId) {
+    return apiPost<QuoteRefreshResponse>(`/api/portfolios/${portfolioId}/quotes/refresh`);
+  }
+  return apiPost<QuoteRefreshResponse>("/api/quotes/refresh");
 }

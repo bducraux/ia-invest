@@ -79,6 +79,9 @@ function pos(
     unrealizedPnl: cents(marketValue - invested),
     unrealizedPnlPct: (marketValue - invested) / invested,
     weight,
+    quoteStatus: "live",
+    quoteSource: "mock",
+    quoteAgeSeconds: 0,
   };
 }
 

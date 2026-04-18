@@ -53,6 +53,25 @@ class QuoteRepository:
             return None
         return dict(row)
 
+    def get_latest(self, asset_code: str) -> dict[str, Any] | None:
+        row = self._conn.execute(
+            """
+            SELECT
+                asset_code,
+                price_cents,
+                source,
+                fetched_at,
+                (CAST(strftime('%s', 'now') AS INTEGER) - CAST(strftime('%s', fetched_at) AS INTEGER))
+                    AS age_seconds
+            FROM market_quotes_cache
+            WHERE asset_code = ?
+            """,
+            (asset_code.upper(),),
+        ).fetchone()
+        if row is None:
+            return None
+        return dict(row)
+
     def upsert(self, asset_code: str, price_cents: int, source: str) -> None:
         self._conn.execute(
             """

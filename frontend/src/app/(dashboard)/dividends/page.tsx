@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Card,
   CardContent,
@@ -17,21 +19,110 @@ import { Badge } from "@/components/ui/badge";
 import { TopBar } from "@/components/layout/topbar";
 import { PageHeader } from "@/components/layout/page-header";
 import { DividendsBarChart } from "@/features/dividends/dividends-bar-chart";
+import { useDashboardScope } from "@/lib/dashboard-scope";
 import { formatBRL } from "@/lib/money";
 import { formatDate } from "@/lib/date";
-import { mockDividends, mockDividendsByMonth } from "@/mocks/data";
+import {
+  aggregateDividendsByMonth,
+  mergeOperations,
+  toDividendEntries,
+} from "@/lib/portfolio-aggregation";
+import {
+  usePortfolioOperations,
+  usePortfolioOperationsList,
+  usePortfolios,
+} from "@/lib/queries";
 
 export default function DividendsPage() {
-  const total = mockDividendsByMonth.reduce((acc, m) => acc + m.amount, 0);
+  const scope = useDashboardScope();
+  const portfoliosQuery = usePortfolios();
+  const portfolios = portfoliosQuery.data ?? [];
+  const portfolioIds = portfolios.map((portfolio) => portfolio.id);
+  const activePortfolio = portfolios.find((portfolio) => portfolio.id === scope.portfolioId);
+
+  const scopedOperationsQuery = usePortfolioOperations(scope.isGlobalScope ? undefined : scope.portfolioId, {
+    limit: 400,
+    offset: 0,
+  });
+  const globalOperationsQueries = usePortfolioOperationsList(scope.isGlobalScope ? portfolioIds : [], {
+    limit: 400,
+    offset: 0,
+  });
+
+  const globalLoading = globalOperationsQueries.some((query) => query.isLoading);
+  const globalError = globalOperationsQueries.find((query) => query.error)?.error;
+
+  const isLoading = scope.isGlobalScope
+    ? portfoliosQuery.isLoading || globalLoading
+    : portfoliosQuery.isLoading || scopedOperationsQuery.isLoading;
+  const error = scope.isGlobalScope
+    ? portfoliosQuery.error || globalError
+    : portfoliosQuery.error || scopedOperationsQuery.error;
+
+  if (isLoading) {
+    return (
+      <>
+        <TopBar title="Proventos" />
+        <main className="flex-1 space-y-6 p-4 md:p-6">
+          <PageHeader title="Proventos recebidos" description="Carregando dados do backend..." />
+        </main>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <TopBar title="Proventos" />
+        <main className="flex-1 space-y-6 p-4 md:p-6">
+          <PageHeader
+            title="Proventos recebidos"
+            description="Falha ao carregar proventos. Verifique se a API está rodando."
+          />
+        </main>
+      </>
+    );
+  }
+
+  if (!scope.isGlobalScope && !activePortfolio) {
+    return (
+      <>
+        <TopBar title="Proventos" />
+        <main className="flex-1 space-y-6 p-4 md:p-6">
+          <PageHeader
+            title="Proventos recebidos"
+            description="Selecione um portfolio válido na navegação lateral."
+          />
+        </main>
+      </>
+    );
+  }
+
+  const mergedOperations = scope.isGlobalScope
+    ? mergeOperations(
+        portfolios,
+        globalOperationsQueries.map((query) => query.data?.operations ?? []),
+      )
+    : (scopedOperationsQuery.data?.operations ?? []).map((operation) => ({
+        ...operation,
+        portfolioId: activePortfolio?.id ?? "",
+        portfolioName: activePortfolio?.name ?? "Portfolio",
+      }));
+
+  const dividends = toDividendEntries(mergedOperations);
+  const dividendsByMonth = aggregateDividendsByMonth(dividends);
+  const total = dividendsByMonth.reduce((acc, month) => acc + month.amount, 0);
+
+  const title = scope.isGlobalScope ? "Proventos consolidados" : `Proventos - ${activePortfolio?.name}`;
+  const description = scope.isGlobalScope
+    ? "Dividendos e JCP recebidos em todas as carteiras."
+    : `Dividendos e JCP recebidos no portfolio ${activePortfolio?.name}.`;
 
   return (
     <>
       <TopBar title="Proventos" />
       <main className="flex-1 space-y-6 p-4 md:p-6">
-        <PageHeader
-          title="Proventos recebidos"
-          description="Dividendos e juros sobre capital próprio dos últimos meses."
-        />
+        <PageHeader title={title} description={description} />
 
         <Card>
           <CardHeader>
@@ -43,7 +134,7 @@ export default function DividendsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <DividendsBarChart data={mockDividendsByMonth} />
+            <DividendsBarChart data={dividendsByMonth} />
           </CardContent>
         </Card>
 
@@ -56,15 +147,21 @@ export default function DividendsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Data</TableHead>
+                  {scope.isGlobalScope ? <TableHead>Portfolio</TableHead> : null}
                   <TableHead>Ativo</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mockDividends.map((d) => (
-                  <TableRow key={d.id}>
+                {dividends.map((d) => (
+                  <TableRow key={`${d.portfolioId}-${d.id}`}>
                     <TableCell>{formatDate(d.date)}</TableCell>
+                    {scope.isGlobalScope ? (
+                      <TableCell>
+                        <Badge variant="outline">{d.portfolioName}</Badge>
+                      </TableCell>
+                    ) : null}
                     <TableCell className="font-medium">{d.assetCode}</TableCell>
                     <TableCell>
                       <Badge variant="muted">{d.type}</Badge>

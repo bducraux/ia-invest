@@ -17,13 +17,19 @@ import {
 } from "@/components/ui/table";
 import { TopBar } from "@/components/layout/topbar";
 import { PageHeader } from "@/components/layout/page-header";
+import { useDashboardScope } from "@/lib/dashboard-scope";
 import {
   formatBRL,
   formatBRLSigned,
   formatPercent,
   formatQuantity,
 } from "@/lib/money";
-import { usePortfolioPositions, usePortfolios } from "@/lib/queries";
+import { mergePositions, type PositionWithPortfolio } from "@/lib/portfolio-aggregation";
+import {
+  usePortfolioPositions,
+  usePortfolioPositionsList,
+  usePortfolios,
+} from "@/lib/queries";
 
 const classLabels: Record<string, string> = {
   ACAO: "Ação",
@@ -34,12 +40,56 @@ const classLabels: Record<string, string> = {
   CRIPTO: "Cripto",
 };
 
-export default function PositionsPage() {
-  const portfoliosQuery = usePortfolios();
-  const activePortfolio = portfoliosQuery.data?.[0];
-  const positionsQuery = usePortfolioPositions(activePortfolio?.id, true);
+const quoteStatusLabel: Record<string, string> = {
+  live: "Ao vivo",
+  cache_fresh: "Atualizado",
+  cache_stale: "Cache antigo",
+  avg_fallback: "Preço médio",
+};
 
-  if (portfoliosQuery.isLoading || positionsQuery.isLoading) {
+const quoteStatusVariant: Record<string, "positive" | "muted" | "outline"> = {
+  live: "positive",
+  cache_fresh: "muted",
+  cache_stale: "outline",
+  avg_fallback: "outline",
+};
+
+function formatQuoteAge(ageSeconds?: number | null): string | null {
+  if (ageSeconds == null || ageSeconds < 0) {
+    return null;
+  }
+  if (ageSeconds < 60) {
+    return `${ageSeconds}s`;
+  }
+  const minutes = Math.floor(ageSeconds / 60);
+  if (minutes < 60) {
+    return `${minutes}min`;
+  }
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h`;
+}
+
+export default function PositionsPage() {
+  const scope = useDashboardScope();
+  const portfoliosQuery = usePortfolios();
+  const portfolios = portfoliosQuery.data ?? [];
+  const portfolioIds = portfolios.map((portfolio) => portfolio.id);
+  const activePortfolio = portfolios.find((portfolio) => portfolio.id === scope.portfolioId);
+
+  const scopedPositionsQuery = usePortfolioPositions(scope.isGlobalScope ? undefined : scope.portfolioId, true);
+  const globalPositionsQueries = usePortfolioPositionsList(scope.isGlobalScope ? portfolioIds : [], true);
+
+  const globalLoading = globalPositionsQueries.some((query) => query.isLoading);
+  const globalError = globalPositionsQueries.find((query) => query.error)?.error;
+
+  const isLoading = scope.isGlobalScope
+    ? portfoliosQuery.isLoading || globalLoading
+    : portfoliosQuery.isLoading || scopedPositionsQuery.isLoading;
+  const error = scope.isGlobalScope
+    ? portfoliosQuery.error || globalError
+    : portfoliosQuery.error || scopedPositionsQuery.error;
+
+  if (isLoading) {
     return (
       <>
         <TopBar title="Posições" />
@@ -50,7 +100,7 @@ export default function PositionsPage() {
     );
   }
 
-  if (portfoliosQuery.error || positionsQuery.error) {
+  if (error) {
     return (
       <>
         <TopBar title="Posições" />
@@ -64,16 +114,41 @@ export default function PositionsPage() {
     );
   }
 
-  const positions = positionsQuery.data ?? [];
+  if (!scope.isGlobalScope && !activePortfolio) {
+    return (
+      <>
+        <TopBar title="Posições" />
+        <main className="flex-1 space-y-6 p-4 md:p-6">
+          <PageHeader
+            title="Posições atuais"
+            description="Selecione um portfolio válido na navegação lateral."
+          />
+        </main>
+      </>
+    );
+  }
+
+  const positions: PositionWithPortfolio[] = scope.isGlobalScope
+    ? mergePositions(
+        portfolios,
+        globalPositionsQueries.map((query) => query.data ?? []),
+      )
+    : (scopedPositionsQuery.data ?? []).map((position) => ({
+        ...position,
+        portfolioId: activePortfolio?.id ?? "",
+        portfolioName: activePortfolio?.name ?? "Portfolio",
+      }));
+
+  const title = scope.isGlobalScope ? "Posições consolidadas" : `Posições - ${activePortfolio?.name}`;
+  const description = scope.isGlobalScope
+    ? "Ativos consolidados de todas as carteiras da família."
+    : `Ativos consolidados a partir das operações do portfolio ${activePortfolio?.name}.`;
 
   return (
     <>
       <TopBar title="Posições" />
       <main className="flex-1 space-y-6 p-4 md:p-6">
-        <PageHeader
-          title="Posições atuais"
-          description="Ativos consolidados a partir das suas operações."
-        />
+        <PageHeader title={title} description={description} />
 
         <Card>
           <CardHeader>
@@ -84,6 +159,7 @@ export default function PositionsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Ativo</TableHead>
+                  {scope.isGlobalScope ? <TableHead>Portfolio</TableHead> : null}
                   <TableHead>Classe</TableHead>
                   <TableHead className="text-right">Qtd.</TableHead>
                   <TableHead className="text-right">Preço médio</TableHead>
@@ -95,19 +171,37 @@ export default function PositionsPage() {
               </TableHeader>
               <TableBody>
                 {positions.map((p) => (
-                  <TableRow key={p.assetCode}>
+                  <TableRow key={`${p.portfolioId}-${p.assetCode}`}>
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-medium">{p.assetCode}</span>
                         <span className="text-xs text-muted-foreground">{p.name}</span>
                       </div>
                     </TableCell>
+                    {scope.isGlobalScope ? (
+                      <TableCell>
+                        <Badge variant="outline">{p.portfolioName}</Badge>
+                      </TableCell>
+                    ) : null}
                     <TableCell>
                       <Badge variant="muted">{classLabels[p.assetClass] ?? p.assetClass}</Badge>
                     </TableCell>
                     <TableCell className="text-right">{formatQuantity(p.quantity)}</TableCell>
                     <TableCell className="text-right">{formatBRL(p.avgPrice)}</TableCell>
-                    <TableCell className="text-right">{formatBRL(p.marketPrice)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex flex-col items-end gap-1">
+                        <span>{formatBRL(p.marketPrice)}</span>
+                        <Badge variant={quoteStatusVariant[p.quoteStatus] ?? "outline"}>
+                          {quoteStatusLabel[p.quoteStatus] ?? p.quoteStatus}
+                        </Badge>
+                        {p.quoteStatus !== "avg_fallback" ? (
+                          <span className="text-[11px] text-muted-foreground">
+                            {p.quoteSource}
+                            {formatQuoteAge(p.quoteAgeSeconds) ? ` · há ${formatQuoteAge(p.quoteAgeSeconds)}` : ""}
+                          </span>
+                        ) : null}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-right font-medium">
                       {formatBRL(p.marketValue)}
                     </TableCell>

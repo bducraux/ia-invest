@@ -36,7 +36,9 @@ class Database:
 
     def _connect(self) -> sqlite3.Connection:
         # Wait longer before failing when another process holds a write lock.
-        conn = sqlite3.connect(self._db_path, timeout=30.0)
+        # FastAPI sync endpoints may execute dependency setup and handler logic
+        # in different worker threads; allow cross-thread connection access.
+        conn = sqlite3.connect(self._db_path, timeout=30.0, check_same_thread=False)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA busy_timeout=30000")
         conn.execute("PRAGMA foreign_keys=ON")

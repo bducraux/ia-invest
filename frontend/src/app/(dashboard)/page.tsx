@@ -21,39 +21,83 @@ import { PageHeader } from "@/components/layout/page-header";
 import { KpiCard } from "@/features/dashboard/kpi-card";
 import { AllocationDonut } from "@/features/dashboard/allocation-donut";
 import { PerformanceChart } from "@/features/dashboard/performance-chart";
+import { useDashboardScope } from "@/lib/dashboard-scope";
 import {
   formatBRL,
   formatBRLSigned,
   formatPercent,
 } from "@/lib/money";
 import { formatDate } from "@/lib/date";
-import { usePortfolioOperations, usePortfolios, usePortfolioSummary } from "@/lib/queries";
+import {
+  aggregateSummaries,
+  mergeOperations,
+  type OperationWithPortfolio,
+} from "@/lib/portfolio-aggregation";
+import {
+  usePortfolioOperations,
+  usePortfolioOperationsList,
+  usePortfolioPositions,
+  usePortfolioPositionsList,
+  usePortfolios,
+  usePortfolioSummaries,
+  usePortfolioSummary,
+} from "@/lib/queries";
 import {
   Banknote,
   Coins,
   TrendingUp,
   Wallet,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function OverviewPage() {
+  const scope = useDashboardScope();
   const portfoliosQuery = usePortfolios();
-  const activePortfolio = portfoliosQuery.data?.[0];
+  const portfolios = portfoliosQuery.data ?? [];
+  const portfolioIds = portfolios.map((portfolio) => portfolio.id);
+  const activePortfolio = portfolios.find((portfolio) => portfolio.id === scope.portfolioId);
 
-  const summaryQuery = usePortfolioSummary(activePortfolio?.id);
-  const operationsQuery = usePortfolioOperations(activePortfolio?.id, {
+  const scopedSummaryQuery = usePortfolioSummary(scope.isGlobalScope ? undefined : scope.portfolioId);
+  const scopedOperationsQuery = usePortfolioOperations(scope.isGlobalScope ? undefined : scope.portfolioId, {
     limit: 6,
     offset: 0,
   });
+  const scopedPositionsQuery = usePortfolioPositions(scope.isGlobalScope ? undefined : scope.portfolioId, true);
 
-  const isLoading = portfoliosQuery.isLoading || summaryQuery.isLoading || operationsQuery.isLoading;
-  const error = portfoliosQuery.error || summaryQuery.error || operationsQuery.error;
+  const allSummaryQueries = usePortfolioSummaries(scope.isGlobalScope ? portfolioIds : []);
+  const allOperationsQueries = usePortfolioOperationsList(scope.isGlobalScope ? portfolioIds : [], {
+    limit: 6,
+    offset: 0,
+  });
+  const allPositionsQueries = usePortfolioPositionsList(scope.isGlobalScope ? portfolioIds : [], true);
+
+  const globalSummaryLoading = allSummaryQueries.some((query) => query.isLoading);
+  const globalOperationsLoading = allOperationsQueries.some((query) => query.isLoading);
+  const globalPositionsLoading = allPositionsQueries.some((query) => query.isLoading);
+  const globalSummaryError = allSummaryQueries.find((query) => query.error)?.error;
+  const globalOperationsError = allOperationsQueries.find((query) => query.error)?.error;
+  const globalPositionsError = allPositionsQueries.find((query) => query.error)?.error;
+
+  const isLoading = scope.isGlobalScope
+    ? portfoliosQuery.isLoading || globalSummaryLoading || globalOperationsLoading || globalPositionsLoading
+    : portfoliosQuery.isLoading
+      || scopedSummaryQuery.isLoading
+      || scopedOperationsQuery.isLoading
+      || scopedPositionsQuery.isLoading;
+
+  const error = scope.isGlobalScope
+    ? portfoliosQuery.error || globalSummaryError || globalOperationsError || globalPositionsError
+    : portfoliosQuery.error
+      || scopedSummaryQuery.error
+      || scopedOperationsQuery.error
+      || scopedPositionsQuery.error;
 
   if (isLoading) {
     return (
       <>
         <TopBar title="Visão geral" />
         <main className="flex-1 space-y-6 p-4 md:p-6">
-          <PageHeader title="Sua carteira" description="Carregando dados do backend..." />
+          <PageHeader title="Visão consolidada" description="Carregando dados do backend..." />
         </main>
       </>
     );
@@ -65,7 +109,7 @@ export default function OverviewPage() {
         <TopBar title="Visão geral" />
         <main className="flex-1 space-y-6 p-4 md:p-6">
           <PageHeader
-            title="Sua carteira"
+            title="Visão consolidada"
             description="Falha ao carregar dados da API. Verifique se o backend está rodando."
           />
         </main>
@@ -73,28 +117,131 @@ export default function OverviewPage() {
     );
   }
 
-  if (!activePortfolio || !summaryQuery.data) {
+  if (!scope.isGlobalScope && !activePortfolio) {
     return (
       <>
         <TopBar title="Visão geral" />
         <main className="flex-1 space-y-6 p-4 md:p-6">
-          <PageHeader title="Sua carteira" description="Nenhuma carteira ativa encontrada." />
+          <PageHeader
+            title="Portfolio não encontrado"
+            description="Selecione um portfolio válido na navegação lateral."
+          />
         </main>
       </>
     );
   }
 
-  const summary = summaryQuery.data;
-  const recent = operationsQuery.data?.operations ?? [];
+  if (scope.isGlobalScope && portfolios.length === 0) {
+    return (
+      <>
+        <TopBar title="Visão geral" />
+        <main className="flex-1 space-y-6 p-4 md:p-6">
+          <PageHeader
+            title="Visão família"
+            description="Nenhum portfolio cadastrado para consolidação."
+          />
+        </main>
+      </>
+    );
+  }
+
+  if (!scope.isGlobalScope && !scopedSummaryQuery.data) {
+    return (
+      <>
+        <TopBar title="Visão geral" />
+        <main className="flex-1 space-y-6 p-4 md:p-6">
+          <PageHeader
+            title={activePortfolio?.name ?? "Portfolio"}
+            description="Resumo indisponível para este portfolio."
+          />
+        </main>
+      </>
+    );
+  }
+
+  const globalSummaryInput = portfolios.map((portfolio, index) => ({
+    portfolio,
+    summary: allSummaryQueries[index]?.data,
+  }));
+
+  if (scope.isGlobalScope && globalSummaryInput.some((item) => !item.summary)) {
+    return (
+      <>
+        <TopBar title="Visão geral" />
+        <main className="flex-1 space-y-6 p-4 md:p-6">
+          <PageHeader
+            title="Visão família"
+            description="Não foi possível consolidar os dados de todas as carteiras."
+          />
+        </main>
+      </>
+    );
+  }
+
+  const globalConsolidated = scope.isGlobalScope
+    ? aggregateSummaries(
+        globalSummaryInput.map((item) => ({
+          portfolio: item.portfolio,
+          summary: item.summary!,
+        })),
+      )
+    : null;
+
+  const summary = scope.isGlobalScope ? globalConsolidated!.summary : scopedSummaryQuery.data!;
+
+  const recent: OperationWithPortfolio[] = scope.isGlobalScope
+    ? mergeOperations(
+        portfolios,
+        allOperationsQueries.map((query) => query.data?.operations ?? []),
+      ).slice(0, 6)
+    : (scopedOperationsQuery.data?.operations ?? []).map((operation) => ({
+        ...operation,
+        portfolioId: activePortfolio?.id ?? "",
+        portfolioName: activePortfolio?.name ?? "Portfolio",
+      }));
+
+  const contextTitle = scope.isGlobalScope ? "Visão família" : activePortfolio?.name ?? "Portfolio";
+  const contextDescription = scope.isGlobalScope
+    ? `Consolidado em tempo real de ${portfolios.length} carteiras.`
+    : `Resumo em tempo real do portfolio ${activePortfolio?.name}.`;
+
+  const quotePositions = scope.isGlobalScope
+    ? allPositionsQueries.flatMap((query) => query.data ?? [])
+    : (scopedPositionsQuery.data ?? []);
+
+  const quoteCounts = quotePositions.reduce(
+    (acc, position) => {
+      switch (position.quoteStatus) {
+        case "live":
+          acc.live += 1;
+          break;
+        case "cache_fresh":
+          acc.cacheFresh += 1;
+          break;
+        case "cache_stale":
+          acc.cacheStale += 1;
+          break;
+        default:
+          acc.avgFallback += 1;
+          break;
+      }
+      return acc;
+    },
+    { live: 0, cacheFresh: 0, cacheStale: 0, avgFallback: 0 },
+  );
 
   return (
     <>
       <TopBar title="Visão geral" />
       <main className="flex-1 space-y-6 p-4 md:p-6">
-        <PageHeader
-          title="Sua carteira"
-          description={`Resumo consolidado em tempo real (${activePortfolio.name}).`}
-        />
+        <PageHeader title={contextTitle} description={contextDescription} />
+
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="positive">Ao vivo: {quoteCounts.live}</Badge>
+          <Badge variant="muted">Atualizado: {quoteCounts.cacheFresh}</Badge>
+          <Badge variant="outline">Cache antigo: {quoteCounts.cacheStale}</Badge>
+          <Badge variant="outline">Preço médio: {quoteCounts.avgFallback}</Badge>
+        </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiCard
@@ -130,7 +277,12 @@ export default function OverviewPage() {
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div
+          className={cn(
+            "grid grid-cols-1 gap-4",
+            scope.isGlobalScope ? "lg:grid-cols-4" : "lg:grid-cols-3",
+          )}
+        >
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle className="text-base text-foreground">
@@ -154,6 +306,20 @@ export default function OverviewPage() {
               <AllocationDonut data={summary.allocation} />
             </CardContent>
           </Card>
+
+          {scope.isGlobalScope ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base text-foreground">
+                  Alocação por portfolio
+                </CardTitle>
+                <CardDescription>Participação no patrimônio total</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AllocationDonut data={globalConsolidated?.allocationByPortfolio ?? []} />
+              </CardContent>
+            </Card>
+          ) : null}
         </div>
 
         <Card>
@@ -170,6 +336,7 @@ export default function OverviewPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Data</TableHead>
+                  {scope.isGlobalScope ? <TableHead>Portfolio</TableHead> : null}
                   <TableHead>Ativo</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead className="text-right">Qtd.</TableHead>
@@ -179,8 +346,13 @@ export default function OverviewPage() {
               </TableHeader>
               <TableBody>
                 {recent.map((op) => (
-                  <TableRow key={op.id}>
+                  <TableRow key={`${op.portfolioId}-${op.id}`}>
                     <TableCell>{formatDate(op.date)}</TableCell>
+                    {scope.isGlobalScope ? (
+                      <TableCell>
+                        <Badge variant="outline">{op.portfolioName}</Badge>
+                      </TableCell>
+                    ) : null}
                     <TableCell className="font-medium">{op.assetCode}</TableCell>
                     <TableCell>
                       <Badge

@@ -73,6 +73,9 @@ class PositionOut(BaseModel):
     unrealizedPnl: int
     unrealizedPnlPct: float
     weight: float
+    quoteStatus: str
+    quoteSource: str
+    quoteAgeSeconds: int | None = None
 
 
 class PositionsResponse(BaseModel):
@@ -95,6 +98,17 @@ class OperationsResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class QuoteRefreshResponse(BaseModel):
+    scope: str
+    portfolios: list[str]
+    totalAssets: int
+    liveCount: int
+    cacheFreshCount: int
+    cacheStaleCount: int
+    avgFallbackCount: int
+    failedCount: int
 
 
 def _to_ui_operation_type(operation_type: str) -> str:
@@ -218,12 +232,62 @@ def create_http_app(
         else quotes_enabled
     )
 
-    def build_quote_service(db: Database) -> MarketQuoteService:
+    def build_quote_service(db: Database, *, force_live: bool = False) -> MarketQuoteService:
         return MarketQuoteService(
             db.connection,
-            enabled=resolved_quotes_enabled,
+            enabled=(resolved_quotes_enabled or force_live),
             ttl_seconds=_DEFAULT_QUOTES_TTL_SECONDS,
             timeout_seconds=_DEFAULT_QUOTES_TIMEOUT_SECONDS,
+        )
+
+    def refresh_quotes_for_portfolios(
+        db: Database,
+        portfolio_ids: list[str],
+    ) -> QuoteRefreshResponse:
+        pos_repo = PositionRepository(db.connection)
+        quote_service = build_quote_service(db, force_live=True)
+
+        seen_assets: set[tuple[str, str]] = set()
+        status_counts = {
+            "live": 0,
+            "cache_fresh": 0,
+            "cache_stale": 0,
+            "avg_fallback": 0,
+            "failed": 0,
+        }
+
+        for portfolio_id in portfolio_ids:
+            for row in pos_repo.list_open_by_portfolio(portfolio_id):
+                key = (str(row["asset_code"]).upper(), str(row["asset_type"]).lower())
+                if key in seen_assets:
+                    continue
+                seen_assets.add(key)
+
+                quote = quote_service.resolve_price(
+                    row["asset_code"],
+                    row["asset_type"],
+                    force_refresh=True,
+                )
+                if quote is None:
+                    status_counts["failed"] += 1
+                    continue
+
+                status = str(quote.get("status") or "failed")
+                if status in status_counts:
+                    status_counts[status] += 1
+                else:
+                    status_counts["failed"] += 1
+
+        scope = "global" if len(portfolio_ids) != 1 else "portfolio"
+        return QuoteRefreshResponse(
+            scope=scope,
+            portfolios=portfolio_ids,
+            totalAssets=len(seen_assets),
+            liveCount=status_counts["live"],
+            cacheFreshCount=status_counts["cache_fresh"],
+            cacheStaleCount=status_counts["cache_stale"],
+            avgFallbackCount=status_counts["avg_fallback"],
+            failedCount=status_counts["failed"],
         )
 
     @app.get("/health")
@@ -234,6 +298,20 @@ def create_http_app(
     def list_portfolios(db: Database = Depends(get_db)) -> list[PortfolioOut]:  # noqa: B008
         repo = PortfolioRepository(db.connection)
         return [PortfolioOut(id=p.id, name=p.name, currency=p.base_currency) for p in repo.list_active()]
+
+    @app.post("/api/quotes/refresh", response_model=QuoteRefreshResponse)
+    def refresh_all_quotes(db: Database = Depends(get_db)) -> QuoteRefreshResponse:  # noqa: B008
+        repo = PortfolioRepository(db.connection)
+        portfolio_ids = [portfolio.id for portfolio in repo.list_active()]
+        return refresh_quotes_for_portfolios(db, portfolio_ids)
+
+    @app.post("/api/portfolios/{portfolio_id}/quotes/refresh", response_model=QuoteRefreshResponse)
+    def refresh_portfolio_quotes(
+        portfolio_id: str,
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> QuoteRefreshResponse:
+        require_portfolio(portfolio_id, db)
+        return refresh_quotes_for_portfolios(db, [portfolio_id])
 
     @app.get("/api/portfolios/{portfolio_id}/operations", response_model=OperationsResponse)
     def list_operations(
@@ -315,7 +393,12 @@ def create_http_app(
         quote_service = build_quote_service(db)
         for row in rows:
             avg_price = int(row["avg_price"])
-            market_price = quote_service.get_price_cents(row["asset_code"], row["asset_type"]) or avg_price
+            quote = quote_service.resolve_price(
+                row["asset_code"],
+                row["asset_type"],
+                fallback_price_cents=avg_price,
+            )
+            market_price = quote["price_cents"] if quote is not None else avg_price
             market_value = int(round(float(row["quantity"]) * market_price))
             unrealized = market_value - int(row["total_cost"])
             unrealized_pct = (
@@ -333,6 +416,13 @@ def create_http_app(
                     unrealizedPnl=unrealized,
                     unrealizedPnlPct=unrealized_pct,
                     weight=0.0,
+                    quoteStatus=str(quote["status"]) if quote is not None else "avg_fallback",
+                    quoteSource=str(quote["source"]) if quote is not None else "avg_price",
+                    quoteAgeSeconds=(
+                        int(quote["age_seconds"])
+                        if quote is not None and quote.get("age_seconds") is not None
+                        else None
+                    ),
                 )
             )
 
@@ -355,18 +445,16 @@ def create_http_app(
         quote_service = build_quote_service(db)
 
         total_invested = sum(int(row["total_cost"]) for row in positions)
-        market_value = sum(
-            int(
-                round(
-                    float(row["quantity"])
-                    * (
-                        quote_service.get_price_cents(row["asset_code"], row["asset_type"])
-                        or int(row["avg_price"])
-                    )
-                )
+        market_value = 0
+        for row in positions:
+            avg_price = int(row["avg_price"])
+            quote = quote_service.resolve_price(
+                row["asset_code"],
+                row["asset_type"],
+                fallback_price_cents=avg_price,
             )
-            for row in positions
-        )
+            price_cents = quote["price_cents"] if quote is not None else avg_price
+            market_value += int(round(float(row["quantity"]) * price_cents))
         unrealized = market_value - total_invested
         unrealized_pct = (unrealized / total_invested) if total_invested > 0 else 0.0
 
@@ -389,9 +477,13 @@ def create_http_app(
         allocation_by_class: dict[str, int] = {}
         for row in positions:
             klass = _to_ui_asset_class(row["asset_type"])
-            price_cents = quote_service.get_price_cents(row["asset_code"], row["asset_type"]) or int(
-                row["avg_price"]
+            avg_price = int(row["avg_price"])
+            quote = quote_service.resolve_price(
+                row["asset_code"],
+                row["asset_type"],
+                fallback_price_cents=avg_price,
             )
+            price_cents = quote["price_cents"] if quote is not None else avg_price
             market_value_cents = int(round(float(row["quantity"]) * price_cents))
             allocation_by_class[klass] = allocation_by_class.get(klass, 0) + market_value_cents
 

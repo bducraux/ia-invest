@@ -17,21 +17,48 @@ import {
 } from "@/components/ui/table";
 import { TopBar } from "@/components/layout/topbar";
 import { PageHeader } from "@/components/layout/page-header";
+import { useDashboardScope } from "@/lib/dashboard-scope";
 import { formatBRL, formatQuantity } from "@/lib/money";
 import { formatDate } from "@/lib/date";
-import { usePortfolioOperations, usePortfolios } from "@/lib/queries";
+import {
+  mergeOperations,
+  type OperationWithPortfolio,
+} from "@/lib/portfolio-aggregation";
+import {
+  usePortfolioOperations,
+  usePortfolioOperationsList,
+  usePortfolios,
+} from "@/lib/queries";
 import Link from "next/link";
 import { Upload } from "lucide-react";
 
 export default function OperationsPage() {
+  const scope = useDashboardScope();
   const portfoliosQuery = usePortfolios();
-  const activePortfolio = portfoliosQuery.data?.[0];
-  const operationsQuery = usePortfolioOperations(activePortfolio?.id, {
+  const portfolios = portfoliosQuery.data ?? [];
+  const portfolioIds = portfolios.map((portfolio) => portfolio.id);
+  const activePortfolio = portfolios.find((portfolio) => portfolio.id === scope.portfolioId);
+
+  const scopedOperationsQuery = usePortfolioOperations(scope.isGlobalScope ? undefined : scope.portfolioId, {
+    limit: 100,
+    offset: 0,
+  });
+  const globalOperationsQueries = usePortfolioOperationsList(scope.isGlobalScope ? portfolioIds : [], {
     limit: 100,
     offset: 0,
   });
 
-  if (portfoliosQuery.isLoading || operationsQuery.isLoading) {
+  const globalLoading = globalOperationsQueries.some((query) => query.isLoading);
+  const globalError = globalOperationsQueries.find((query) => query.error)?.error;
+
+  const isLoading = scope.isGlobalScope
+    ? portfoliosQuery.isLoading || globalLoading
+    : portfoliosQuery.isLoading || scopedOperationsQuery.isLoading;
+  const error = scope.isGlobalScope
+    ? portfoliosQuery.error || globalError
+    : portfoliosQuery.error || scopedOperationsQuery.error;
+
+  if (isLoading) {
     return (
       <>
         <TopBar title="Operações" />
@@ -42,7 +69,7 @@ export default function OperationsPage() {
     );
   }
 
-  if (portfoliosQuery.error || operationsQuery.error) {
+  if (error) {
     return (
       <>
         <TopBar title="Operações" />
@@ -56,16 +83,49 @@ export default function OperationsPage() {
     );
   }
 
-  const operations = operationsQuery.data?.operations ?? [];
-  const total = operationsQuery.data?.total ?? 0;
+  if (!scope.isGlobalScope && !activePortfolio) {
+    return (
+      <>
+        <TopBar title="Operações" />
+        <main className="flex-1 space-y-6 p-4 md:p-6">
+          <PageHeader
+            title="Histórico de operações"
+            description="Selecione um portfolio válido na navegação lateral."
+          />
+        </main>
+      </>
+    );
+  }
+
+  const operations: OperationWithPortfolio[] = scope.isGlobalScope
+    ? mergeOperations(
+        portfolios,
+        globalOperationsQueries.map((query) => query.data?.operations ?? []),
+      )
+    : (scopedOperationsQuery.data?.operations ?? []).map((operation) => ({
+        ...operation,
+        portfolioId: activePortfolio?.id ?? "",
+        portfolioName: activePortfolio?.name ?? "Portfolio",
+      }));
+
+  const total = scope.isGlobalScope
+    ? globalOperationsQueries.reduce((acc, query) => acc + (query.data?.total ?? 0), 0)
+    : scopedOperationsQuery.data?.total ?? 0;
+
+  const title = scope.isGlobalScope
+    ? "Histórico de operações consolidado"
+    : `Histórico de operações - ${activePortfolio?.name}`;
+  const description = scope.isGlobalScope
+    ? "Compras, vendas e proventos importados de todas as carteiras."
+    : `Compras, vendas e proventos importados do portfolio ${activePortfolio?.name}.`;
 
   return (
     <>
       <TopBar title="Operações" />
       <main className="flex-1 space-y-6 p-4 md:p-6">
         <PageHeader
-          title="Histórico de operações"
-          description="Compras, vendas e proventos importados das suas notas de corretagem."
+          title={title}
+          description={description}
           actions={
             <Link
               href="/import"
@@ -88,6 +148,7 @@ export default function OperationsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Data</TableHead>
+                  {scope.isGlobalScope ? <TableHead>Portfolio</TableHead> : null}
                   <TableHead>Ativo</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead className="text-right">Qtd.</TableHead>
@@ -98,8 +159,13 @@ export default function OperationsPage() {
               </TableHeader>
               <TableBody>
                 {operations.map((op) => (
-                  <TableRow key={op.id}>
+                  <TableRow key={`${op.portfolioId}-${op.id}`}>
                     <TableCell>{formatDate(op.date)}</TableCell>
+                    {scope.isGlobalScope ? (
+                      <TableCell>
+                        <Badge variant="outline">{op.portfolioName}</Badge>
+                      </TableCell>
+                    ) : null}
                     <TableCell className="font-medium">{op.assetCode}</TableCell>
                     <TableCell>
                       <Badge

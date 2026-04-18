@@ -1,4 +1,4 @@
-.PHONY: help install init reset-db create-portfolio adjust-balance check-balance import-all portfolio-overview lint type-check test clean server
+.PHONY: help install init reset-db create-portfolio adjust-balance check-balance import-all portfolio-overview lint type-check test clean server frontend-install frontend-dev frontend-build frontend-test frontend-lint
 
 help:
 	@echo "IA-Invest - Available commands:"
@@ -22,6 +22,13 @@ help:
 	@echo ""
 	@echo "Server:"
 	@echo "  make server               Start MCP server"
+	@echo ""
+	@echo "Frontend:"
+	@echo "  make frontend-install     Install frontend dependencies (npm ci)"
+	@echo "  make frontend-dev         Start frontend dev server (http://localhost:3000)"
+	@echo "  make frontend-build       Build frontend for production"
+	@echo "  make frontend-test        Run frontend Vitest tests"
+	@echo "  make frontend-lint        Run frontend ESLint"
 	@echo ""
 	@echo "Development:"
 	@echo "  make lint                 Run ruff linter"
@@ -63,6 +70,21 @@ import-all:
 
 server:
 	uv run python -m mcp_server.server
+
+frontend-install:
+	cd frontend && npm ci
+
+frontend-dev:
+	cd frontend && npm run dev
+
+frontend-build:
+	cd frontend && npm run build
+
+frontend-test:
+	cd frontend && npm run test
+
+frontend-lint:
+	cd frontend && npm run lint
 
 lint:
 	uv run ruff check .

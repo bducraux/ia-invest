@@ -12,6 +12,9 @@ O projeto é **local-first**: processamento local de arquivos, armazenamento em 
 com separação lógica por portfólio, e exposição dos dados via protocolo MCP para uso com
 clientes como o Claude Desktop.
 
+Também inclui uma interface web em pasta separada, em `frontend/`, para manter o projeto
+organizado sem acoplar o runtime Node.js ao backend Python.
+
 ---
 
 ## Quickstart
@@ -107,6 +110,25 @@ uv run ruff check .
 uv run mypy .
 ```
 
+### 7. Rodar o frontend (pasta separada)
+
+Pré-requisito: Node.js 20.9+ (recomendado 22+) e npm 10+.
+
+```bash
+make frontend-install
+make frontend-dev
+```
+
+A interface abrirá em http://localhost:3000.
+
+Outros comandos úteis:
+
+```bash
+make frontend-lint
+make frontend-test
+make frontend-build
+```
+
 ---
 
 ## Estrutura do projeto
@@ -131,6 +153,7 @@ ia-invest/
 ├── mcp_server/              # Servidor MCP local
 │   ├── tools/               # Ferramentas expostas ao agente
 │   └── resources/           # Recursos estáticos MCP
+├── frontend/                # Frontend Next.js (UI web, separado do backend)
 ├── scripts/                 # Scripts operacionais
 └── tests/                   # Testes automatizados
 ```

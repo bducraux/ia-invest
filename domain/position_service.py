@@ -86,7 +86,6 @@ class PositionService:
                     realized_pnl += proceeds - cost_sold
                     total_cost -= cost_sold
                 quantity -= qty
-                quantity = max(0.0, quantity)  # guard against rounding
 
             elif op_type in _INCOME_TYPES:
                 dividends += gross - fees

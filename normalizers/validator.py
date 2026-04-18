@@ -16,6 +16,13 @@ _ASSET_TYPES = {
     "international", "option", "fund",
 }
 
+_ASSET_ALIASES = {
+    # Token rebrand: Render Token (RNDR) -> Render (RENDER)
+    "RNDR": "RENDER",
+    # Polygon token migration: MATIC -> POL (1:1)
+    "MATIC": "POL",
+}
+
 _DATE_FORMATS = [
     "%Y-%m-%d",
     "%d/%m/%Y",
@@ -148,6 +155,19 @@ def normalise_operation_type(value: str | None) -> str:
         )
 
     return canonical
+
+
+def normalise_asset_code(value: str | None) -> str:
+    """Normalise asset/ticker code to canonical uppercase symbol.
+
+    Raises:
+        ValueError: if code is empty.
+    """
+    if not value or not str(value).strip():
+        raise ValueError("Asset code is required.")
+
+    raw = str(value).strip().upper()
+    return _ASSET_ALIASES.get(raw, raw)
 
 
 def infer_asset_type(asset_code: str) -> str:

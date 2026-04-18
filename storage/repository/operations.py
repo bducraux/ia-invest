@@ -108,3 +108,40 @@ class OperationRepository:
             params,
         ).fetchall()
         return [dict(r) for r in rows]
+
+    def list_all_by_portfolio(
+        self,
+        portfolio_id: str,
+        *,
+        asset_code: str | None = None,
+        operation_type: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """List all operations for a portfolio (no pagination)."""
+        conditions = ["portfolio_id = ?"]
+        params: list[Any] = [portfolio_id]
+
+        if asset_code:
+            conditions.append("asset_code = ?")
+            params.append(asset_code)
+        if operation_type:
+            conditions.append("operation_type = ?")
+            params.append(operation_type)
+        if start_date:
+            conditions.append("operation_date >= ?")
+            params.append(start_date)
+        if end_date:
+            conditions.append("operation_date <= ?")
+            params.append(end_date)
+
+        where = " AND ".join(conditions)
+        rows = self._conn.execute(
+            f"""
+            SELECT * FROM operations
+            WHERE {where}
+            ORDER BY operation_date DESC, id DESC
+            """,
+            params,
+        ).fetchall()
+        return [dict(r) for r in rows]

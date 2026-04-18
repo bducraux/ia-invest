@@ -12,12 +12,18 @@ from __future__ import annotations
 from extractors.b3_csv import B3CsvExtractor
 from extractors.base import BaseExtractor, ExtractionResult
 from extractors.binance_csv import BinanceCsvExtractor
+from extractors.binance_simple_earn import BinanceSimpleEarnExtractor
 from extractors.broker_csv import BrokerCsvExtractor
+from extractors.gorila_b3_xlsx import GorilaB3XlsxExtractor
+from extractors.gorila_xlsx import GorilaXlsxExtractor
 
 _REGISTRY: dict[str, type[BaseExtractor]] = {
     "b3_csv": B3CsvExtractor,
     "broker_csv": BrokerCsvExtractor,
     "binance_csv": BinanceCsvExtractor,
+    "binance_simple_earn": BinanceSimpleEarnExtractor,
+    "gorila_b3_xlsx": GorilaB3XlsxExtractor,
+    "gorila_xlsx": GorilaXlsxExtractor,
 }
 
 
@@ -42,6 +48,8 @@ __all__ = [
     "B3CsvExtractor",
     "BrokerCsvExtractor",
     "BinanceCsvExtractor",
+    "GorilaB3XlsxExtractor",
+    "GorilaXlsxExtractor",
     "get_extractor",
     "list_source_types",
 ]

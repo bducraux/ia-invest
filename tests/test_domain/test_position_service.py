@@ -100,3 +100,16 @@ def test_idempotent(svc: PositionService) -> None:
     pos2 = svc.calculate(ops, "p1")
     assert pos1[0].quantity == pos2[0].quantity
     assert pos1[0].realized_pnl == pos2[0].realized_pnl
+
+
+def test_negative_intermediate_quantity_is_not_clamped(svc: PositionService) -> None:
+    ops = [
+        _op("USDT", "transfer_out", 300.3, 0, date="2022-01-01", idx=1),
+        _op("USDT", "buy", 500.0, 250000, date="2022-01-02", idx=2),
+    ]
+
+    positions = svc.calculate(ops, "p1")
+    pos = positions[0]
+
+    # Arithmetic net must be preserved: -300.3 + 500 = 199.7
+    assert pos.quantity == pytest.approx(199.7)

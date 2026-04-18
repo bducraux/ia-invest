@@ -6,6 +6,7 @@ import pytest
 
 from normalizers.validator import (
     infer_asset_type,
+    normalise_asset_code,
     normalise_operation_type,
     parse_date,
     parse_monetary_cents,
@@ -116,3 +117,18 @@ class TestInferAssetType:
 
     def test_bdr(self) -> None:
         assert infer_asset_type("AAPL34") == "bdr"
+
+
+class TestNormaliseAssetCode:
+    def test_uppercase_preserved(self) -> None:
+        assert normalise_asset_code("btc") == "BTC"
+
+    def test_rndr_alias_to_render(self) -> None:
+        assert normalise_asset_code("RNDR") == "RENDER"
+
+    def test_matic_alias_to_pol(self) -> None:
+        assert normalise_asset_code("MATIC") == "POL"
+
+    def test_empty_raises(self) -> None:
+        with pytest.raises(ValueError):
+            normalise_asset_code("")

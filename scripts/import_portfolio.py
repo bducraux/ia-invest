@@ -236,7 +236,7 @@ def import_portfolio(
                 skipped += db_skipped
 
                 # Recalculate positions
-                all_ops = op_repo.list_by_portfolio(portfolio_id)
+                all_ops = op_repo.list_all_by_portfolio(portfolio_id)
                 positions = pos_svc.calculate(all_ops, portfolio_id)
                 pos_repo.upsert_many(positions)
 

@@ -35,17 +35,32 @@ class Database:
         return self._conn
 
     def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self._db_path)
+        # Wait longer before failing when another process holds a write lock.
+        conn = sqlite3.connect(self._db_path, timeout=30.0)
         conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA busy_timeout=30000")
         conn.execute("PRAGMA foreign_keys=ON")
         return conn
 
     def initialize(self) -> None:
-        """Apply schema.sql if the database has not been initialised yet."""
+        """Apply schema.sql only when the database appears uninitialised."""
+        if self._is_initialized():
+            return
+
         schema_sql = _SCHEMA_PATH.read_text(encoding="utf-8")
         self.connection.executescript(schema_sql)
         self.connection.commit()
+
+    def _is_initialized(self) -> bool:
+        row = self.connection.execute(
+            """
+            SELECT 1
+            FROM sqlite_master
+            WHERE type = 'table' AND name = 'portfolios'
+            LIMIT 1
+            """
+        ).fetchone()
+        return row is not None
 
     def close(self) -> None:
         if self._conn is not None:

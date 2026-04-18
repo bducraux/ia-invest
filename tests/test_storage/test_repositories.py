@@ -92,6 +92,37 @@ def test_operation_dedup_on_insert(db: Database) -> None:
     assert skipped == 1
 
 
+def test_operation_list_all_by_portfolio_returns_full_history(db: Database) -> None:
+    p_repo = PortfolioRepository(db.connection)
+    p_repo.upsert(Portfolio(id="rv", name="RV", base_currency="BRL", status="active"))
+
+    op_repo = OperationRepository(db.connection)
+    ops = [
+        Operation(
+            portfolio_id="rv",
+            source="broker_csv",
+            external_id=f"OP{i}",
+            asset_code="PETR4",
+            asset_type="stock",
+            operation_type="buy",
+            operation_date="2024-01-15",
+            quantity=1.0,
+            unit_price=100,
+            gross_value=100,
+        )
+        for i in range(600)
+    ]
+    inserted, skipped = op_repo.insert_many(ops)
+    assert inserted == 600
+    assert skipped == 0
+
+    paged = op_repo.list_by_portfolio("rv")
+    full = op_repo.list_all_by_portfolio("rv")
+
+    assert len(paged) == 500
+    assert len(full) == 600
+
+
 def test_position_upsert_and_get(db: Database) -> None:
     p_repo = PortfolioRepository(db.connection)
     p_repo.upsert(Portfolio(id="rv", name="RV", base_currency="BRL", status="active"))

@@ -103,3 +103,93 @@ def test_normalize_mixed_valid_and_invalid(normalizer: OperationNormalizer) -> N
     result = normalizer.normalize(records, "test-portfolio")
     assert len(result.valid) == 2
     assert len(result.errors) == 1
+
+
+def test_normalize_generates_external_id_when_missing(
+    normalizer: OperationNormalizer,
+) -> None:
+    raw = _raw({"external_id": None})
+    r1 = normalizer.normalize([raw], "p")
+    r2 = normalizer.normalize([raw], "p")
+    assert len(r1.valid) == 1
+    assert len(r2.valid) == 1
+    assert r1.valid[0].external_id is not None
+    assert r1.valid[0].external_id == r2.valid[0].external_id
+
+
+def test_normalize_asset_alias_rndr_to_render(
+    normalizer: OperationNormalizer,
+) -> None:
+    result = normalizer.normalize([_raw({"asset_code": "RNDR", "asset_type": "crypto"})], "p")
+    assert len(result.valid) == 1
+    assert result.valid[0].asset_code == "RENDER"
+
+
+def test_normalize_asset_alias_matic_to_pol(
+    normalizer: OperationNormalizer,
+) -> None:
+    result = normalizer.normalize([_raw({"asset_code": "MATIC", "asset_type": "crypto"})], "p")
+    assert len(result.valid) == 1
+    assert result.valid[0].asset_code == "POL"
+
+
+def test_binance_buy_generates_quote_leg_transfer_out(
+    normalizer: OperationNormalizer,
+) -> None:
+    raw = _raw(
+        {
+            "source": "binance_csv",
+            "asset_code": "ETH",
+            "asset_type": "crypto",
+            "operation_type": "buy",
+            "quantity": "1",
+            "unit_price": "2000",
+            "gross_value": "2000",
+            "fees": "2",
+            "fee_unit": "USDT",
+            "quote_currency": "USDT",
+            "external_id": "BIN001",
+        }
+    )
+    result = normalizer.normalize([raw], "p")
+    assert result.errors == []
+    assert len(result.valid) == 2
+
+    main_op = next(op for op in result.valid if op.asset_code == "ETH")
+    quote_op = next(op for op in result.valid if op.asset_code == "USDT")
+
+    assert main_op.operation_type == "buy"
+    assert quote_op.operation_type == "transfer_out"
+    assert quote_op.quantity == 2002.0
+    assert quote_op.external_id == "BIN001:quote"
+
+
+def test_binance_sell_generates_quote_leg_transfer_in(
+    normalizer: OperationNormalizer,
+) -> None:
+    raw = _raw(
+        {
+            "source": "binance_csv",
+            "asset_code": "ETH",
+            "asset_type": "crypto",
+            "operation_type": "sell",
+            "quantity": "1",
+            "unit_price": "2500",
+            "gross_value": "2500",
+            "fees": "1",
+            "fee_unit": "USDT",
+            "quote_currency": "USDT",
+            "external_id": "BIN002",
+        }
+    )
+    result = normalizer.normalize([raw], "p")
+    assert result.errors == []
+    assert len(result.valid) == 2
+
+    main_op = next(op for op in result.valid if op.asset_code == "ETH")
+    quote_op = next(op for op in result.valid if op.asset_code == "USDT")
+
+    assert main_op.operation_type == "sell"
+    assert quote_op.operation_type == "transfer_in"
+    assert quote_op.quantity == 2499.0
+    assert quote_op.external_id == "BIN002:quote"

@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 240 10% 3.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 3.9%;
+  --muted: 240 4.8% 95.9%;
+  --muted-foreground: 240 3.8% 46.1%;
+  --border: 240 5.9% 90%;
+  --input: 240 5.9% 90%;
+  --primary: 158 64% 42%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 240 4.8% 95.9%;
+  --accent-foreground: 240 5.9% 10%;
+  --destructive: 0 72% 51%;
+  --positive: 158 64% 42%;
+  --negative: 0 72% 51%;
+  --ring: 158 64% 42%;
+}
+
+.dark {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --card: 240 8% 6%;
+  --card-foreground: 0 0% 98%;
+  --muted: 240 6% 12%;
+  --muted-foreground: 240 5% 64.9%;
+  --border: 240 6% 15%;
+  --input: 240 6% 15%;
+  --primary: 158 64% 52%;
+  --primary-foreground: 240 10% 3.9%;
+  --accent: 240 6% 12%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 72% 60%;
+  --positive: 158 64% 52%;
+  --negative: 0 72% 60%;
+  --ring: 158 64% 52%;
+}
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-positive: hsl(var(--positive));
+  --color-negative: hsl(var(--negative));
+  --color-ring: hsl(var(--ring));
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji";
+  --font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+html,
+body {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+body {
+  font-feature-settings: "rlig" 1, "calt" 1, "tnum" 1;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}

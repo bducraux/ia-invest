@@ -99,6 +99,19 @@ CREATE TABLE IF NOT EXISTS positions (
 CREATE INDEX IF NOT EXISTS idx_positions_portfolio ON positions(portfolio_id);
 
 -- ---------------------------------------------------------------------------
+-- market_quotes_cache
+-- Cached market quotes in cents for dashboard and position valuation.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS market_quotes_cache (
+    asset_code      TEXT PRIMARY KEY,
+    price_cents     INTEGER NOT NULL,
+    source          TEXT NOT NULL,
+    fetched_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_market_quotes_fetched_at ON market_quotes_cache(fetched_at);
+
+-- ---------------------------------------------------------------------------
 -- import_jobs
 -- Audit trail for each file import attempt.
 -- ---------------------------------------------------------------------------

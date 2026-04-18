@@ -5,6 +5,7 @@ from storage.repository.import_jobs import ImportJobRepository
 from storage.repository.operations import OperationRepository
 from storage.repository.portfolios import PortfolioRepository
 from storage.repository.positions import PositionRepository
+from storage.repository.quotes import QuoteRepository
 
 __all__ = [
     "Database",
@@ -12,4 +13,5 @@ __all__ = [
     "OperationRepository",
     "PositionRepository",
     "ImportJobRepository",
+    "QuoteRepository",
 ]

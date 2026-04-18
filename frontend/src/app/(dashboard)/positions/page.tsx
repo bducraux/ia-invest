@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Card,
   CardContent,
@@ -21,7 +23,7 @@ import {
   formatPercent,
   formatQuantity,
 } from "@/lib/money";
-import { mockPositions } from "@/mocks/data";
+import { usePortfolioPositions, usePortfolios } from "@/lib/queries";
 
 const classLabels: Record<string, string> = {
   ACAO: "Ação",
@@ -33,6 +35,37 @@ const classLabels: Record<string, string> = {
 };
 
 export default function PositionsPage() {
+  const portfoliosQuery = usePortfolios();
+  const activePortfolio = portfoliosQuery.data?.[0];
+  const positionsQuery = usePortfolioPositions(activePortfolio?.id, true);
+
+  if (portfoliosQuery.isLoading || positionsQuery.isLoading) {
+    return (
+      <>
+        <TopBar title="Posições" />
+        <main className="flex-1 space-y-6 p-4 md:p-6">
+          <PageHeader title="Posições atuais" description="Carregando dados do backend..." />
+        </main>
+      </>
+    );
+  }
+
+  if (portfoliosQuery.error || positionsQuery.error) {
+    return (
+      <>
+        <TopBar title="Posições" />
+        <main className="flex-1 space-y-6 p-4 md:p-6">
+          <PageHeader
+            title="Posições atuais"
+            description="Falha ao carregar posições. Verifique se a API está rodando."
+          />
+        </main>
+      </>
+    );
+  }
+
+  const positions = positionsQuery.data ?? [];
+
   return (
     <>
       <TopBar title="Posições" />
@@ -61,7 +94,7 @@ export default function PositionsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mockPositions.map((p) => (
+                {positions.map((p) => (
                   <TableRow key={p.assetCode}>
                     <TableCell>
                       <div className="flex flex-col">

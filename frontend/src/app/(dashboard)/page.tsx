@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Card,
   CardContent,
@@ -25,10 +27,7 @@ import {
   formatPercent,
 } from "@/lib/money";
 import { formatDate } from "@/lib/date";
-import {
-  mockOperations,
-  mockSummary,
-} from "@/mocks/data";
+import { usePortfolioOperations, usePortfolios, usePortfolioSummary } from "@/lib/queries";
 import {
   Banknote,
   Coins,
@@ -37,8 +36,56 @@ import {
 } from "lucide-react";
 
 export default function OverviewPage() {
-  const summary = mockSummary;
-  const recent = mockOperations.slice(0, 6);
+  const portfoliosQuery = usePortfolios();
+  const activePortfolio = portfoliosQuery.data?.[0];
+
+  const summaryQuery = usePortfolioSummary(activePortfolio?.id);
+  const operationsQuery = usePortfolioOperations(activePortfolio?.id, {
+    limit: 6,
+    offset: 0,
+  });
+
+  const isLoading = portfoliosQuery.isLoading || summaryQuery.isLoading || operationsQuery.isLoading;
+  const error = portfoliosQuery.error || summaryQuery.error || operationsQuery.error;
+
+  if (isLoading) {
+    return (
+      <>
+        <TopBar title="Visão geral" />
+        <main className="flex-1 space-y-6 p-4 md:p-6">
+          <PageHeader title="Sua carteira" description="Carregando dados do backend..." />
+        </main>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <TopBar title="Visão geral" />
+        <main className="flex-1 space-y-6 p-4 md:p-6">
+          <PageHeader
+            title="Sua carteira"
+            description="Falha ao carregar dados da API. Verifique se o backend está rodando."
+          />
+        </main>
+      </>
+    );
+  }
+
+  if (!activePortfolio || !summaryQuery.data) {
+    return (
+      <>
+        <TopBar title="Visão geral" />
+        <main className="flex-1 space-y-6 p-4 md:p-6">
+          <PageHeader title="Sua carteira" description="Nenhuma carteira ativa encontrada." />
+        </main>
+      </>
+    );
+  }
+
+  const summary = summaryQuery.data;
+  const recent = operationsQuery.data?.operations ?? [];
 
   return (
     <>
@@ -46,7 +93,7 @@ export default function OverviewPage() {
       <main className="flex-1 space-y-6 p-4 md:p-6">
         <PageHeader
           title="Sua carteira"
-          description="Resumo consolidado em tempo real, com dados locais."
+          description={`Resumo consolidado em tempo real (${activePortfolio.name}).`}
         />
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

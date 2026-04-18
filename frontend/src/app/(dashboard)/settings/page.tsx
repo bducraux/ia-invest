@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Card,
   CardContent,
@@ -7,9 +9,38 @@ import {
 } from "@/components/ui/card";
 import { TopBar } from "@/components/layout/topbar";
 import { PageHeader } from "@/components/layout/page-header";
-import { mockPortfolios } from "@/mocks/data";
+import { usePortfolios } from "@/lib/queries";
 
 export default function SettingsPage() {
+  const portfoliosQuery = usePortfolios();
+
+  if (portfoliosQuery.isLoading) {
+    return (
+      <>
+        <TopBar title="Configurações" />
+        <main className="flex-1 space-y-6 p-4 md:p-6">
+          <PageHeader title="Configurações" description="Carregando carteiras..." />
+        </main>
+      </>
+    );
+  }
+
+  if (portfoliosQuery.error) {
+    return (
+      <>
+        <TopBar title="Configurações" />
+        <main className="flex-1 space-y-6 p-4 md:p-6">
+          <PageHeader
+            title="Configurações"
+            description="Falha ao carregar carteiras. Verifique se a API está rodando."
+          />
+        </main>
+      </>
+    );
+  }
+
+  const portfolios = portfoliosQuery.data ?? [];
+
   return (
     <>
       <TopBar title="Configurações" />
@@ -27,7 +58,7 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            {mockPortfolios.map((p) => (
+            {portfolios.map((p) => (
               <div
                 key={p.id}
                 className="flex items-center justify-between rounded-md border border-border px-4 py-3"

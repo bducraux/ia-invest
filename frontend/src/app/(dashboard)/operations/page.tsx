@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Card,
   CardContent,
@@ -17,11 +19,46 @@ import { TopBar } from "@/components/layout/topbar";
 import { PageHeader } from "@/components/layout/page-header";
 import { formatBRL, formatQuantity } from "@/lib/money";
 import { formatDate } from "@/lib/date";
-import { mockOperations } from "@/mocks/data";
+import { usePortfolioOperations, usePortfolios } from "@/lib/queries";
 import Link from "next/link";
 import { Upload } from "lucide-react";
 
 export default function OperationsPage() {
+  const portfoliosQuery = usePortfolios();
+  const activePortfolio = portfoliosQuery.data?.[0];
+  const operationsQuery = usePortfolioOperations(activePortfolio?.id, {
+    limit: 100,
+    offset: 0,
+  });
+
+  if (portfoliosQuery.isLoading || operationsQuery.isLoading) {
+    return (
+      <>
+        <TopBar title="Operações" />
+        <main className="flex-1 space-y-6 p-4 md:p-6">
+          <PageHeader title="Histórico de operações" description="Carregando dados do backend..." />
+        </main>
+      </>
+    );
+  }
+
+  if (portfoliosQuery.error || operationsQuery.error) {
+    return (
+      <>
+        <TopBar title="Operações" />
+        <main className="flex-1 space-y-6 p-4 md:p-6">
+          <PageHeader
+            title="Histórico de operações"
+            description="Falha ao carregar operações. Verifique se a API está rodando."
+          />
+        </main>
+      </>
+    );
+  }
+
+  const operations = operationsQuery.data?.operations ?? [];
+  const total = operationsQuery.data?.total ?? 0;
+
   return (
     <>
       <TopBar title="Operações" />
@@ -43,7 +80,7 @@ export default function OperationsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base text-foreground">
-              {mockOperations.length} operações
+              {total} operações
             </CardTitle>
           </CardHeader>
           <CardContent className="px-0">
@@ -60,7 +97,7 @@ export default function OperationsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mockOperations.map((op) => (
+                {operations.map((op) => (
                   <TableRow key={op.id}>
                     <TableCell>{formatDate(op.date)}</TableCell>
                     <TableCell className="font-medium">{op.assetCode}</TableCell>

@@ -471,9 +471,9 @@ function FixedIncomeForm({
         />
       </Field>
       {error && (
-        <p className="md:col-span-2 text-sm text-destructive">{error}</p>
+        <p className="col-span-2 text-sm text-destructive">{error}</p>
       )}
-      <div className="md:col-span-2">
+      <div className="col-span-2">
         <Button type="submit" disabled={disabled}>
           {disabled ? "Salvando..." : "Salvar aplicação"}
         </Button>

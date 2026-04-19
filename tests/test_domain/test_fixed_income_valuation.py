@@ -84,10 +84,8 @@ def test_cdb_pre_above_720_days_uses_15_pct_bracket() -> None:
     assert result.days_since_application > 720
     # IR amount should be 15% of gross income.
     expected_ir = (
-        (Decimal(result.gross_value_current_brl) - Decimal(result.gross_income_current_brl) * 0)
-        - Decimal(pos.principal_applied_brl)
-    )
-    expected_ir = (Decimal(result.gross_income_current_brl) * Decimal("0.15")).quantize(Decimal("1"))
+        Decimal(result.gross_income_current_brl) * Decimal("0.15")
+    ).quantize(Decimal("1"))
     assert abs(result.estimated_ir_current_brl - int(expected_ir)) <= 1
 
 

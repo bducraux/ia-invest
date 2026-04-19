@@ -6,6 +6,7 @@ import {
   PieChart,
   ListOrdered,
   Coins,
+  Landmark,
   Upload,
   Settings,
   TrendingUp,
@@ -24,6 +25,7 @@ const items = [
   { href: "/positions", label: "Posições", icon: PieChart },
   { href: "/operations", label: "Operações", icon: ListOrdered },
   { href: "/dividends", label: "Proventos", icon: Coins },
+  { href: "/fixed-income", label: "Renda fixa", icon: Landmark },
   { href: "/import", label: "Importar", icon: Upload },
   { href: "/settings", label: "Configurações", icon: Settings },
 ];

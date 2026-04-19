@@ -157,6 +157,50 @@ CREATE TABLE IF NOT EXISTS import_errors (
 CREATE INDEX IF NOT EXISTS idx_import_errors_job ON import_errors(import_job_id);
 
 -- ---------------------------------------------------------------------------
+-- fixed_income_positions
+-- One row per individual brazilian fixed-income application (CDB, LCI, LCA).
+-- Calculated values (gross/net/IR) are recomputed on the fly by the
+-- FixedIncomeValuationService and are NOT persisted here.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS fixed_income_positions (
+    id                            INTEGER PRIMARY KEY AUTOINCREMENT,
+    portfolio_id                  TEXT NOT NULL REFERENCES portfolios(id),
+    import_job_id                 INTEGER REFERENCES import_jobs(id),
+
+    external_id                   TEXT,
+    institution                   TEXT NOT NULL,
+    asset_type                    TEXT NOT NULL CHECK (asset_type IN ('CDB','LCI','LCA')),
+    product_name                  TEXT NOT NULL,
+    remuneration_type             TEXT NOT NULL CHECK (remuneration_type IN ('PRE','CDI_PERCENT')),
+    benchmark                     TEXT NOT NULL CHECK (benchmark IN ('NONE','CDI')),
+    investor_type                 TEXT NOT NULL DEFAULT 'PF' CHECK (investor_type IN ('PF')),
+    currency                      TEXT NOT NULL DEFAULT 'BRL',
+
+    application_date              TEXT NOT NULL,
+    maturity_date                 TEXT NOT NULL,
+    liquidity_label               TEXT,
+    principal_applied_brl         INTEGER NOT NULL CHECK (principal_applied_brl > 0),
+    fixed_rate_annual_percent     REAL,
+    benchmark_percent             REAL,
+
+    imported_gross_value_brl      INTEGER,
+    imported_net_value_brl        INTEGER,
+    imported_estimated_ir_brl     INTEGER,
+    valuation_reference_date      TEXT,
+    notes                         TEXT,
+
+    status                        TEXT NOT NULL DEFAULT 'ACTIVE'
+                                       CHECK (status IN ('ACTIVE','MATURED','REDEEMED')),
+
+    created_at                    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    updated_at                    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_fi_positions_portfolio ON fixed_income_positions(portfolio_id);
+CREATE INDEX IF NOT EXISTS idx_fi_positions_status    ON fixed_income_positions(portfolio_id, status);
+CREATE INDEX IF NOT EXISTS idx_fi_positions_asset     ON fixed_income_positions(portfolio_id, asset_type);
+
+-- ---------------------------------------------------------------------------
 -- schema_migrations
 -- Tracks applied migrations.
 -- ---------------------------------------------------------------------------
@@ -168,4 +212,7 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 
 -- Record this baseline migration
 INSERT OR IGNORE INTO schema_migrations (version, description)
-VALUES ('0001', 'initial schema');
+VALUES
+    ('0001', 'initial schema'),
+    ('0002', 'market quote cache table'),
+    ('0003', 'fixed income positions table');

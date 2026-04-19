@@ -112,3 +112,108 @@ export function refreshQuotes(portfolioId?: string): Promise<QuoteRefreshRespons
   }
   return apiPost<QuoteRefreshResponse>("/api/quotes/refresh");
 }
+
+// --- Fixed income (renda fixa) -----------------------------------------------
+
+export interface FixedIncomePosition {
+  id: number;
+  institution: string;
+  assetType: "CDB" | "LCI" | "LCA";
+  productName: string;
+  remunerationType: "PRE" | "CDI_PERCENT";
+  benchmark: "NONE" | "CDI";
+  investorType: string;
+  currency: string;
+  applicationDate: string;
+  maturityDate: string;
+  liquidityLabel: string | null;
+  principalAppliedBrl: number;     // cents
+  fixedRateAnnualPercent: number | null;
+  benchmarkPercent: number | null;
+  grossValueCurrentBrl: number;    // cents
+  grossIncomeCurrentBrl: number;   // cents
+  estimatedIrCurrentBrl: number;   // cents
+  netValueCurrentBrl: number;      // cents
+  taxBracketCurrent: string | null;
+  daysSinceApplication: number;
+  valuationDate: string;
+  isComplete: boolean;
+  incompleteReason: string | null;
+  status: string;
+  importedGrossValueBrl: number | null;
+  importedNetValueBrl: number | null;
+  importedEstimatedIrBrl: number | null;
+  grossDiffBrl: number | null;
+  netDiffBrl: number | null;
+  notes: string | null;
+}
+
+export interface FixedIncomeImportResponse {
+  imported: number;
+  failed: number;
+  positions: FixedIncomePosition[];
+  errors: { rowIndex: number | null; message: string; field: string | null }[];
+}
+
+export interface CreateFixedIncomeInput {
+  institution: string;
+  assetType: "CDB" | "LCI" | "LCA";
+  productName: string;
+  remunerationType: "PRE" | "CDI_PERCENT";
+  benchmark?: "NONE" | "CDI";
+  applicationDate: string;
+  maturityDate: string;
+  principalAppliedBrl: number;
+  fixedRateAnnualPercent?: number | null;
+  benchmarkPercent?: number | null;
+  liquidityLabel?: string | null;
+  notes?: string | null;
+}
+
+export async function getFixedIncomePositions(
+  portfolioId: string,
+): Promise<FixedIncomePosition[]> {
+  const response = await apiFetch<{ positions: FixedIncomePosition[] }>(
+    `/api/portfolios/${portfolioId}/fixed-income`,
+  );
+  return response.positions;
+}
+
+export async function createFixedIncomePosition(
+  portfolioId: string,
+  input: CreateFixedIncomeInput,
+): Promise<FixedIncomePosition> {
+  const response = await fetch(
+    `${API_BASE}/api/portfolios/${portfolioId}/fixed-income`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+  );
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`API ${response.status}: ${body || response.statusText}`);
+  }
+  return (await response.json()) as FixedIncomePosition;
+}
+
+export async function importFixedIncomeCSV(
+  portfolioId: string,
+  file: File,
+): Promise<FixedIncomeImportResponse> {
+  const form = new FormData();
+  form.append("file", file);
+  const response = await fetch(
+    `${API_BASE}/api/portfolios/${portfolioId}/fixed-income/import-csv`,
+    { method: "POST", body: form },
+  );
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`API ${response.status}: ${body || response.statusText}`);
+  }
+  return (await response.json()) as FixedIncomeImportResponse;
+}

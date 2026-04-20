@@ -13,13 +13,17 @@ from pathlib import Path
 from typing import Any
 
 from dateutil.relativedelta import relativedelta
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from domain.fixed_income import FixedIncomePosition
+from domain.fixed_income_valuation import FixedIncomeValuationService
 from mcp_server.services.quotes import MarketQuoteService
 from mcp_server.tools.portfolios import get_portfolio_operations
+from normalizers.fixed_income_csv import FixedIncomeCSVImporter
 from storage.repository.db import Database
+from storage.repository.fixed_income import FixedIncomePositionRepository
 from storage.repository.operations import OperationRepository
 from storage.repository.portfolios import PortfolioRepository
 from storage.repository.positions import PositionRepository
@@ -109,6 +113,74 @@ class QuoteRefreshResponse(BaseModel):
     cacheStaleCount: int
     avgFallbackCount: int
     failedCount: int
+
+
+# --- Fixed-income (renda fixa) -----------------------------------------------
+
+
+class FixedIncomePositionCreate(BaseModel):
+    institution: str
+    assetType: str               # CDB | LCI | LCA
+    productName: str
+    remunerationType: str        # PRE | CDI_PERCENT
+    benchmark: str | None = None
+    applicationDate: str
+    maturityDate: str
+    principalAppliedBrl: int     # cents
+    fixedRateAnnualPercent: float | None = None
+    benchmarkPercent: float | None = None
+    liquidityLabel: str | None = None
+    notes: str | None = None
+
+
+class FixedIncomePositionOut(BaseModel):
+    id: int
+    institution: str
+    assetType: str
+    productName: str
+    remunerationType: str
+    benchmark: str
+    investorType: str
+    currency: str
+    applicationDate: str
+    maturityDate: str
+    liquidityLabel: str | None = None
+    principalAppliedBrl: int
+    fixedRateAnnualPercent: float | None = None
+    benchmarkPercent: float | None = None
+    grossValueCurrentBrl: int
+    grossIncomeCurrentBrl: int
+    estimatedIrCurrentBrl: int
+    netValueCurrentBrl: int
+    taxBracketCurrent: str | None = None
+    daysSinceApplication: int
+    valuationDate: str
+    isComplete: bool
+    incompleteReason: str | None = None
+    status: str
+    importedGrossValueBrl: int | None = None
+    importedNetValueBrl: int | None = None
+    importedEstimatedIrBrl: int | None = None
+    grossDiffBrl: int | None = None
+    netDiffBrl: int | None = None
+    notes: str | None = None
+
+
+class FixedIncomePositionsResponse(BaseModel):
+    positions: list[FixedIncomePositionOut]
+
+
+class FixedIncomeImportError(BaseModel):
+    rowIndex: int | None = None
+    message: str
+    field: str | None = None
+
+
+class FixedIncomeImportResponse(BaseModel):
+    imported: int
+    failed: int
+    positions: list[FixedIncomePositionOut]
+    errors: list[FixedIncomeImportError]
 
 
 def _to_ui_operation_type(operation_type: str) -> str:
@@ -511,6 +583,166 @@ def create_http_app(
             ytdReturnPct=ytd_return_pct,
             allocation=allocation,
             performance=_build_performance_series(market_value),
+        )
+
+    # ------------------------------------------------------------------
+    # Fixed-income (renda fixa) endpoints
+    # ------------------------------------------------------------------
+
+    def _serialize_fi(
+        position: FixedIncomePosition,
+        valuation_service: FixedIncomeValuationService,
+    ) -> FixedIncomePositionOut:
+        valuation = valuation_service.revalue(position)
+        diff_gross = (
+            position.imported_gross_value_brl - valuation.gross_value_current_brl
+            if position.imported_gross_value_brl is not None
+            else None
+        )
+        diff_net = (
+            position.imported_net_value_brl - valuation.net_value_current_brl
+            if position.imported_net_value_brl is not None
+            else None
+        )
+        return FixedIncomePositionOut(
+            id=position.id or 0,
+            institution=position.institution,
+            assetType=position.asset_type,
+            productName=position.product_name,
+            remunerationType=position.remuneration_type,
+            benchmark=position.benchmark,
+            investorType=position.investor_type,
+            currency=position.currency,
+            applicationDate=position.application_date,
+            maturityDate=position.maturity_date,
+            liquidityLabel=position.liquidity_label,
+            principalAppliedBrl=position.principal_applied_brl,
+            fixedRateAnnualPercent=position.fixed_rate_annual_percent,
+            benchmarkPercent=position.benchmark_percent,
+            grossValueCurrentBrl=valuation.gross_value_current_brl,
+            grossIncomeCurrentBrl=valuation.gross_income_current_brl,
+            estimatedIrCurrentBrl=valuation.estimated_ir_current_brl,
+            netValueCurrentBrl=valuation.net_value_current_brl,
+            taxBracketCurrent=valuation.tax_bracket_current,
+            daysSinceApplication=valuation.days_since_application,
+            valuationDate=valuation.valuation_date,
+            isComplete=valuation.is_complete,
+            incompleteReason=valuation.incomplete_reason,
+            status=position.status,
+            importedGrossValueBrl=position.imported_gross_value_brl,
+            importedNetValueBrl=position.imported_net_value_brl,
+            importedEstimatedIrBrl=position.imported_estimated_ir_brl,
+            grossDiffBrl=diff_gross,
+            netDiffBrl=diff_net,
+            notes=position.notes,
+        )
+
+    @app.get(
+        "/api/portfolios/{portfolio_id}/fixed-income",
+        response_model=FixedIncomePositionsResponse,
+    )
+    def list_fixed_income(
+        portfolio_id: str,
+        status: str | None = Query(default=None),
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> FixedIncomePositionsResponse:
+        require_portfolio(portfolio_id, db)
+        repo = FixedIncomePositionRepository(db.connection)
+        positions = repo.list_by_portfolio(portfolio_id, status=status)
+        valuation_service = FixedIncomeValuationService()
+        items = [_serialize_fi(p, valuation_service) for p in positions]
+        return FixedIncomePositionsResponse(positions=items)
+
+    @app.get(
+        "/api/portfolios/{portfolio_id}/fixed-income/{position_id}",
+        response_model=FixedIncomePositionOut,
+    )
+    def get_fixed_income(
+        portfolio_id: str,
+        position_id: int,
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> FixedIncomePositionOut:
+        require_portfolio(portfolio_id, db)
+        repo = FixedIncomePositionRepository(db.connection)
+        position = repo.get(position_id)
+        if position is None or position.portfolio_id != portfolio_id:
+            raise HTTPException(status_code=404, detail="Position not found")
+        return _serialize_fi(position, FixedIncomeValuationService())
+
+    @app.post(
+        "/api/portfolios/{portfolio_id}/fixed-income",
+        response_model=FixedIncomePositionOut,
+        status_code=201,
+    )
+    def create_fixed_income(
+        portfolio_id: str,
+        payload: FixedIncomePositionCreate,
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> FixedIncomePositionOut:
+        require_portfolio(portfolio_id, db)
+        try:
+            position = FixedIncomePosition(
+                portfolio_id=portfolio_id,
+                institution=payload.institution,
+                asset_type=payload.assetType,
+                product_name=payload.productName,
+                remuneration_type=payload.remunerationType,
+                benchmark=payload.benchmark or (
+                    "CDI" if payload.remunerationType == "CDI_PERCENT" else "NONE"
+                ),
+                investor_type="PF",
+                currency="BRL",
+                application_date=payload.applicationDate,
+                maturity_date=payload.maturityDate,
+                principal_applied_brl=payload.principalAppliedBrl,
+                liquidity_label=payload.liquidityLabel,
+                fixed_rate_annual_percent=payload.fixedRateAnnualPercent,
+                benchmark_percent=payload.benchmarkPercent,
+                notes=payload.notes,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+        repo = FixedIncomePositionRepository(db.connection)
+        repo.insert(position)
+        return _serialize_fi(position, FixedIncomeValuationService())
+
+    @app.post(
+        "/api/portfolios/{portfolio_id}/fixed-income/import-csv",
+        response_model=FixedIncomeImportResponse,
+    )
+    async def import_fixed_income_csv(
+        portfolio_id: str,
+        file: UploadFile,
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> FixedIncomeImportResponse:
+        require_portfolio(portfolio_id, db)
+        raw = await file.read()
+        try:
+            text = raw.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            text = raw.decode("latin-1")
+
+        result = FixedIncomeCSVImporter().parse_text(text, portfolio_id=portfolio_id)
+        repo = FixedIncomePositionRepository(db.connection)
+        for position in result.valid:
+            repo.insert(position)
+
+        valuation_service = FixedIncomeValuationService()
+        items = [_serialize_fi(p, valuation_service) for p in result.valid]
+        errors = [
+            FixedIncomeImportError(
+                rowIndex=err.row_index,
+                message=err.message,
+                field=err.field,
+            )
+            for err in result.errors
+        ]
+        return FixedIncomeImportResponse(
+            imported=len(items),
+            failed=len(errors),
+            positions=items,
+            errors=errors,
         )
 
     return app

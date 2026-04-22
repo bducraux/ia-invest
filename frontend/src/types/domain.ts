@@ -5,6 +5,7 @@ export type AssetClass =
   | "FII"
   | "ETF"
   | "RENDA_FIXA"
+  | "PREVIDENCIA"
   | "CAIXA"
   | "CRIPTO";
 
@@ -25,6 +26,7 @@ export interface PortfolioSummary {
   unrealizedPnlPct: number; // 0.1234 = +12,34%
   monthDividends: Cents;
   ytdReturnPct: number;
+  previdenciaTotalValue: Cents;
   allocation: AllocationSlice[];
   performance: PerformancePoint[];
 }

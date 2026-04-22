@@ -91,7 +91,7 @@ export default function DividendsPage() {
         <main className="flex-1 space-y-6 p-4 md:p-6">
           <PageHeader
             title="Proventos recebidos"
-            description="Selecione um portfolio válido na navegação lateral."
+            description="Selecione uma carteira válida na navegação lateral."
           />
         </main>
       </>
@@ -106,7 +106,7 @@ export default function DividendsPage() {
     : (scopedOperationsQuery.data?.operations ?? []).map((operation) => ({
         ...operation,
         portfolioId: activePortfolio?.id ?? "",
-        portfolioName: activePortfolio?.name ?? "Portfolio",
+        portfolioName: activePortfolio?.name ?? "Carteira",
       }));
 
   const dividends = toDividendEntries(mergedOperations);
@@ -116,7 +116,7 @@ export default function DividendsPage() {
   const title = scope.isGlobalScope ? "Proventos consolidados" : `Proventos - ${activePortfolio?.name}`;
   const description = scope.isGlobalScope
     ? "Dividendos e JCP recebidos em todas as carteiras."
-    : `Dividendos e JCP recebidos no portfolio ${activePortfolio?.name}.`;
+    : `Dividendos e JCP recebidos na carteira ${activePortfolio?.name}.`;
 
   return (
     <>
@@ -147,7 +147,7 @@ export default function DividendsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Data</TableHead>
-                  {scope.isGlobalScope ? <TableHead>Portfolio</TableHead> : null}
+                  {scope.isGlobalScope ? <TableHead>Carteira</TableHead> : null}
                   <TableHead>Ativo</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead className="text-right">Valor</TableHead>

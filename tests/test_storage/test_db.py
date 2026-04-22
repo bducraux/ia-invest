@@ -21,6 +21,7 @@ def test_initialize_creates_tables(tmp_path: Path) -> None:
     assert "positions" in tables
     assert "import_jobs" in tables
     assert "import_errors" in tables
+    assert "previdencia_snapshots" in tables
     assert "schema_migrations" in tables
     db.close()
 
@@ -48,3 +49,23 @@ def test_context_manager_closes_connection(tmp_path: Path) -> None:
         db.initialize()
         assert db.connection is not None
     assert db._conn is None
+
+
+def test_initialize_updates_existing_database_with_new_tables(tmp_path: Path) -> None:
+    db_path = tmp_path / "test.db"
+    db = Database(db_path)
+    db.connection.execute("CREATE TABLE portfolios (id TEXT PRIMARY KEY)")
+    db.connection.commit()
+    db.close()
+
+    db = Database(db_path)
+    db.initialize()
+    tables = {
+        row[0]
+        for row in db.connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()
+    }
+    assert "fixed_income_positions" in tables
+    assert "schema_migrations" in tables
+    db.close()

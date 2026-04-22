@@ -1,6 +1,6 @@
 import type { Operation, Portfolio, PortfolioSummary, Position } from "@/types/domain";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8010";
 
 export interface ListOperationsParams {
   assetCode?: string;
@@ -27,6 +27,12 @@ export interface QuoteRefreshResponse {
   cacheStaleCount: number;
   avgFallbackCount: number;
   failedCount: number;
+}
+
+export interface AppSettings {
+  cdiAnnualRate: number | null;
+  selicAnnualRate: number | null;
+  ipcaAnnualRate: number | null;
 }
 
 async function apiFetch<T>(path: string): Promise<T> {
@@ -80,6 +86,25 @@ export function getPortfolioSummary(portfolioId: string): Promise<PortfolioSumma
   return apiFetch<PortfolioSummary>(`/api/portfolios/${portfolioId}/summary`);
 }
 
+export async function updatePortfolioName(
+  portfolioId: string,
+  payload: { name: string },
+): Promise<Portfolio> {
+  const response = await fetch(`${API_BASE}/api/portfolios/${portfolioId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`API ${response.status}: ${body || response.statusText}`);
+  }
+  return (await response.json()) as Portfolio;
+}
+
 export async function getPortfolioPositions(
   portfolioId: string,
   onlyOpen = true,
@@ -111,6 +136,36 @@ export function refreshQuotes(portfolioId?: string): Promise<QuoteRefreshRespons
     return apiPost<QuoteRefreshResponse>(`/api/portfolios/${portfolioId}/quotes/refresh`);
   }
   return apiPost<QuoteRefreshResponse>("/api/quotes/refresh");
+}
+
+export function getAppSettings(): Promise<AppSettings> {
+  return apiFetch<AppSettings>("/api/settings");
+}
+
+export async function updateAppSettings(payload: Partial<AppSettings>): Promise<AppSettings> {
+  const response = await fetch(`${API_BASE}/api/settings`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`API ${response.status}: ${body || response.statusText}`);
+  }
+  return (await response.json()) as AppSettings;
+}
+
+/**
+ * Calculate daily rate from annual rate percentage using the formula:
+ * daily = (1 + annualPct/100)^(1/252) - 1
+ * where 252 is the number of business days per year.
+ * @param annualPct - annual rate as percentage (e.g. 14.65 for 14.65%)
+ */
+export function calculateDailyRateFromAnnual(annualPct: number): number {
+  return Math.pow(1 + annualPct / 100, 1 / 252) - 1;
 }
 
 // --- Fixed income (renda fixa) -----------------------------------------------

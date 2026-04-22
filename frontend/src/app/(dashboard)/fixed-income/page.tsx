@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Upload, Plus, AlertTriangle, Info } from "lucide-react";
+import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
+import { Upload, Plus, AlertTriangle, Wallet } from "lucide-react";
+import Link from "next/link";
 
 import {
   Card,
@@ -24,7 +25,7 @@ import {
 } from "@/components/ui/table";
 import { TopBar } from "@/components/layout/topbar";
 import { PageHeader, EmptyState } from "@/components/layout/page-header";
-import { useDashboardScope } from "@/lib/dashboard-scope";
+import { buildScopedPath, useDashboardScope } from "@/lib/dashboard-scope";
 import { formatBRL } from "@/lib/money";
 import { formatDate } from "@/lib/date";
 import { usePortfolios } from "@/lib/queries";
@@ -34,6 +35,7 @@ import {
   importFixedIncomeCSV,
   type CreateFixedIncomeInput,
   type FixedIncomeImportResponse,
+  type FixedIncomePosition,
 } from "@/lib/api";
 
 type AssetType = "CDB" | "LCI" | "LCA";
@@ -53,23 +55,89 @@ const EMPTY_FORM: CreateFixedIncomeInput = {
   notes: null,
 };
 
+type FixedIncomePositionWithPortfolio = FixedIncomePosition & {
+  portfolioId: string;
+  portfolioName: string;
+};
+
+const EMPTY_LIST: FixedIncomePosition[] = [];
+
 export default function FixedIncomePage() {
   const scope = useDashboardScope();
   const portfoliosQuery = usePortfolios();
-  const portfolios = portfoliosQuery.data ?? [];
-  const portfolioId = scope.portfolioId ?? portfolios[0]?.id;
+  const portfolios = useMemo(() => portfoliosQuery.data ?? [], [portfoliosQuery.data]);
+  const activePortfolio = portfolios.find((portfolio) => portfolio.id === scope.portfolioId);
+  const visiblePortfolios = useMemo(
+    () => (
+      scope.isGlobalScope
+        ? portfolios
+        : activePortfolio
+          ? [activePortfolio]
+          : []
+    ),
+    [scope.isGlobalScope, portfolios, activePortfolio],
+  );
+  const [preferredPortfolioId, setPreferredPortfolioId] = useState<string>("");
 
   const queryClient = useQueryClient();
-  const positionsQuery = useQuery({
-    queryKey: ["fixed-income", portfolioId],
-    queryFn: () => getFixedIncomePositions(portfolioId as string),
-    enabled: Boolean(portfolioId),
+
+  const positionQueries = useQueries({
+    queries: visiblePortfolios.map((portfolio) => ({
+      queryKey: ["fixed-income", portfolio.id],
+      queryFn: () => getFixedIncomePositions(portfolio.id),
+      enabled: Boolean(portfolio.id),
+    })),
   });
 
-  const positions = useMemo(
-    () => positionsQuery.data ?? [],
-    [positionsQuery.data],
+  const targetPortfolioId = scope.isGlobalScope
+    ? portfolios.some((portfolio) => portfolio.id === preferredPortfolioId)
+      ? preferredPortfolioId
+      : portfolios[0]?.id ?? ""
+    : activePortfolio?.id ?? "";
+  const targetPortfolio = portfolios.find((portfolio) => portfolio.id === targetPortfolioId);
+
+  const positions = useMemo<FixedIncomePositionWithPortfolio[]>(
+    () =>
+      visiblePortfolios.flatMap((portfolio, index) =>
+        (positionQueries[index]?.data ?? []).map((position) => ({
+          ...position,
+          portfolioId: portfolio.id,
+          portfolioName: portfolio.name,
+        })),
+      ),
+    [visiblePortfolios, positionQueries],
   );
+
+  const portfolioSummaries = useMemo(
+    () =>
+      visiblePortfolios
+        .map((portfolio, index) => {
+          const list = positionQueries[index]?.data ?? EMPTY_LIST;
+          const applied = list.reduce((sum, position) => sum + position.principalAppliedBrl, 0);
+          const gross = list.reduce((sum, position) => sum + position.grossValueCurrentBrl, 0);
+          const net = list.reduce((sum, position) => sum + position.netValueCurrentBrl, 0);
+
+          return {
+            portfolioId: portfolio.id,
+            portfolioName: portfolio.name,
+            count: list.length,
+            applied,
+            gross,
+            net,
+          };
+        })
+        .filter((summary) => summary.count > 0)
+        .sort((left, right) => right.net - left.net),
+    [visiblePortfolios, positionQueries],
+  );
+
+  const hasIncompleteValuation = useMemo(
+    () => positions.some((position) => !position.isComplete),
+    [positions],
+  );
+
+  const isLoading = portfoliosQuery.isLoading || positionQueries.some((query) => query.isLoading);
+  const error = positionQueries.find((query) => query.error)?.error;
 
   const totalInvested = useMemo(
     () => positions.reduce((sum, p) => sum + p.principalAppliedBrl, 0),
@@ -91,24 +159,38 @@ export default function FixedIncomePage() {
 
   const createMutation = useMutation({
     mutationFn: () =>
-      createFixedIncomePosition(portfolioId as string, normalizeForm(form)),
+      createFixedIncomePosition(targetPortfolioId, normalizeForm(form)),
     onSuccess: () => {
       setForm(EMPTY_FORM);
       setShowForm(false);
-      queryClient.invalidateQueries({ queryKey: ["fixed-income", portfolioId] });
+      queryClient.invalidateQueries({ queryKey: ["fixed-income", targetPortfolioId] });
     },
   });
 
   const importMutation = useMutation({
     mutationFn: (file: File) =>
-      importFixedIncomeCSV(portfolioId as string, file),
+      importFixedIncomeCSV(targetPortfolioId, file),
     onSuccess: (data) => {
       setImportResult(data);
-      queryClient.invalidateQueries({ queryKey: ["fixed-income", portfolioId] });
+      queryClient.invalidateQueries({ queryKey: ["fixed-income", targetPortfolioId] });
     },
   });
 
-  if (!portfolioId) {
+  if (portfoliosQuery.isLoading) {
+    return (
+      <>
+        <TopBar title="Renda fixa" />
+        <main className="flex-1 space-y-6 p-4 md:p-6">
+          <PageHeader
+            title="Renda fixa"
+            description="Carregando aplicações de renda fixa."
+          />
+        </main>
+      </>
+    );
+  }
+
+  if (!portfolios.length) {
     return (
       <>
         <TopBar title="Renda fixa" />
@@ -118,23 +200,60 @@ export default function FixedIncomePage() {
             description="Aplicações bancárias (CDB, LCI, LCA) com cálculo de bruto e líquido."
           />
           <EmptyState
-            title="Selecione um portfólio"
-            description="Crie ou selecione um portfólio para registrar aplicações de renda fixa."
+            title="Selecione uma carteira"
+            description="Crie ou selecione uma carteira para registrar aplicações de renda fixa."
           />
         </main>
       </>
     );
   }
 
+  if (!scope.isGlobalScope && !activePortfolio) {
+    return (
+      <>
+        <TopBar title="Renda fixa" />
+        <main className="flex-1 space-y-6 p-4 md:p-6">
+          <PageHeader
+            title="Renda fixa"
+            description="Selecione uma carteira válida na navegação lateral."
+          />
+        </main>
+      </>
+    );
+  }
+
+  const pageTitle = scope.isGlobalScope
+    ? "Renda fixa"
+    : `Renda fixa - ${activePortfolio?.name}`;
+  const pageDescription = scope.isGlobalScope
+    ? "Visão consolidada das aplicações bancárias da família."
+    : `Aplicações de renda fixa da carteira ${activePortfolio?.name}.`;
+
   return (
     <>
       <TopBar title="Renda fixa" />
       <main className="flex-1 space-y-6 p-4 md:p-6">
         <PageHeader
-          title="Renda fixa"
-          description="Aplicações bancárias brasileiras: CDB, LCI e LCA. Bruto e líquido recalculados sempre na data de hoje."
+          title={pageTitle}
+          description={pageDescription}
           actions={
             <>
+              {scope.isGlobalScope ? (
+                <label className="flex min-w-52 flex-col gap-1 text-xs text-muted-foreground">
+                  Carteira de destino
+                  <select
+                    className="flex h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+                    value={targetPortfolioId}
+                    onChange={(event) => setPreferredPortfolioId(event.target.value)}
+                  >
+                    {portfolios.map((portfolio) => (
+                      <option key={portfolio.id} value={portfolio.id}>
+                        {portfolio.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
               <Button onClick={() => setShowForm((v) => !v)} variant="outline">
                 <Plus className="mr-2 h-4 w-4" />
                 {showForm ? "Cancelar" : "Nova aplicação"}
@@ -157,35 +276,12 @@ export default function FixedIncomePage() {
           }
         />
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm text-muted-foreground">
-              Avisos do MVP
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <p className="flex items-start gap-2">
-              <Info className="mt-0.5 h-4 w-4 shrink-0" />
-              IOF não é considerado nesta versão (decisão de produto do MVP).
-            </p>
-            <p className="flex items-start gap-2">
-              <Info className="mt-0.5 h-4 w-4 shrink-0" />
-              CDB: o valor líquido considera IR estimado com base na data atual.
-            </p>
-            <p className="flex items-start gap-2">
-              <Info className="mt-0.5 h-4 w-4 shrink-0" />
-              LCI/LCA: tratadas como isentas de IR para PF no modelo atual.
-            </p>
-          </CardContent>
-        </Card>
-
         {showForm && (
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Cadastrar aplicação</CardTitle>
               <CardDescription>
-                Os campos são suficientes para o cálculo contratual. O bruto e o
-                líquido são calculados pelo sistema.
+                A aplicação será registrada em {targetPortfolio?.name ?? "uma carteira"}. Os campos são suficientes para o cálculo contratual.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -209,7 +305,7 @@ export default function FixedIncomePage() {
             <CardHeader>
               <CardTitle className="text-base">Resultado da importação</CardTitle>
               <CardDescription>
-                {importResult.imported} aplicação(ões) importada(s),{" "}
+                {targetPortfolio?.name ?? "Carteira selecionada"}: {importResult.imported} aplicação(ões) importada(s),{" "}
                 {importResult.failed} linha(s) com erro.
               </CardDescription>
             </CardHeader>
@@ -232,20 +328,103 @@ export default function FixedIncomePage() {
         )}
 
         <div className="grid gap-4 md:grid-cols-3">
+          <SummaryCard label="Líquido para resgate hoje" value={totalNet} highlight />
+          <SummaryCard label="Bruto atual (antes de IR)" value={totalGross} />
           <SummaryCard label="Aplicado" value={totalInvested} />
-          <SummaryCard label="Bruto atual" value={totalGross} />
-          <SummaryCard label="Líquido estimado hoje" value={totalNet} />
         </div>
+
+        {hasIncompleteValuation ? (
+          <Card className="border-amber-500/50 bg-amber-50/40">
+            <CardHeader>
+              <CardTitle className="text-base text-amber-900">Erro de regra de negócio: cálculo incompleto</CardTitle>
+              <CardDescription className="text-amber-800">
+                Existem aplicações sem cálculo completo de CDI. Configure a taxa anual em Configurações &gt; Taxas de Referência
+                para permitir o cálculo diário automático e reprocessar os valores.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        ) : null}
+
+        {scope.isGlobalScope ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Carteiras com renda fixa</CardTitle>
+              <CardDescription>
+                Panorama por carteira para facilitar leitura do patrimônio consolidado.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {portfolioSummaries.length === 0 ? (
+                <EmptyState
+                  title="Nenhuma carteira com renda fixa"
+                  description="Cadastre uma aplicação ou importe um CSV para começar a consolidar essa visão."
+                />
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {portfolioSummaries.map((summary) => (
+                    <Link
+                      key={summary.portfolioId}
+                      href={buildScopedPath(summary.portfolioId, "/")}
+                      className="rounded-xl border border-border bg-muted/20 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-foreground">{summary.portfolioName}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {summary.count} aplicaç{summary.count === 1 ? "ão" : "ões"}
+                          </p>
+                        </div>
+                        {summary.portfolioId === targetPortfolioId ? (
+                          <Badge variant="outline">Destino</Badge>
+                        ) : (
+                          <Badge variant="muted">Abrir</Badge>
+                        )}
+                      </div>
+                      <dl className="mt-4 space-y-2 text-sm">
+                        <div className="flex items-center justify-between gap-4">
+                          <dt className="text-muted-foreground">Aplicado</dt>
+                          <dd className="font-medium">{formatBRL(summary.applied)}</dd>
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <dt className="text-muted-foreground">Bruto</dt>
+                          <dd className="font-medium">{formatBRL(summary.gross)}</dd>
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <dt className="text-muted-foreground">Líquido</dt>
+                          <dd className="font-medium">{formatBRL(summary.net)}</dd>
+                        </div>
+                      </dl>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
 
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Aplicações</CardTitle>
             <CardDescription>
-              Cada linha = uma aplicação individual. Valores recalculados na data atual.
+              Cada linha representa uma aplicação individual em alguma carteira. Valores recalculados na data atual.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {positions.length === 0 ? (
+            {isLoading ? (
+              <EmptyState
+                title="Carregando aplicações"
+                description={
+                  scope.isGlobalScope
+                    ? "Buscando renda fixa em todas as carteiras cadastradas."
+                    : `Buscando renda fixa da carteira ${activePortfolio?.name}.`
+                }
+              />
+            ) : error instanceof Error ? (
+              <EmptyState
+                title="Não foi possível carregar a renda fixa"
+                description={error.message}
+              />
+            ) : positions.length === 0 ? (
               <EmptyState
                 title="Nenhuma aplicação registrada"
                 description="Cadastre manualmente ou importe um CSV com seus extratos bancários."
@@ -254,6 +433,7 @@ export default function FixedIncomePage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {scope.isGlobalScope ? <TableHead>Carteira</TableHead> : null}
                     <TableHead>Instituição / Produto</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Remuneração</TableHead>
@@ -268,21 +448,25 @@ export default function FixedIncomePage() {
                 </TableHeader>
                 <TableBody>
                   {positions.map((p) => (
-                    <TableRow key={p.id}>
+                    <TableRow key={`${p.portfolioId}-${p.id}`}>
+                      {scope.isGlobalScope ? (
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Wallet className="h-4 w-4 text-muted-foreground" />
+                            <span>{p.portfolioName}</span>
+                          </div>
+                        </TableCell>
+                      ) : null}
                       <TableCell>
-                        <div className="font-medium">{p.productName}</div>
+                        <div className="font-medium">{fixedIncomeDisplayName(p)}</div>
                         <div className="text-xs text-muted-foreground">
-                          {p.institution} · {p.daysSinceApplication}d
+                          {p.productName} · {p.daysSinceApplication}d
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{p.assetType}</Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {p.remunerationType === "PRE"
-                          ? `Pré ${p.fixedRateAnnualPercent ?? 0}% a.a.`
-                          : `${p.benchmarkPercent ?? 0}% do CDI`}
-                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{remunerationLabel(p)}</TableCell>
                       <TableCell>{formatDate(p.applicationDate)}</TableCell>
                       <TableCell>{formatDate(p.maturityDate)}</TableCell>
                       <TableCell className="text-right">
@@ -320,15 +504,39 @@ export default function FixedIncomePage() {
   );
 }
 
-function SummaryCard({ label, value }: { label: string; value: number }) {
+function SummaryCard({
+  label,
+  value,
+  highlight = false,
+}: {
+  label: string;
+  value: number;
+  highlight?: boolean;
+}) {
   return (
-    <Card>
+    <Card className={highlight ? "border-primary/40 bg-primary/5" : undefined}>
       <CardHeader>
         <CardDescription>{label}</CardDescription>
-        <CardTitle className="text-2xl">{formatBRL(value)}</CardTitle>
+        <CardTitle className={highlight ? "text-2xl text-primary" : "text-2xl"}>{formatBRL(value)}</CardTitle>
       </CardHeader>
     </Card>
   );
+}
+
+function fixedIncomeDisplayName(position: FixedIncomePosition): string {
+  return `${position.assetType} ${position.institution} ${position.productName}`.trim();
+}
+
+function remunerationLabel(position: FixedIncomePosition): string {
+  if (position.remunerationType === "PRE") {
+    return `Pré ${formatPercent(position.fixedRateAnnualPercent)}% a.a.`;
+  }
+  return `${formatPercent(position.benchmarkPercent)}% do CDI`;
+}
+
+function formatPercent(value: number | null): string {
+  if (value === null) return "0";
+  return value.toFixed(2).replace(/\.?0+$/, "");
 }
 
 function FixedIncomeForm({

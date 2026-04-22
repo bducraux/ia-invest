@@ -223,7 +223,7 @@ class BaseGorilaXlsxExtractor(BaseExtractor):
 
             record = {
                 "source": self.source_type,
-                "external_id": f"{external_id_prefix}:{operation_date}:{asset_code}:{operation_type}:{quantity:.8f}",
+                "external_id": f"{external_id_prefix}:{operation_date}:{asset_code}:{operation_type}:{quantity:.8f}:{unit_price}",
                 "asset_code": asset_code,
                 "asset_type": self.default_asset_type,
                 "operation_type": operation_type,

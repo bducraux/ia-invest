@@ -1,23 +1,24 @@
 id: renda-fixa
 name: Renda Fixa
-description: CDBs, LCIs, LCAs, Tesouro Direto e outros títulos de renda fixa
+description: CDBs, LCIs e LCAs
 base_currency: BRL
 status: active
 
 rules:
   allowed_asset_types:
-    - bond
-    - treasury
+    - CDB
+    - LCI
+    - LCA
 
 sources:
-  - type: broker_csv
+  - type: fixed_income_csv
     enabled: true
 
 import:
   move_processed_files: true
   deduplicate_by:
-    - source
-    - external_id
-    - operation_date
-    - asset_code
-    - operation_type
+    - institution
+    - product_name
+    - application_date
+    - maturity_date
+    - principal_applied_brl

@@ -7,8 +7,10 @@ tool logic to keep business rules centralized.
 
 from __future__ import annotations
 
+import math
 import os
 from datetime import date
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from domain.fixed_income import FixedIncomePosition
+from domain.fixed_income_rates import FlatCDIRateProvider
 from domain.fixed_income_valuation import FixedIncomeValuationService
 from mcp_server.services.quotes import MarketQuoteService
 from mcp_server.tools.portfolios import get_portfolio_operations
@@ -26,6 +29,7 @@ from storage.repository.db import Database
 from storage.repository.fixed_income import FixedIncomePositionRepository
 from storage.repository.operations import OperationRepository
 from storage.repository.portfolios import PortfolioRepository
+from storage.repository.previdencia import PrevidenciaSnapshotRepository
 from storage.repository.positions import PositionRepository
 
 _DEFAULT_DB_PATH = Path(os.environ.get("IA_INVEST_DB", "ia_invest.db"))
@@ -39,6 +43,10 @@ class PortfolioOut(BaseModel):
     id: str
     name: str
     currency: str = "BRL"
+
+
+class PortfolioUpdate(BaseModel):
+    name: str
 
 
 class AllocationSliceOut(BaseModel):
@@ -62,6 +70,7 @@ class PortfolioSummaryOut(BaseModel):
     unrealizedPnlPct: float
     monthDividends: int
     ytdReturnPct: float
+    previdenciaTotalValue: int
     allocation: list[AllocationSliceOut]
     performance: list[PerformancePointOut]
 
@@ -113,6 +122,18 @@ class QuoteRefreshResponse(BaseModel):
     cacheStaleCount: int
     avgFallbackCount: int
     failedCount: int
+
+
+class AppSettingsOut(BaseModel):
+    cdiAnnualRate: float | None = None
+    selicAnnualRate: float | None = None
+    ipcaAnnualRate: float | None = None
+
+
+class AppSettingsUpdate(BaseModel):
+    cdiAnnualRate: float | None = None
+    selicAnnualRate: float | None = None
+    ipcaAnnualRate: float | None = None
 
 
 # --- Fixed-income (renda fixa) -----------------------------------------------
@@ -202,6 +223,7 @@ def _to_ui_asset_class(asset_type: str) -> str:
         "fii": "FII",
         "etf": "ETF",
         "bond": "RENDA_FIXA",
+        "previdencia": "PREVIDENCIA",
         "crypto": "CRIPTO",
         "cash": "CAIXA",
     }
@@ -214,10 +236,40 @@ def _asset_class_label(asset_class: str) -> str:
         "FII": "FIIs",
         "ETF": "ETFs",
         "RENDA_FIXA": "Renda Fixa",
+        "PREVIDENCIA": "Previdencia",
         "CRIPTO": "Cripto",
         "CAIXA": "Caixa",
     }
     return labels.get(asset_class, asset_class)
+
+
+def _format_percent(value: float | None) -> str | None:
+    if value is None:
+        return None
+    rendered = f"{value:.4f}".rstrip("0").rstrip(".")
+    return rendered or "0"
+
+
+def _fixed_income_display_name(position: FixedIncomePosition) -> str:
+    """Build a human-friendly label for fixed-income assets."""
+    institution = position.institution.strip()
+    product = position.product_name.strip()
+    asset_type = position.asset_type.strip().upper()
+
+    if product:
+        return f"{asset_type} {institution} {product}".strip()
+
+    if position.remuneration_type == "CDI_PERCENT":
+        pct = _format_percent(position.benchmark_percent)
+        if pct is not None:
+            return f"{asset_type} {institution} {pct}% CDI".strip()
+
+    if position.remuneration_type == "PRE":
+        rate = _format_percent(position.fixed_rate_annual_percent)
+        if rate is not None:
+            return f"{asset_type} {institution} {rate}% a.a.".strip()
+
+    return f"{asset_type} {institution}".strip()
 
 
 def _month_window(today: date) -> tuple[str, str]:
@@ -238,6 +290,49 @@ def _build_performance_series(total_value_cents: int, months: int = 12) -> list[
 
 def _parse_bool_flag(value: str) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _build_fixed_income_valuation_service(db: Database) -> FixedIncomeValuationService:
+    """Build valuation service with optional CDI provider.
+
+    Rates are stored as percentages (e.g. 14.65 means 14.65% a.a.).
+    Converts annual percent to daily fraction: daily = (1 + rate/100)^(1/252) - 1
+
+    Priority:
+    1) Persisted SQLite app setting (app_settings key=cdi_annual_rate)
+    2) IA_INVEST_CDI_DAILY_RATE environment variable (legacy daily rate fraction)
+    """
+    # Try to get annual CDI rate from database (stored as percent, e.g. 14.65)
+    row = db.connection.execute(
+        "SELECT value FROM app_settings WHERE key = 'cdi_annual_rate'"
+    ).fetchone()
+    configured_annual_rate = row["value"] if row is not None else None
+
+    if configured_annual_rate:
+        try:
+            annual_pct = float(configured_annual_rate.strip())
+            if annual_pct > 0 and math.isfinite(annual_pct):
+                # Stored as percentage → convert to fraction first, then to daily:
+                # daily = (1 + annual_pct/100)^(1/252) - 1
+                daily_rate = math.pow(1 + annual_pct / 100, 1 / 252) - 1
+                provider = FlatCDIRateProvider(Decimal(str(daily_rate)))
+                return FixedIncomeValuationService(cdi_provider=provider)
+        except Exception as exc:  # noqa: BLE001
+            _ = exc
+    
+    # Fallback to legacy environment variable (daily rate)
+    configured_daily_rate = os.environ.get("IA_INVEST_CDI_DAILY_RATE")
+    if configured_daily_rate is None or configured_daily_rate.strip() == "":
+        return FixedIncomeValuationService()
+
+    try:
+        provider = FlatCDIRateProvider(Decimal(configured_daily_rate.strip()))
+    except Exception as exc:  # noqa: BLE001
+        # Keep API functional if runtime config is malformed.
+        _ = exc
+        return FixedIncomeValuationService()
+
+    return FixedIncomeValuationService(cdi_provider=provider)
 
 
 def _count_operations(
@@ -371,6 +466,84 @@ def create_http_app(
         repo = PortfolioRepository(db.connection)
         return [PortfolioOut(id=p.id, name=p.name, currency=p.base_currency) for p in repo.list_active()]
 
+    @app.put("/api/portfolios/{portfolio_id}", response_model=PortfolioOut)
+    def update_portfolio(
+        portfolio_id: str,
+        payload: PortfolioUpdate,
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> PortfolioOut:
+        repo = PortfolioRepository(db.connection)
+        portfolio = repo.get(portfolio_id)
+        if portfolio is None:
+            raise HTTPException(status_code=404, detail=f"Portfolio '{portfolio_id}' not found")
+
+        name = payload.name.strip()
+        if not name:
+            raise HTTPException(status_code=422, detail="name must not be empty")
+
+        portfolio.name = name
+        repo.upsert(portfolio)
+        return PortfolioOut(id=portfolio.id, name=portfolio.name, currency=portfolio.base_currency)
+
+    @app.get("/api/settings", response_model=AppSettingsOut)
+    def get_settings(db: Database = Depends(get_db)) -> AppSettingsOut:  # noqa: B008
+        def get_rate(key: str) -> float | None:
+            row = db.connection.execute(
+                f"SELECT value FROM app_settings WHERE key = '{key}'"
+            ).fetchone()
+            if row is None:
+                return None
+            try:
+                return float(row["value"])
+            except (TypeError, ValueError):
+                return None
+
+        return AppSettingsOut(
+            cdiAnnualRate=get_rate("cdi_annual_rate"),
+            selicAnnualRate=get_rate("selic_annual_rate"),
+            ipcaAnnualRate=get_rate("ipca_annual_rate"),
+        )
+
+    @app.put("/api/settings", response_model=AppSettingsOut)
+    def update_settings(
+        payload: AppSettingsUpdate,
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> AppSettingsOut:
+        def validate_and_save(key: str, value: float | None) -> None:
+            if value is None:
+                db.connection.execute(
+                    "DELETE FROM app_settings WHERE key = ?",
+                    (key,),
+                )
+            else:
+                # Values stored as percentage (e.g. 14.65 for 14.65% a.a.)
+                if not math.isfinite(value) or value <= 0 or value >= 1000:
+                    raise HTTPException(
+                        status_code=422,
+                        detail=f"{key} must be a percentage between 0 and 1000 (e.g. 14.65 for 14.65% a.a.)",
+                    )
+                db.connection.execute(
+                    """
+                    INSERT INTO app_settings (key, value, updated_at)
+                    VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+                    ON CONFLICT(key) DO UPDATE SET
+                        value = excluded.value,
+                        updated_at = excluded.updated_at
+                    """,
+                    (key, str(value)),
+                )
+
+        validate_and_save("cdi_annual_rate", payload.cdiAnnualRate)
+        validate_and_save("selic_annual_rate", payload.selicAnnualRate)
+        validate_and_save("ipca_annual_rate", payload.ipcaAnnualRate)
+        db.connection.commit()
+
+        return AppSettingsOut(
+            cdiAnnualRate=payload.cdiAnnualRate,
+            selicAnnualRate=payload.selicAnnualRate,
+            ipcaAnnualRate=payload.ipcaAnnualRate,
+        )
+
     @app.post("/api/quotes/refresh", response_model=QuoteRefreshResponse)
     def refresh_all_quotes(db: Database = Depends(get_db)) -> QuoteRefreshResponse:  # noqa: B008
         repo = PortfolioRepository(db.connection)
@@ -392,7 +565,7 @@ def create_http_app(
         operationType: str | None = Query(default=None),
         startDate: str | None = Query(default=None),
         endDate: str | None = Query(default=None),
-        limit: int = Query(default=100, ge=1, le=1000),
+        limit: int = Query(default=100, ge=1, le=5000),
         offset: int = Query(default=0, ge=0),
         db: Database = Depends(get_db),  # noqa: B008
     ) -> OperationsResponse:
@@ -498,6 +671,59 @@ def create_http_app(
                 )
             )
 
+        fi_repo = FixedIncomePositionRepository(db.connection)
+        prev_repo = PrevidenciaSnapshotRepository(db.connection)
+        fi_positions = fi_repo.list_by_portfolio(
+            portfolio_id,
+            status="ACTIVE" if onlyOpen else None,
+        )
+        prev_positions = prev_repo.list_by_portfolio(portfolio_id)
+        fi_valuation_service = _build_fixed_income_valuation_service(db)
+        for position in fi_positions:
+            valuation = fi_valuation_service.revalue(position)
+            avg_price = int(position.principal_applied_brl)
+            market_value = int(valuation.net_value_current_brl)
+            unrealized = market_value - avg_price
+            unrealized_pct = (unrealized / avg_price) if avg_price > 0 else 0.0
+            code = position.external_id or f"RF-{position.id or position.application_date}"
+            enriched.append(
+                PositionOut(
+                    assetCode=code,
+                    name=_fixed_income_display_name(position),
+                    assetClass="RENDA_FIXA",
+                    quantity=1.0,
+                    avgPrice=avg_price,
+                    marketPrice=market_value,
+                    marketValue=market_value,
+                    unrealizedPnl=unrealized,
+                    unrealizedPnlPct=unrealized_pct,
+                    weight=0.0,
+                    quoteStatus="avg_fallback",
+                    quoteSource="fixed_income_valuation",
+                    quoteAgeSeconds=None,
+                )
+            )
+
+        for snapshot in prev_positions:
+            market_value = int(snapshot.market_value_cents)
+            enriched.append(
+                PositionOut(
+                    assetCode=snapshot.asset_code,
+                    name=snapshot.product_name,
+                    assetClass="PREVIDENCIA",
+                    quantity=float(snapshot.quantity),
+                    avgPrice=int(snapshot.unit_price_cents),
+                    marketPrice=int(snapshot.unit_price_cents),
+                    marketValue=market_value,
+                    unrealizedPnl=0,
+                    unrealizedPnlPct=0.0,
+                    weight=0.0,
+                    quoteStatus="avg_fallback",
+                    quoteSource="previdencia_statement",
+                    quoteAgeSeconds=None,
+                )
+            )
+
         total_market = sum(p.marketValue for p in enriched)
         weighted = [
             p.model_copy(update={"weight": (p.marketValue / total_market) if total_market else 0.0})
@@ -514,10 +740,18 @@ def create_http_app(
 
         pos_repo = PositionRepository(db.connection)
         positions = pos_repo.list_open_by_portfolio(portfolio_id)
+        fi_repo = FixedIncomePositionRepository(db.connection)
+        prev_repo = PrevidenciaSnapshotRepository(db.connection)
+        fi_positions = fi_repo.list_by_portfolio(portfolio_id, status="ACTIVE")
+        prev_positions = prev_repo.list_by_portfolio(portfolio_id)
+        fi_valuation_service = _build_fixed_income_valuation_service(db)
         quote_service = build_quote_service(db)
 
         total_invested = sum(int(row["total_cost"]) for row in positions)
-        market_value = 0
+        total_invested += sum(int(position.principal_applied_brl) for position in fi_positions)
+        # Previdência snapshots have no historical cost — excluded from total_invested
+        previdencia_total = sum(int(snapshot.market_value_cents) for snapshot in prev_positions)
+        market_value_with_cost = 0
         for row in positions:
             avg_price = int(row["avg_price"])
             quote = quote_service.resolve_price(
@@ -526,8 +760,13 @@ def create_http_app(
                 fallback_price_cents=avg_price,
             )
             price_cents = quote["price_cents"] if quote is not None else avg_price
-            market_value += int(round(float(row["quantity"]) * price_cents))
-        unrealized = market_value - total_invested
+            market_value_with_cost += int(round(float(row["quantity"]) * price_cents))
+        for position in fi_positions:
+            valuation = fi_valuation_service.revalue(position)
+            market_value_with_cost += int(valuation.net_value_current_brl)
+        # marketValue = full patrimônio including previdência; unrealized only on assets with known cost
+        market_value = market_value_with_cost + previdencia_total
+        unrealized = market_value_with_cost - total_invested
         unrealized_pct = (unrealized / total_invested) if total_invested > 0 else 0.0
 
         start_month, end_month = _month_window(date.today())
@@ -558,6 +797,17 @@ def create_http_app(
             price_cents = quote["price_cents"] if quote is not None else avg_price
             market_value_cents = int(round(float(row["quantity"]) * price_cents))
             allocation_by_class[klass] = allocation_by_class.get(klass, 0) + market_value_cents
+        for position in fi_positions:
+            valuation = fi_valuation_service.revalue(position)
+            allocation_by_class["RENDA_FIXA"] = (
+                allocation_by_class.get("RENDA_FIXA", 0)
+                + int(valuation.net_value_current_brl)
+            )
+        for snapshot in prev_positions:
+            allocation_by_class["PREVIDENCIA"] = (
+                allocation_by_class.get("PREVIDENCIA", 0)
+                + int(snapshot.market_value_cents)
+            )
 
         allocation_total = sum(allocation_by_class.values())
         allocation = [
@@ -581,6 +831,7 @@ def create_http_app(
             unrealizedPnlPct=unrealized_pct,
             monthDividends=month_dividends,
             ytdReturnPct=ytd_return_pct,
+            previdenciaTotalValue=previdencia_total,
             allocation=allocation,
             performance=_build_performance_series(market_value),
         )
@@ -649,7 +900,7 @@ def create_http_app(
         require_portfolio(portfolio_id, db)
         repo = FixedIncomePositionRepository(db.connection)
         positions = repo.list_by_portfolio(portfolio_id, status=status)
-        valuation_service = FixedIncomeValuationService()
+        valuation_service = _build_fixed_income_valuation_service(db)
         items = [_serialize_fi(p, valuation_service) for p in positions]
         return FixedIncomePositionsResponse(positions=items)
 
@@ -667,7 +918,7 @@ def create_http_app(
         position = repo.get(position_id)
         if position is None or position.portfolio_id != portfolio_id:
             raise HTTPException(status_code=404, detail="Position not found")
-        return _serialize_fi(position, FixedIncomeValuationService())
+        return _serialize_fi(position, _build_fixed_income_valuation_service(db))
 
     @app.post(
         "/api/portfolios/{portfolio_id}/fixed-income",
@@ -705,7 +956,7 @@ def create_http_app(
 
         repo = FixedIncomePositionRepository(db.connection)
         repo.insert(position)
-        return _serialize_fi(position, FixedIncomeValuationService())
+        return _serialize_fi(position, _build_fixed_income_valuation_service(db))
 
     @app.post(
         "/api/portfolios/{portfolio_id}/fixed-income/import-csv",
@@ -728,7 +979,7 @@ def create_http_app(
         for position in result.valid:
             repo.insert(position)
 
-        valuation_service = FixedIncomeValuationService()
+        valuation_service = _build_fixed_income_valuation_service(db)
         items = [_serialize_fi(p, valuation_service) for p in result.valid]
         errors = [
             FixedIncomeImportError(

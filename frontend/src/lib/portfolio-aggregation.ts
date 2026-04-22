@@ -39,6 +39,7 @@ export function aggregateSummaries(inputs: PortfolioSummaryInput[]): {
   const cashBalance = inputs.reduce((acc, item) => acc + item.summary.cashBalance, 0);
   const unrealizedPnl = inputs.reduce((acc, item) => acc + item.summary.unrealizedPnl, 0);
   const monthDividends = inputs.reduce((acc, item) => acc + item.summary.monthDividends, 0);
+  const previdenciaTotalValue = inputs.reduce((acc, item) => acc + item.summary.previdenciaTotalValue, 0);
 
   const unrealizedPnlPct = totalInvested > 0 ? unrealizedPnl / totalInvested : 0;
   const ytdWeightedSum = inputs.reduce(
@@ -104,6 +105,7 @@ export function aggregateSummaries(inputs: PortfolioSummaryInput[]): {
       unrealizedPnlPct,
       monthDividends: cents(monthDividends),
       ytdReturnPct,
+      previdenciaTotalValue: cents(previdenciaTotalValue),
       allocation,
       performance,
     },

@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from "react";
-import { ToastContainer, type Toast } from "@/components/ui/toast";
+import { ToastContainer } from "@/components/ui/toast";
 import { useToast } from "@/lib/use-toast";
 
 interface ToastContextValue {

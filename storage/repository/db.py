@@ -45,24 +45,10 @@ class Database:
         return conn
 
     def initialize(self) -> None:
-        """Apply schema.sql only when the database appears uninitialised."""
-        if self._is_initialized():
-            return
-
+        """Apply the idempotent schema.sql to ensure new tables exist."""
         schema_sql = _SCHEMA_PATH.read_text(encoding="utf-8")
         self.connection.executescript(schema_sql)
         self.connection.commit()
-
-    def _is_initialized(self) -> bool:
-        row = self.connection.execute(
-            """
-            SELECT 1
-            FROM sqlite_master
-            WHERE type = 'table' AND name = 'portfolios'
-            LIMIT 1
-            """
-        ).fetchone()
-        return row is not None
 
     def close(self) -> None:
         if self._conn is not None:

@@ -22,6 +22,7 @@ export const mockSummary: PortfolioSummary = {
   unrealizedPnlPct: 0.1798,
   monthDividends: cents(412_88),
   ytdReturnPct: 0.0942,
+  previdenciaTotalValue: cents(0),
   allocation: [
     { assetClass: "ACAO", label: "Ações", value: cents(9_840_00), weight: 0.45 },
     { assetClass: "FII", label: "FIIs", value: cents(6_120_00), weight: 0.28 },

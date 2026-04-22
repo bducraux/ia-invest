@@ -1,6 +1,7 @@
 .PHONY: help install init reset-db create-portfolio adjust-balance check-balance import-all portfolio-overview lint type-check test clean server api-server frontend-install frontend-dev frontend-build frontend-test frontend-lint
 
-API_PORT ?= 8000
+API_PORT ?= 8010
+CDI_DAILY_RATE ?=
 
 help:
 	@echo "IA-Invest - Available commands:"
@@ -24,8 +25,9 @@ help:
 	@echo ""
 	@echo "Server:"
 	@echo "  make server               Start MCP server"
-	@echo "  make api-server           Start FastAPI backend (http://localhost:8000)"
-	@echo "                            Example: make api-server API_PORT=8001"
+	@echo "  make api-server           Start FastAPI backend (http://localhost:8010)"
+	@echo "                            Example: make api-server API_PORT=8010"
+	@echo "                            Optional: make api-server CDI_DAILY_RATE=0.00045"
 	@echo ""
 	@echo "Frontend:"
 	@echo "  make frontend-install     Install frontend dependencies (npm ci)"
@@ -76,7 +78,7 @@ server:
 	uv run python -m mcp_server.server
 
 api-server:
-	uv run uvicorn mcp_server.http_api:app --host 0.0.0.0 --port $(API_PORT) --reload
+	IA_INVEST_CDI_DAILY_RATE=$(CDI_DAILY_RATE) uv run uvicorn mcp_server.http_api:app --host 0.0.0.0 --port $(API_PORT) --reload
 
 frontend-install:
 	cd frontend && npm ci

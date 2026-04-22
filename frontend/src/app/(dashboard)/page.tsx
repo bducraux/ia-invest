@@ -20,7 +20,7 @@ import { TopBar } from "@/components/layout/topbar";
 import { PageHeader } from "@/components/layout/page-header";
 import { KpiCard } from "@/features/dashboard/kpi-card";
 import { AllocationDonut } from "@/features/dashboard/allocation-donut";
-import { PerformanceChart } from "@/features/dashboard/performance-chart";
+import { AssetAllocationDonut } from "@/features/dashboard/asset-allocation-donut";
 import { useDashboardScope } from "@/lib/dashboard-scope";
 import {
   formatBRL,
@@ -123,8 +123,8 @@ export default function OverviewPage() {
         <TopBar title="Visão geral" />
         <main className="flex-1 space-y-6 p-4 md:p-6">
           <PageHeader
-            title="Portfolio não encontrado"
-            description="Selecione um portfolio válido na navegação lateral."
+            title="Carteira não encontrada"
+            description="Selecione uma carteira válida na navegação lateral."
           />
         </main>
       </>
@@ -138,7 +138,7 @@ export default function OverviewPage() {
         <main className="flex-1 space-y-6 p-4 md:p-6">
           <PageHeader
             title="Visão família"
-            description="Nenhum portfolio cadastrado para consolidação."
+            description="Nenhuma carteira cadastrada para consolidação."
           />
         </main>
       </>
@@ -151,8 +151,8 @@ export default function OverviewPage() {
         <TopBar title="Visão geral" />
         <main className="flex-1 space-y-6 p-4 md:p-6">
           <PageHeader
-            title={activePortfolio?.name ?? "Portfolio"}
-            description="Resumo indisponível para este portfolio."
+            title={activePortfolio?.name ?? "Carteira"}
+            description="Resumo indisponível para esta carteira."
           />
         </main>
       </>
@@ -197,51 +197,23 @@ export default function OverviewPage() {
     : (scopedOperationsQuery.data?.operations ?? []).map((operation) => ({
         ...operation,
         portfolioId: activePortfolio?.id ?? "",
-        portfolioName: activePortfolio?.name ?? "Portfolio",
+        portfolioName: activePortfolio?.name ?? "Carteira",
       }));
 
-  const contextTitle = scope.isGlobalScope ? "Visão família" : activePortfolio?.name ?? "Portfolio";
+  const contextTitle = scope.isGlobalScope ? "Visão família" : activePortfolio?.name ?? "Carteira";
   const contextDescription = scope.isGlobalScope
     ? `Consolidado em tempo real de ${portfolios.length} carteiras.`
-    : `Resumo em tempo real do portfolio ${activePortfolio?.name}.`;
+    : `Resumo em tempo real da carteira ${activePortfolio?.name}.`;
 
   const quotePositions = scope.isGlobalScope
     ? allPositionsQueries.flatMap((query) => query.data ?? [])
     : (scopedPositionsQuery.data ?? []);
-
-  const quoteCounts = quotePositions.reduce(
-    (acc, position) => {
-      switch (position.quoteStatus) {
-        case "live":
-          acc.live += 1;
-          break;
-        case "cache_fresh":
-          acc.cacheFresh += 1;
-          break;
-        case "cache_stale":
-          acc.cacheStale += 1;
-          break;
-        default:
-          acc.avgFallback += 1;
-          break;
-      }
-      return acc;
-    },
-    { live: 0, cacheFresh: 0, cacheStale: 0, avgFallback: 0 },
-  );
 
   return (
     <>
       <TopBar title="Visão geral" />
       <main className="flex-1 space-y-6 p-4 md:p-6">
         <PageHeader title={contextTitle} description={contextDescription} />
-
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="positive">Ao vivo: {quoteCounts.live}</Badge>
-          <Badge variant="muted">Atualizado: {quoteCounts.cacheFresh}</Badge>
-          <Badge variant="outline">Cache antigo: {quoteCounts.cacheStale}</Badge>
-          <Badge variant="outline">Preço médio: {quoteCounts.avgFallback}</Badge>
-        </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiCard
@@ -253,7 +225,11 @@ export default function OverviewPage() {
           <KpiCard
             title="Total investido"
             value={formatBRL(summary.totalInvested)}
-            subValue="Custo médio agregado"
+            subValue={
+              summary.previdenciaTotalValue > 0
+                ? `+ ${formatBRL(summary.previdenciaTotalValue)} previdência`
+                : "Custo médio agregado"
+            }
             icon={<Banknote className="h-4 w-4" />}
           />
           <KpiCard
@@ -280,18 +256,18 @@ export default function OverviewPage() {
         <div
           className={cn(
             "grid grid-cols-1 gap-4",
-            scope.isGlobalScope ? "lg:grid-cols-4" : "lg:grid-cols-3",
+            scope.isGlobalScope ? "lg:grid-cols-3" : "lg:grid-cols-2",
           )}
         >
-          <Card className="lg:col-span-2">
+          <Card>
             <CardHeader>
               <CardTitle className="text-base text-foreground">
-                Evolução do patrimônio
+                Alocação por ativo
               </CardTitle>
-              <CardDescription>Últimos 12 meses</CardDescription>
+              <CardDescription>Top ativos por valor de mercado</CardDescription>
             </CardHeader>
             <CardContent>
-              <PerformanceChart data={summary.performance} />
+              <AssetAllocationDonut positions={quotePositions} />
             </CardContent>
           </Card>
 
@@ -311,7 +287,7 @@ export default function OverviewPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base text-foreground">
-                  Alocação por portfolio
+                  Alocação por carteira
                 </CardTitle>
                 <CardDescription>Participação no patrimônio total</CardDescription>
               </CardHeader>
@@ -336,7 +312,7 @@ export default function OverviewPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Data</TableHead>
-                  {scope.isGlobalScope ? <TableHead>Portfolio</TableHead> : null}
+                  {scope.isGlobalScope ? <TableHead>Carteira</TableHead> : null}
                   <TableHead>Ativo</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead className="text-right">Qtd.</TableHead>

@@ -201,6 +201,46 @@ CREATE INDEX IF NOT EXISTS idx_fi_positions_status    ON fixed_income_positions(
 CREATE INDEX IF NOT EXISTS idx_fi_positions_asset     ON fixed_income_positions(portfolio_id, asset_type);
 
 -- ---------------------------------------------------------------------------
+-- previdencia_snapshots
+-- Latest statement snapshot for previdencia assets.
+-- One row per portfolio + asset code, updated only when statement month is
+-- not older than the current stored month.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS previdencia_snapshots (
+    id                            INTEGER PRIMARY KEY AUTOINCREMENT,
+    portfolio_id                  TEXT NOT NULL REFERENCES portfolios(id),
+    import_job_id                 INTEGER REFERENCES import_jobs(id),
+
+    asset_code                    TEXT NOT NULL,
+    product_name                  TEXT NOT NULL,
+    quantity                      REAL NOT NULL CHECK (quantity >= 0),
+    unit_price_cents              INTEGER NOT NULL CHECK (unit_price_cents >= 0),
+    market_value_cents            INTEGER NOT NULL CHECK (market_value_cents >= 0),
+    period_month                  TEXT NOT NULL,
+    period_start_date             TEXT,
+    period_end_date               TEXT,
+    source_file                   TEXT,
+
+    created_at                    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    updated_at                    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+
+    UNIQUE (portfolio_id, asset_code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_prev_positions_portfolio ON previdencia_snapshots(portfolio_id);
+CREATE INDEX IF NOT EXISTS idx_prev_positions_period    ON previdencia_snapshots(portfolio_id, period_month);
+
+-- ---------------------------------------------------------------------------
+-- app_settings
+-- Global application settings stored in SQLite.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS app_settings (
+    key             TEXT PRIMARY KEY,
+    value           TEXT NOT NULL,
+    updated_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+);
+
+-- ---------------------------------------------------------------------------
 -- schema_migrations
 -- Tracks applied migrations.
 -- ---------------------------------------------------------------------------
@@ -215,4 +255,5 @@ INSERT OR IGNORE INTO schema_migrations (version, description)
 VALUES
     ('0001', 'initial schema'),
     ('0002', 'market quote cache table'),
-    ('0003', 'fixed income positions table');
+    ('0003', 'fixed income positions table'),
+    ('0004', 'application settings table');

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import {
   LayoutDashboard,
@@ -10,6 +11,7 @@ import {
   Upload,
   Settings,
   TrendingUp,
+  ChevronRight,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -20,24 +22,37 @@ import {
 import { usePortfolios } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
-const items = [
+const patrimonioItems = [
   { href: "/", label: "Visão geral", icon: LayoutDashboard },
   { href: "/positions", label: "Posições", icon: PieChart },
   { href: "/operations", label: "Operações", icon: ListOrdered },
   { href: "/dividends", label: "Proventos", icon: Coins },
   { href: "/fixed-income", label: "Renda fixa", icon: Landmark },
+];
+
+const systemItems = [
   { href: "/import", label: "Importar", icon: Upload },
   { href: "/settings", label: "Configurações", icon: Settings },
+];
+
+const portfolioSections = [
+  { href: "/positions", label: "Posições" },
+  { href: "/operations", label: "Operações" },
 ];
 
 export function Sidebar() {
   const scope = useDashboardScope();
   const portfoliosQuery = usePortfolios();
   const portfolios = portfoliosQuery.data ?? [];
+  const [expandedPortfolios, setExpandedPortfolios] = useState<Record<string, boolean>>({});
   const activePortfolio = portfolios.find((portfolio) => portfolio.id === scope.portfolioId);
-  const sectionForSwitch = CONTEXT_AWARE_SECTIONS.has(scope.sectionPath)
-    ? scope.sectionPath
-    : "/";
+
+  function togglePortfolio(portfolioId: string) {
+    setExpandedPortfolios((prev) => ({
+      ...prev,
+      [portfolioId]: !(prev[portfolioId] ?? false),
+    }));
+  }
 
   return (
     <aside className="hidden w-60 shrink-0 border-r border-border bg-card/40 md:flex md:flex-col">
@@ -53,67 +68,134 @@ export function Sidebar() {
         </div>
       </div>
       <nav className="flex-1 space-y-1 p-3">
-        {items.map((item) => {
-          const isContextAware = CONTEXT_AWARE_SECTIONS.has(item.href);
-          const href = isContextAware ? buildScopedPath(scope.portfolioId, item.href) : item.href;
-          const active =
-            item.href === "/"
-              ? scope.sectionPath === "/"
-              : scope.sectionPath.startsWith(item.href);
-          const Icon = item.icon;
-
-          return (
-            <Link
-              key={item.href}
-              href={href}
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                active
-                  ? "bg-accent text-accent-foreground font-medium"
-                  : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          );
-        })}
-
-        <div className="pt-3">
+        <div className="pb-3">
           <p className="px-3 pb-2 text-[10px] uppercase tracking-wider text-muted-foreground">
-            Portfolios
+            Patrimônio
           </p>
 
-          <Link
-            href={buildScopedPath(undefined, sectionForSwitch)}
-            className={cn(
-              "mb-1 flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors",
+          {patrimonioItems.map((item) => {
+            const isContextAware = CONTEXT_AWARE_SECTIONS.has(item.href);
+            const href = isContextAware ? buildScopedPath(undefined, item.href) : item.href;
+            const active =
               scope.isGlobalScope
-                ? "bg-accent text-accent-foreground font-medium"
-                : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
-            )}
-          >
-            <span>Família (consolidado)</span>
-            <Badge variant="outline">Global</Badge>
-          </Link>
-
-          {portfolios.map((portfolio) => {
-            const isActive = scope.portfolioId === portfolio.id;
-            const href = buildScopedPath(portfolio.id, sectionForSwitch);
+              && (item.href === "/"
+                ? scope.sectionPath === "/"
+                : scope.sectionPath.startsWith(item.href));
+            const Icon = item.icon;
 
             return (
               <Link
-                key={portfolio.id}
+                key={item.href}
                 href={href}
                 className={cn(
-                  "mb-1 flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition-colors",
-                  isActive
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                  active
                     ? "bg-accent text-accent-foreground font-medium"
                     : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
                 )}
               >
-                <span className="truncate">{portfolio.name}</span>
-                {isActive ? <Badge variant="outline">Ativo</Badge> : null}
+                <Icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+
+        <div className="border-t border-border/60 pt-3">
+          <p className="px-3 pb-2 text-[10px] uppercase tracking-wider text-muted-foreground">
+            Carteiras
+          </p>
+
+          {portfolios.map((portfolio) => {
+            const isActive = scope.portfolioId === portfolio.id;
+            const overviewHref = buildScopedPath(portfolio.id, "/");
+            const isExpanded = expandedPortfolios[portfolio.id] ?? isActive;
+
+            return (
+              <div key={portfolio.id} className="mb-2 rounded-lg border border-transparent px-1 py-1">
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => togglePortfolio(portfolio.id)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
+                    aria-label={isExpanded ? "Recolher carteira" : "Expandir carteira"}
+                    aria-expanded={isExpanded}
+                  >
+                    <ChevronRight
+                      className={cn("h-4 w-4 transition-transform", isExpanded ? "rotate-90" : "")}
+                    />
+                  </button>
+                  <Link
+                    href={overviewHref}
+                    className={cn(
+                      "flex min-w-0 flex-1 items-center justify-between gap-2 rounded-md px-2 py-2 text-sm transition-colors",
+                      isActive && scope.sectionPath === "/"
+                        ? "bg-accent text-accent-foreground font-medium"
+                        : isActive
+                          ? "text-foreground"
+                          : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                    )}
+                  >
+                    <span className="truncate">{portfolio.name}</span>
+                    {isActive ? <Badge variant="outline">Ativa</Badge> : null}
+                  </Link>
+                </div>
+
+                {isExpanded ? (
+                  <div className="mt-1 space-y-1 pl-9">
+                    {portfolioSections.map((section) => {
+                      const href = buildScopedPath(portfolio.id, section.href);
+                      const isSectionActive = isActive && scope.sectionPath === section.href;
+
+                      return (
+                        <Link
+                          key={`${portfolio.id}-${section.href}`}
+                          href={href}
+                          className={cn(
+                            "block rounded-md px-2 py-1.5 text-sm transition-colors",
+                            isSectionActive
+                              ? "bg-accent text-accent-foreground font-medium"
+                              : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                          )}
+                        >
+                          {section.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="border-t border-border/60 pt-3">
+          <p className="px-3 pb-2 text-[10px] uppercase tracking-wider text-muted-foreground">
+            Sistema
+          </p>
+
+          {systemItems.map((item) => {
+            const isContextAware = CONTEXT_AWARE_SECTIONS.has(item.href);
+            const href = isContextAware ? buildScopedPath(scope.portfolioId, item.href) : item.href;
+            const active =
+              item.href === "/"
+                ? scope.sectionPath === "/"
+                : scope.sectionPath.startsWith(item.href);
+            const Icon = item.icon;
+
+            return (
+              <Link
+                key={item.href}
+                href={href}
+                className={cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                  active
+                    ? "bg-accent text-accent-foreground font-medium"
+                    : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
               </Link>
             );
           })}
@@ -123,8 +205,8 @@ export function Sidebar() {
         <p className="font-medium text-foreground">Contexto ativo</p>
         <p>
           {scope.isGlobalScope
-            ? "Todas as carteiras"
-            : activePortfolio?.name ?? "Portfolio selecionado"}
+            ? "Patrimônio consolidado"
+            : activePortfolio?.name ?? "Carteira selecionada"}
         </p>
       </div>
     </aside>

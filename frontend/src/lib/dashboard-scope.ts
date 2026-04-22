@@ -7,6 +7,7 @@ export const CONTEXT_AWARE_SECTIONS = new Set([
   "/positions",
   "/operations",
   "/dividends",
+  "/fixed-income",
 ]);
 
 function normalizeSectionPath(path: string): string {

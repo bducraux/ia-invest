@@ -169,7 +169,7 @@ Cada portfólio é uma entidade lógica independente. Exemplos típicos:
 | ID               | Descrição                                      |
 |------------------|------------------------------------------------|
 | `renda-variavel` | Ações, FIIs, ETFs e BDRs                       |
-| `renda-fixa`     | CDBs, LCIs, LCAs, Tesouro Direto               |
+| `renda-fixa`     | CDBs, LCIs e LCAs                              |
 | `cripto`         | Criptoativos de exchanges                      |
 | `previdencia`    | PGBL/VGBL                                      |
 | `internacional`  | Ativos no exterior                             |
@@ -183,6 +183,7 @@ Cada portfólio é uma entidade lógica independente. Exemplos típicos:
 | B3 CSV/XLSX      | `B3CsvExtractor`        | ✅ Fase 2   |
 | CSV de corretora | `BrokerCsvExtractor`    | ✅ Fase 2   |
 | Binance CSV      | `BinanceCsvExtractor`   | ✅ Fase 2   |
+| CSV renda fixa   | `fixed_income_csv`      | ✅ MVP      |
 
 ---
 

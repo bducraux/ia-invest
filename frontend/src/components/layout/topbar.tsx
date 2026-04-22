@@ -20,8 +20,8 @@ export function TopBar({ title }: { title: string }) {
   );
 
   const scopeLabel = scope.isGlobalScope
-    ? "Familia consolidada"
-    : activePortfolio?.name ?? "Portfolio";
+    ? "Patrimônio"
+    : activePortfolio?.name ?? "Carteira";
 
   const refreshMutation = useMutation({
     mutationFn: () => refreshQuotes(scope.portfolioId),

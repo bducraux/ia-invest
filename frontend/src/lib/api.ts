@@ -1,9 +1,12 @@
 import type { Operation, Portfolio, PortfolioSummary, Position } from "@/types/domain";
 
+export type AssetClassFilter = Position["assetClass"] | "RENDA_VARIAVEL";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8010";
 
 export interface ListOperationsParams {
   assetCode?: string;
+  assetClass?: AssetClassFilter;
   operationType?: Operation["type"];
   startDate?: string;
   endDate?: string;
@@ -108,8 +111,9 @@ export async function updatePortfolioName(
 export async function getPortfolioPositions(
   portfolioId: string,
   onlyOpen = true,
+  assetClass?: AssetClassFilter,
 ): Promise<Position[]> {
-  const query = toQueryString({ onlyOpen });
+  const query = toQueryString({ onlyOpen, assetClass });
   const response = await apiFetch<{ positions: Position[] }>(
     `/api/portfolios/${portfolioId}/positions${query}`,
   );
@@ -122,6 +126,7 @@ export function getPortfolioOperations(
 ): Promise<ListOperationsResponse> {
   const query = toQueryString({
     assetCode: params.assetCode,
+    assetClass: params.assetClass,
     operationType: params.operationType,
     startDate: params.startDate,
     endDate: params.endDate,

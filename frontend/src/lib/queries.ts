@@ -5,6 +5,7 @@ import {
   getPortfolios,
   getPortfolioPositions,
   getPortfolioSummary,
+  type AssetClassFilter,
   type ListOperationsParams,
 } from "@/lib/api";
 
@@ -23,10 +24,14 @@ export function usePortfolioSummary(portfolioId: string | undefined) {
   });
 }
 
-export function usePortfolioPositions(portfolioId: string | undefined, onlyOpen = true) {
+export function usePortfolioPositions(
+  portfolioId: string | undefined,
+  onlyOpen = true,
+  assetClass?: AssetClassFilter,
+) {
   return useQuery({
-    queryKey: ["portfolio", portfolioId, "positions", onlyOpen],
-    queryFn: () => getPortfolioPositions(portfolioId as string, onlyOpen),
+    queryKey: ["portfolio", portfolioId, "positions", onlyOpen, assetClass],
+    queryFn: () => getPortfolioPositions(portfolioId as string, onlyOpen, assetClass),
     enabled: Boolean(portfolioId),
   });
 }
@@ -51,11 +56,15 @@ export function usePortfolioSummaries(portfolioIds: string[]) {
   });
 }
 
-export function usePortfolioPositionsList(portfolioIds: string[], onlyOpen = true) {
+export function usePortfolioPositionsList(
+  portfolioIds: string[],
+  onlyOpen = true,
+  assetClass?: AssetClassFilter,
+) {
   return useQueries({
     queries: portfolioIds.map((portfolioId) => ({
-      queryKey: ["portfolio", portfolioId, "positions", onlyOpen],
-      queryFn: () => getPortfolioPositions(portfolioId, onlyOpen),
+      queryKey: ["portfolio", portfolioId, "positions", onlyOpen, assetClass],
+      queryFn: () => getPortfolioPositions(portfolioId, onlyOpen, assetClass),
     })),
   });
 }

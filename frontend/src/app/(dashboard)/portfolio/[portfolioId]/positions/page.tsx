@@ -1,1 +1,1 @@
-export { default } from "@/app/(dashboard)/positions/page";
+export { PortfolioSpecializedPositionsRoute as default } from "@/features/asset-classes/portfolio-specialized-routes";

@@ -143,13 +143,21 @@ export default function PositionsPage() {
         portfolioName: activePortfolio?.name ?? "Carteira",
       }));
 
-  const availableClasses = useMemo(() => {
-    const classes = new Set(positions.map((p) => p.assetClass));
-    return Array.from(classes).sort();
+  const positionsWithScopeWeight = useMemo(() => {
+    const scopeMarketValue = positions.reduce((sum, position) => sum + position.marketValue, 0);
+    return positions.map((position) => ({
+      ...position,
+      weight: scopeMarketValue > 0 ? position.marketValue / scopeMarketValue : 0,
+    }));
   }, [positions]);
 
+  const availableClasses = useMemo(() => {
+    const classes = new Set(positionsWithScopeWeight.map((p) => p.assetClass));
+    return Array.from(classes).sort();
+  }, [positionsWithScopeWeight]);
+
   const filteredPositions = useMemo(() => {
-    let result = positions;
+    let result = positionsWithScopeWeight;
 
     if (classFilter !== "ALL") {
       result = result.filter((p) => p.assetClass === classFilter);
@@ -165,7 +173,7 @@ export default function PositionsPage() {
     }
 
     return sortPositions(result, sort.key, sort.dir);
-  }, [positions, classFilter, deferredSearch, sort]);
+  }, [positionsWithScopeWeight, classFilter, deferredSearch, sort]);
 
   function handleSort(key: string) {
     const typed = key as SortKey;
@@ -254,7 +262,7 @@ export default function PositionsPage() {
                 <p className="mt-1 text-sm text-muted-foreground">
                   {filteredPositions.length} ativo
                   {filteredPositions.length === 1 ? "" : "s"}
-                  {hasFilters ? ` encontrados de ${positions.length}` : " no resultado"}
+                  {hasFilters ? ` encontrados de ${positionsWithScopeWeight.length}` : " no resultado"}
                 </p>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

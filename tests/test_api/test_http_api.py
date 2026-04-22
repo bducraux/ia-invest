@@ -27,6 +27,7 @@ def _seed_db(db_path: Path) -> None:
             name="Carteira Teste",
             base_currency="BRL",
             status="active",
+            config={"rules": {"allowed_asset_types": ["stock", "fii"]}},
         )
     )
 
@@ -92,6 +93,40 @@ def test_list_portfolios_endpoint(tmp_path: Path) -> None:
             "id": "carteira-teste",
             "name": "Carteira Teste",
             "currency": "BRL",
+            "allowedAssetTypes": ["stock", "fii"],
+            "specialization": "RENDA_VARIAVEL",
+        }
+    ]
+
+
+def test_list_portfolios_endpoint_exposes_specialization_for_fixed_income(tmp_path: Path) -> None:
+    db_path = tmp_path / "api.db"
+    db = Database(db_path)
+    db.initialize()
+
+    PortfolioRepository(db.connection).upsert(
+        Portfolio(
+            id="renda-fixa-bruno",
+            name="Renda Fixa Bruno",
+            base_currency="BRL",
+            status="active",
+            config={"rules": {"allowed_asset_types": ["CDB", "LCI", "LCA"]}},
+        )
+    )
+    db.close()
+
+    client = TestClient(create_http_app(db_path, quotes_enabled=False))
+    response = client.get("/api/portfolios")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload == [
+        {
+            "id": "renda-fixa-bruno",
+            "name": "Renda Fixa Bruno",
+            "currency": "BRL",
+            "allowedAssetTypes": ["CDB", "LCI", "LCA"],
+            "specialization": "RENDA_FIXA",
         }
     ]
 
@@ -108,6 +143,19 @@ def test_operations_endpoint_maps_types(tmp_path: Path) -> None:
     assert payload["total"] == 2
     assert payload["limit"] == 100
     assert payload["offset"] == 0
+    assert {op["type"] for op in payload["operations"]} == {"COMPRA", "DIVIDENDO"}
+
+
+def test_operations_endpoint_filters_by_asset_class(tmp_path: Path) -> None:
+    db_path = tmp_path / "api.db"
+    _seed_db(db_path)
+    client = TestClient(create_http_app(db_path, quotes_enabled=False))
+
+    response = client.get("/api/portfolios/carteira-teste/operations?assetClass=RENDA_VARIAVEL")
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["total"] == 2
     assert {op["type"] for op in payload["operations"]} == {"COMPRA", "DIVIDENDO"}
 
 
@@ -132,6 +180,11 @@ def test_positions_endpoint_contains_frontend_fields(tmp_path: Path) -> None:
     assert pos["unrealizedPnl"] == 0
     assert pos["quoteStatus"] == "avg_fallback"
     assert pos["quoteSource"] == "avg_price"
+
+    filtered = client.get("/api/portfolios/carteira-teste/positions?assetClass=RENDA_VARIAVEL")
+    assert filtered.status_code == 200
+    assert len(filtered.json()["positions"]) == 1
+    assert filtered.json()["positions"][0]["assetClass"] == "ACAO"
 
 
 def test_positions_endpoint_uses_cached_quote_before_avg_fallback(tmp_path: Path) -> None:

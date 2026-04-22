@@ -43,6 +43,8 @@ class PortfolioOut(BaseModel):
     id: str
     name: str
     currency: str = "BRL"
+    allowedAssetTypes: list[str] = []
+    specialization: str = "GENERIC"
 
 
 class PortfolioUpdate(BaseModel):
@@ -241,6 +243,33 @@ def _asset_class_label(asset_class: str) -> str:
         "CAIXA": "Caixa",
     }
     return labels.get(asset_class, asset_class)
+
+
+def _portfolio_specialization(allowed_asset_types: list[str]) -> str:
+    normalized = {asset_type.strip().lower() for asset_type in allowed_asset_types}
+    if not normalized:
+        return "GENERIC"
+    if normalized <= {"cdb", "lci", "lca", "bond", "treasury"}:
+        return "RENDA_FIXA"
+    if normalized <= {"previdencia"}:
+        return "PREVIDENCIA"
+    if normalized <= {"stock", "fii", "etf", "bdr"}:
+        return "RENDA_VARIAVEL"
+    if normalized <= {"crypto"}:
+        return "CRIPTO"
+    return "GENERIC"
+
+
+def _matches_ui_asset_class(asset_class: str | None, ui_asset_class: str) -> bool:
+    if asset_class is None:
+        return True
+    if asset_class == "RENDA_VARIAVEL":
+        return ui_asset_class in {"ACAO", "FII", "ETF"}
+    return ui_asset_class == asset_class
+
+
+def _matches_asset_class(asset_class: str | None, asset_type: str) -> bool:
+    return _matches_ui_asset_class(asset_class, _to_ui_asset_class(asset_type))
 
 
 def _format_percent(value: float | None) -> str | None:
@@ -464,7 +493,16 @@ def create_http_app(
     @app.get("/api/portfolios", response_model=list[PortfolioOut])
     def list_portfolios(db: Database = Depends(get_db)) -> list[PortfolioOut]:  # noqa: B008
         repo = PortfolioRepository(db.connection)
-        return [PortfolioOut(id=p.id, name=p.name, currency=p.base_currency) for p in repo.list_active()]
+        return [
+            PortfolioOut(
+                id=p.id,
+                name=p.name,
+                currency=p.base_currency,
+                allowedAssetTypes=p.allowed_asset_types,
+                specialization=_portfolio_specialization(p.allowed_asset_types),
+            )
+            for p in repo.list_active()
+        ]
 
     @app.put("/api/portfolios/{portfolio_id}", response_model=PortfolioOut)
     def update_portfolio(
@@ -483,7 +521,13 @@ def create_http_app(
 
         portfolio.name = name
         repo.upsert(portfolio)
-        return PortfolioOut(id=portfolio.id, name=portfolio.name, currency=portfolio.base_currency)
+        return PortfolioOut(
+            id=portfolio.id,
+            name=portfolio.name,
+            currency=portfolio.base_currency,
+            allowedAssetTypes=portfolio.allowed_asset_types,
+            specialization=_portfolio_specialization(portfolio.allowed_asset_types),
+        )
 
     @app.get("/api/settings", response_model=AppSettingsOut)
     def get_settings(db: Database = Depends(get_db)) -> AppSettingsOut:  # noqa: B008
@@ -562,6 +606,7 @@ def create_http_app(
     def list_operations(
         portfolio_id: str,
         assetCode: str | None = Query(default=None),
+        assetClass: str | None = Query(default=None),
         operationType: str | None = Query(default=None),
         startDate: str | None = Query(default=None),
         endDate: str | None = Query(default=None),
@@ -583,26 +628,40 @@ def create_http_app(
         else:
             op_type = internal_type_map.get(operationType, operationType.lower())
 
-        rows = get_portfolio_operations(
-            db,
-            portfolio_id,
-            asset_code=assetCode,
-            operation_type=op_type,
-            start_date=startDate,
-            end_date=endDate,
-            limit=limit,
-            offset=offset,
-        )
-
         op_repo = OperationRepository(db.connection)
-        total = _count_operations(
-            op_repo,
-            portfolio_id,
-            asset_code=assetCode,
-            operation_type=op_type,
-            start_date=startDate,
-            end_date=endDate,
-        )
+        if assetClass is None:
+            rows = get_portfolio_operations(
+                db,
+                portfolio_id,
+                asset_code=assetCode,
+                operation_type=op_type,
+                start_date=startDate,
+                end_date=endDate,
+                limit=limit,
+                offset=offset,
+            )
+            total = _count_operations(
+                op_repo,
+                portfolio_id,
+                asset_code=assetCode,
+                operation_type=op_type,
+                start_date=startDate,
+                end_date=endDate,
+            )
+        else:
+            filtered_rows = [
+                row
+                for row in op_repo.list_all_by_portfolio(
+                    portfolio_id,
+                    asset_code=assetCode,
+                    operation_type=op_type,
+                    start_date=startDate,
+                    end_date=endDate,
+                )
+                if _matches_asset_class(assetClass, str(row["asset_type"]))
+            ]
+            total = len(filtered_rows)
+            rows = filtered_rows[offset: offset + limit]
 
         mapped = [
             OperationOut(
@@ -623,6 +682,7 @@ def create_http_app(
     def list_positions(
         portfolio_id: str,
         onlyOpen: bool = Query(default=True),
+        assetClass: str | None = Query(default=None),
         db: Database = Depends(get_db),  # noqa: B008
     ) -> PositionsResponse:
         require_portfolio(portfolio_id, db)
@@ -723,6 +783,13 @@ def create_http_app(
                     quoteAgeSeconds=None,
                 )
             )
+
+        if assetClass is not None:
+            enriched = [
+                position
+                for position in enriched
+                if _matches_ui_asset_class(assetClass, position.assetClass)
+            ]
 
         total_market = sum(p.marketValue for p in enriched)
         weighted = [

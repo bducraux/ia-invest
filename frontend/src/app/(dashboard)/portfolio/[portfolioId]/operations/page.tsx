@@ -1,1 +1,1 @@
-export { default } from "@/app/(dashboard)/operations/page";
+export { PortfolioSpecializedOperationsRoute as default } from "@/features/asset-classes/portfolio-specialized-routes";

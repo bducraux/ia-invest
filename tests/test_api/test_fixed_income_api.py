@@ -147,6 +147,30 @@ def test_positions_use_friendly_fixed_income_name(tmp_path: Path) -> None:
     assert position["assetCode"].startswith("RF-")
 
 
+def test_positions_filter_by_asset_class_for_fixed_income(tmp_path: Path) -> None:
+    client = _client(tmp_path)
+
+    payload = {
+        "institution": "Banco X",
+        "assetType": "CDB",
+        "productName": "CDB Pre 12%",
+        "remunerationType": "PRE",
+        "applicationDate": "2024-01-02",
+        "maturityDate": "2027-01-02",
+        "principalAppliedBrl": 1_000_000,
+        "fixedRateAnnualPercent": 12.0,
+    }
+    create_resp = client.post("/api/portfolios/rf-portfolio/fixed-income", json=payload)
+    assert create_resp.status_code == 201, create_resp.text
+
+    positions_resp = client.get("/api/portfolios/rf-portfolio/positions?assetClass=RENDA_FIXA")
+    assert positions_resp.status_code == 200
+    positions = positions_resp.json()["positions"]
+
+    assert len(positions) == 1
+    assert positions[0]["assetClass"] == "RENDA_FIXA"
+
+
 def test_fixed_income_uses_env_cdi_daily_rate(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("IA_INVEST_CDI_DAILY_RATE", "0.0004")
     client = _client(tmp_path)

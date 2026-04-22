@@ -12,6 +12,9 @@ import {
   Settings,
   TrendingUp,
   ChevronRight,
+  ChartCandlestick,
+  Bitcoin,
+  ShieldCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -28,6 +31,9 @@ const patrimonioItems = [
   { href: "/operations", label: "Operações", icon: ListOrdered },
   { href: "/dividends", label: "Proventos", icon: Coins },
   { href: "/fixed-income", label: "Renda fixa", icon: Landmark },
+  { href: "/renda-variavel", label: "Renda variável", icon: ChartCandlestick },
+  { href: "/cripto", label: "Criptomoedas", icon: Bitcoin },
+  { href: "/previdencia", label: "Previdência", icon: ShieldCheck },
 ];
 
 const systemItems = [

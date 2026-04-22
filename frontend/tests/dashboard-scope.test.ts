@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { CONTEXT_AWARE_SECTIONS, buildScopedPath } from "@/lib/dashboard-scope";
+import {
+  CONTEXT_AWARE_SECTIONS,
+  buildScopedPath,
+} from "@/lib/dashboard-scope";
 
 describe("dashboard scope helpers", () => {
   it("includes fixed-income as context-aware section", () => {

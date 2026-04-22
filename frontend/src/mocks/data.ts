@@ -9,8 +9,20 @@ import type {
 import { cents } from "@/lib/money";
 
 export const mockPortfolios: Portfolio[] = [
-  { id: "p1", name: "Carteira Principal", currency: "BRL" },
-  { id: "p2", name: "Renda Passiva", currency: "BRL" },
+  {
+    id: "p1",
+    name: "Carteira Principal",
+    currency: "BRL",
+    allowedAssetTypes: ["stock", "fii"],
+    specialization: "RENDA_VARIAVEL",
+  },
+  {
+    id: "p2",
+    name: "Renda Passiva",
+    currency: "BRL",
+    allowedAssetTypes: ["CDB", "LCI", "LCA"],
+    specialization: "RENDA_FIXA",
+  },
 ];
 
 export const mockSummary: PortfolioSummary = {

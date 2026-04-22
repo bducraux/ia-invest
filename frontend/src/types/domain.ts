@@ -1,5 +1,12 @@
 import type { Cents } from "@/lib/money";
 
+export type PortfolioSpecialization =
+  | "GENERIC"
+  | "RENDA_FIXA"
+  | "RENDA_VARIAVEL"
+  | "CRIPTO"
+  | "PREVIDENCIA";
+
 export type AssetClass =
   | "ACAO"
   | "FII"
@@ -15,6 +22,8 @@ export interface Portfolio {
   id: string;
   name: string;
   currency: "BRL";
+  allowedAssetTypes: string[];
+  specialization: PortfolioSpecialization;
 }
 
 export interface PortfolioSummary {

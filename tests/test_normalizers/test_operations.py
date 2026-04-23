@@ -193,3 +193,37 @@ def test_binance_sell_generates_quote_leg_transfer_in(
     assert quote_op.operation_type == "transfer_in"
     assert quote_op.quantity == 2499.0
     assert quote_op.external_id == "BIN002:quote"
+
+
+def test_buy_with_zero_gross_value_and_zero_unit_price_returns_error(
+    normalizer: OperationNormalizer,
+) -> None:
+    # Both gross_value and unit_price are 0 from a strict-price source — parse error.
+    raw = _raw({"source": "broker_csv", "operation_type": "compra", "gross_value": "0", "unit_price": "0"})
+    result = normalizer.normalize([raw], "test-portfolio")
+    assert len(result.valid) == 0
+    assert len(result.errors) == 1
+    assert "gross_value is 0" in result.errors[0].message
+
+
+def test_sell_with_zero_gross_value_returns_error(normalizer: OperationNormalizer) -> None:
+    raw = _raw({"source": "b3_csv", "operation_type": "venda", "gross_value": "0", "unit_price": "0"})
+    result = normalizer.normalize([raw], "test-portfolio")
+    assert len(result.valid) == 0
+    assert len(result.errors) == 1
+    assert "gross_value is 0" in result.errors[0].message
+
+
+def test_gorila_buy_with_zero_gross_value_is_allowed(normalizer: OperationNormalizer) -> None:
+    # Gorila may omit prices for transfers/cost-unknown operations.
+    raw = _raw({"source": "gorila_xlsx", "operation_type": "compra", "gross_value": "0", "unit_price": "0"})
+    result = normalizer.normalize([raw], "test-portfolio")
+    assert not any("gross_value is 0" in e.message for e in result.errors)
+
+
+def test_dividend_with_zero_gross_value_is_allowed(normalizer: OperationNormalizer) -> None:
+    # Dividends can legitimately be 0 (e.g. fractional cents rounded down).
+    raw = _raw({"operation_type": "dividendo", "gross_value": "0", "unit_price": "0", "quantity": "0"})
+    result = normalizer.normalize([raw], "test-portfolio")
+    # Should not raise the gross_value error for non-buy/sell operations.
+    assert not any("gross_value is 0" in e.message for e in result.errors)

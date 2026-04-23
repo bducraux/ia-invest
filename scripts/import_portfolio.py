@@ -125,7 +125,8 @@ def _select_latest_previdencia_file(files: list[Path], enabled_sources: list[str
             continue
         try:
             period_month = extractor.extract_period_month(file_path)
-        except Exception:
+        except Exception as exc:  # noqa: BLE001
+            log.warning("skip_previdencia_file", path=str(file_path), error=str(exc))
             continue
 
         if latest is None or period_month > latest[1]:
@@ -522,6 +523,10 @@ def import_portfolio(
                 errors=error_count,
                 dry_run=dry_run,
             )
+
+    # Checkpoint the WAL file so it doesn't grow unboundedly.
+    if not dry_run:
+        db.connection.execute("PRAGMA wal_checkpoint(PASSIVE)")
 
     log.info("import_complete", **summary)
     return summary

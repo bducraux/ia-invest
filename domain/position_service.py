@@ -8,6 +8,7 @@ list of Position objects ready for upsert.
 from __future__ import annotations
 
 from collections import defaultdict
+from decimal import Decimal
 from typing import Any
 
 from domain.models import Position
@@ -80,8 +81,12 @@ class PositionService:
 
             elif op_type in _SELL_TYPES:
                 if quantity > 0:
-                    avg_cost_per_unit = total_cost / quantity
-                    cost_sold = round(avg_cost_per_unit * qty)
+                    # Use Decimal to avoid float rounding errors on fractional
+                    # quantities (common with crypto 8-decimal-place amounts).
+                    cost_sold = int(
+                        (Decimal(total_cost) * Decimal(str(qty)) / Decimal(str(quantity)))
+                        .to_integral_value()
+                    )
                     proceeds = gross - fees
                     realized_pnl += proceeds - cost_sold
                     total_cost -= cost_sold

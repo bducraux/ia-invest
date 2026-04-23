@@ -3,11 +3,33 @@
 from __future__ import annotations
 
 from pathlib import Path
+import shutil
 
 import pytest
 
 from domain.models import Operation, Portfolio
 from storage.repository.db import Database
+
+_FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures" / "previdencia"
+_INBOX_DIR = Path(__file__).resolve().parents[1] / "portfolios" / "fundacao-ibm" / "inbox"
+_PREVIDENCIA_FILES = [
+    "extrato_janeiro_2026.pdf",
+    "extrato_fevereiro_2026.pdf",
+    "extrato_março_2026.pdf",
+]
+
+
+@pytest.fixture(scope="session", autouse=True)
+def previdencia_test_pdfs() -> None:
+    """Copy synthetic IBM pension PDFs into the inbox before the test session
+    and remove them afterwards. The source files in tests/fixtures/previdencia/
+    contain only fictitious data and are safe to commit to the repository."""
+    _INBOX_DIR.mkdir(parents=True, exist_ok=True)
+    for name in _PREVIDENCIA_FILES:
+        shutil.copy2(_FIXTURES_DIR / name, _INBOX_DIR / name)
+    yield  # type: ignore[misc]
+    for name in _PREVIDENCIA_FILES:
+        (_INBOX_DIR / name).unlink(missing_ok=True)
 
 
 @pytest.fixture

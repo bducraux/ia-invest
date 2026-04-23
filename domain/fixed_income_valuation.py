@@ -217,6 +217,11 @@ class FixedIncomeValuationService:
             return principal, True, None
 
         if self._cdi_provider is None:
+            import logging
+            logging.getLogger(__name__).warning(
+                "CDI rate provider not configured — returning principal unchanged. "
+                "Set IA_INVEST_CDI_DAILY_RATE or configure a DailyRateProvider."
+            )
             return principal, False, "CDI rate provider not configured"
 
         # Apply CDI for accrual dates ``d`` such that

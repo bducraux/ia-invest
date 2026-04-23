@@ -61,6 +61,7 @@ class OperationNormalizer(BaseNormalizer):
     ) -> list[Operation]:
         # --- required fields ---
         asset_code = normalise_asset_code(raw.get("asset_code"))
+        source = str(raw.get("source", "unknown"))
 
         operation_date = parse_date(raw.get("operation_date"))
         operation_type = normalise_operation_type(str(raw.get("operation_type", "")))
@@ -77,12 +78,23 @@ class OperationNormalizer(BaseNormalizer):
         if unit_price == 0 and gross_value > 0 and quantity > 0:
             unit_price = round(gross_value / quantity)
 
+        # A buy or sell with zero gross_value after derivation is almost always
+        # a parse error for broker/exchange sources that always export prices.
+        # Gorila and similar portfolio-aggregator sources may legitimately omit
+        # prices for transfers or cost-basis-unknown operations, so we skip the
+        # check for those sources.
+        _STRICT_PRICE_SOURCES = {"b3_csv", "broker_csv"}
+        _BUY_SELL = {"buy", "sell"}
+        if operation_type in _BUY_SELL and gross_value == 0 and source in _STRICT_PRICE_SOURCES:
+            raise ValueError(
+                f"gross_value is 0 for {operation_type} of {raw.get('asset_code')!r} "
+                f"on {raw.get('operation_date')} — check unit_price and quantity in source file"
+            )
+
         # --- asset type ---
         asset_type = str(raw.get("asset_type") or "").strip().lower()
         if not asset_type:
             asset_type = infer_asset_type(asset_code)
-
-        source = str(raw.get("source", "unknown"))
         external_id = raw.get("external_id")
         if external_id is None or str(external_id).strip() == "":
             external_id = self._build_fallback_external_id(

@@ -113,3 +113,39 @@ def test_negative_intermediate_quantity_is_not_clamped(svc: PositionService) -> 
 
     # Arithmetic net must be preserved: -300.3 + 500 = 199.7
     assert pos.quantity == pytest.approx(199.7)
+
+
+def test_sell_when_quantity_is_zero_does_not_corrupt_cost(svc: PositionService) -> None:
+    # transfer_out before any buy leaves quantity negative.
+    # A subsequent sell must still apply the quantity delta without crashing
+    # and must not corrupt total_cost or realized_pnl.
+    ops = [
+        _op("BTC", "transfer_out", 0.1, 0, date="2021-01-01", idx=1),
+        _op("BTC", "buy", 1.0, 50000_00, fees=100, date="2021-01-02", idx=2),
+        _op("BTC", "sell", 0.5, 30000_00, fees=50, date="2021-01-03", idx=3),
+    ]
+    positions = svc.calculate(ops, "p1")
+    pos = positions[0]
+
+    # Net quantity: -0.1 + 1.0 - 0.5 = 0.4
+    assert pos.quantity == pytest.approx(0.4)
+    # total_cost and realized_pnl must be finite numbers, not NaN or negative-infinity
+    assert pos.total_cost >= 0
+    assert isinstance(pos.realized_pnl, int)
+
+
+def test_partial_sell_avg_price_precision(svc: PositionService) -> None:
+    # Buy 3 shares at 100.33 each (30099 cents total with fees).
+    # Sell 1 share: cost_sold must be exactly round(30099 / 3) = 10033,
+    # leaving total_cost = 20066 (not 20067 from double float rounding).
+    ops = [
+        _op("PETR4", "buy", 3, 30000, fees=99, date="2024-01-01", idx=1),
+        _op("PETR4", "sell", 1, 11000, fees=0, date="2024-01-02", idx=2),
+    ]
+    positions = svc.calculate(ops, "p1")
+    pos = positions[0]
+
+    assert pos.quantity == 2.0
+    # total_cost after sell = 30099 - round(30099/3 * 1) = 30099 - 10033 = 20066
+    assert pos.total_cost == 20066
+    assert pos.avg_price == round(20066 / 2)  # 10033

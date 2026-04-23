@@ -7,6 +7,7 @@ tool logic to keep business rules centralized.
 
 from __future__ import annotations
 
+import logging
 import math
 import os
 from datetime import date
@@ -347,8 +348,12 @@ def _build_fixed_income_valuation_service(db: Database) -> FixedIncomeValuationS
                 provider = FlatCDIRateProvider(Decimal(str(daily_rate)))
                 return FixedIncomeValuationService(cdi_provider=provider)
         except Exception as exc:  # noqa: BLE001
-            _ = exc
-    
+            logging.getLogger(__name__).warning(
+                "cdi_annual_rate_parse_error: could not parse '%s': %s — CDI provider disabled",
+                configured_annual_rate,
+                exc,
+            )
+
     # Fallback to legacy environment variable (daily rate)
     configured_daily_rate = os.environ.get("IA_INVEST_CDI_DAILY_RATE")
     if configured_daily_rate is None or configured_daily_rate.strip() == "":
@@ -357,8 +362,11 @@ def _build_fixed_income_valuation_service(db: Database) -> FixedIncomeValuationS
     try:
         provider = FlatCDIRateProvider(Decimal(configured_daily_rate.strip()))
     except Exception as exc:  # noqa: BLE001
-        # Keep API functional if runtime config is malformed.
-        _ = exc
+        logging.getLogger(__name__).warning(
+            "cdi_daily_rate_parse_error: could not parse IA_INVEST_CDI_DAILY_RATE='%s': %s — CDI provider disabled",
+            configured_daily_rate,
+            exc,
+        )
         return FixedIncomeValuationService()
 
     return FixedIncomeValuationService(cdi_provider=provider)

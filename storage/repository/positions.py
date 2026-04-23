@@ -13,6 +13,15 @@ class PositionRepository:
         self._conn = conn
 
     def upsert(self, position: Position) -> None:
+        self._upsert_execute(position)
+        self._conn.commit()
+
+    def upsert_many(self, positions: list[Position]) -> None:
+        for pos in positions:
+            self._upsert_execute(pos)
+        self._conn.commit()
+
+    def _upsert_execute(self, position: Position) -> None:
         self._conn.execute(
             """
             INSERT INTO positions (
@@ -51,11 +60,6 @@ class PositionRepository:
                 "last_operation_date": position.last_operation_date,
             },
         )
-        self._conn.commit()
-
-    def upsert_many(self, positions: list[Position]) -> None:
-        for pos in positions:
-            self.upsert(pos)
 
     def get(self, portfolio_id: str, asset_code: str) -> Position | None:
         row = self._conn.execute(

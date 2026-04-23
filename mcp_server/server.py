@@ -51,11 +51,17 @@ _DB_PATH = Path(os.environ.get("IA_INVEST_DB", "ia_invest.db"))
 
 app = Server("ia-invest")
 
+# Single DB instance for the lifetime of the server process.
+# initialize() runs schema setup once here instead of on every tool call.
+_db: Database | None = None
+
 
 def _get_db() -> Database:
-    db = Database(_DB_PATH)
-    db.initialize()
-    return db
+    global _db  # noqa: PLW0603
+    if _db is None:
+        _db = Database(_DB_PATH)
+        _db.initialize()
+    return _db
 
 
 # ---------------------------------------------------------------------------

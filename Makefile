@@ -1,4 +1,4 @@
-.PHONY: help install init reset-db create-portfolio adjust-balance check-balance import-all portfolio-overview lint type-check test clean server api-server frontend-install frontend-dev frontend-build frontend-test frontend-lint
+.PHONY: help install init migrate reset-db create-portfolio adjust-balance check-balance import-all portfolio-overview lint type-check test clean server api-server frontend-install frontend-dev frontend-build frontend-test frontend-lint
 
 API_PORT ?= 8010
 CDI_DAILY_RATE ?=
@@ -10,7 +10,8 @@ help:
 	@echo "  make install              Install dependencies (uv sync --extra dev)"
 	@echo ""
 	@echo "Database:"
-	@echo "  make init                 Initialize database"
+	@echo "  make init                 Initialize database (fresh schema)"
+	@echo "  make migrate              Apply pending migrations to an existing database"
 	@echo "  make reset-db             Delete and reinitialize database, then import all portfolios"
 	@echo ""
 	@echo "Portfolios:"
@@ -48,6 +49,9 @@ install:
 
 init:
 	uv run python scripts/init_db.py
+
+migrate:
+	uv run python scripts/migrate.py
 
 reset-db:
 	rm -f ia_invest.db

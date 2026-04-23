@@ -20,6 +20,18 @@ class FixedIncomePositionRepository:
 
     def insert(self, position: FixedIncomePosition) -> int:
         """Insert a single position. Returns the new row id."""
+        new_id = self._insert_execute(position)
+        self._conn.commit()
+        return new_id
+
+    def insert_many(self, positions: list[FixedIncomePosition]) -> int:
+        """Insert several positions in a single transaction. Returns the number inserted."""
+        for p in positions:
+            self._insert_execute(p)
+        self._conn.commit()
+        return len(positions)
+
+    def _insert_execute(self, position: FixedIncomePosition) -> int:
         cur = self._conn.execute(
             """
             INSERT INTO fixed_income_positions (
@@ -44,18 +56,9 @@ class FixedIncomePositionRepository:
             """,
             self._to_params(position),
         )
-        self._conn.commit()
         new_id = int(cur.lastrowid or 0)
         position.id = new_id
         return new_id
-
-    def insert_many(self, positions: list[FixedIncomePosition]) -> int:
-        """Insert several positions. Returns the number inserted."""
-        inserted = 0
-        for p in positions:
-            self.insert(p)
-            inserted += 1
-        return inserted
 
     # ------------------------------------------------------------------
     # Reads

@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS operations (
 
     -- identification / deduplication
     source          TEXT NOT NULL,              -- e.g. 'b3_csv', 'binance_csv'
-    external_id     TEXT,                       -- original ID from source file
+    external_id     TEXT NOT NULL,              -- original ID from source file (SHA-256 fallback when absent)
 
     -- asset
     asset_code      TEXT NOT NULL,              -- ticker, ISIN, symbol
@@ -70,6 +70,8 @@ CREATE INDEX IF NOT EXISTS idx_operations_portfolio    ON operations(portfolio_i
 CREATE INDEX IF NOT EXISTS idx_operations_asset        ON operations(portfolio_id, asset_code);
 CREATE INDEX IF NOT EXISTS idx_operations_date         ON operations(portfolio_id, operation_date);
 CREATE INDEX IF NOT EXISTS idx_operations_type         ON operations(portfolio_id, operation_type);
+CREATE INDEX IF NOT EXISTS idx_operations_asset_type   ON operations(portfolio_id, asset_code, operation_type);
+CREATE INDEX IF NOT EXISTS idx_operations_created_at   ON operations(created_at);
 
 -- ---------------------------------------------------------------------------
 -- positions
@@ -199,6 +201,7 @@ CREATE TABLE IF NOT EXISTS fixed_income_positions (
 CREATE INDEX IF NOT EXISTS idx_fi_positions_portfolio ON fixed_income_positions(portfolio_id);
 CREATE INDEX IF NOT EXISTS idx_fi_positions_status    ON fixed_income_positions(portfolio_id, status);
 CREATE INDEX IF NOT EXISTS idx_fi_positions_asset     ON fixed_income_positions(portfolio_id, asset_type);
+CREATE INDEX IF NOT EXISTS idx_fi_positions_maturity  ON fixed_income_positions(maturity_date);
 
 -- ---------------------------------------------------------------------------
 -- previdencia_snapshots
@@ -250,10 +253,6 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
     applied_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 
--- Record this baseline migration
+-- Record this baseline schema version
 INSERT OR IGNORE INTO schema_migrations (version, description)
-VALUES
-    ('0001', 'initial schema'),
-    ('0002', 'market quote cache table'),
-    ('0003', 'fixed income positions table'),
-    ('0004', 'application settings table');
+VALUES ('0001', 'initial schema — all tables, indexes, and constraints');

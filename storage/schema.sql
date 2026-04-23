@@ -184,15 +184,12 @@ CREATE TABLE IF NOT EXISTS fixed_income_positions (
     principal_applied_brl         INTEGER NOT NULL CHECK (principal_applied_brl > 0),
     fixed_rate_annual_percent     REAL,
     benchmark_percent             REAL,
-
-    imported_gross_value_brl      INTEGER,
-    imported_net_value_brl        INTEGER,
-    imported_estimated_ir_brl     INTEGER,
-    valuation_reference_date      TEXT,
     notes                         TEXT,
 
     status                        TEXT NOT NULL DEFAULT 'ACTIVE'
-                                       CHECK (status IN ('ACTIVE','MATURED','REDEEMED')),
+                                       CHECK (status IN ('ACTIVE','MATURED')),
+    auto_reapply_enabled          INTEGER NOT NULL DEFAULT 0
+                                       CHECK (auto_reapply_enabled IN (0,1)),
 
     created_at                    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     updated_at                    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))

@@ -41,9 +41,9 @@ import:
 
     (inbox_dir / "rf.csv").write_text(
         """
-institution,asset_type,product_name,remuneration_type,benchmark,benchmark_percent,application_date,maturity_date,liquidity_label,principal_applied_brl,imported_gross_value_brl
-Banco X,CDB,CDB 104 CDI,CDI_PERCENT,CDI,104.00,2024-01-02,2026-01-02,Diária,1000.00,1100.00
-Banco X,LCI,LCI 95 CDI,CDI_PERCENT,CDI,95.00,2024-01-03,2026-01-03,No vencimento,5000.00,5050.00
+institution,asset_type,product_name,remuneration_type,benchmark,benchmark_percent,application_date,maturity_date,liquidity_label,application_value
+Banco X,CDB,CDB 104 CDI,CDI_PERCENT,CDI,104.00,2024-01-02,2026-01-02,Diária,1000.00
+Banco X,LCI,LCI 95 CDI,CDI_PERCENT,CDI,95.00,2024-01-03,2026-01-03,No vencimento,5000.00
         """.strip()
         + "\n",
         encoding="utf-8",

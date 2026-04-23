@@ -33,6 +33,10 @@ import {
   createFixedIncomePosition,
   getFixedIncomePositions,
   importFixedIncomeCSV,
+  closeFixedIncomePosition,
+  redeemFixedIncomePosition,
+  setFixedIncomeAutoReapply,
+  updateFixedIncomePosition,
   type CreateFixedIncomeInput,
   type FixedIncomeImportResponse,
   type FixedIncomePosition,
@@ -154,6 +158,7 @@ export default function FixedIncomePage() {
 
   const [form, setForm] = useState<CreateFixedIncomeInput>(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
+  const [editingPositionId, setEditingPositionId] = useState<number | null>(null);
   const [importResult, setImportResult] =
     useState<FixedIncomeImportResponse | null>(null);
 
@@ -163,7 +168,19 @@ export default function FixedIncomePage() {
     onSuccess: () => {
       setForm(EMPTY_FORM);
       setShowForm(false);
-      queryClient.invalidateQueries({ queryKey: ["fixed-income", targetPortfolioId] });
+      setEditingPositionId(null);
+      queryClient.invalidateQueries({ queryKey: ["fixed-income"] });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ portfolioId, positionId }: { portfolioId: string; positionId: number }) =>
+      updateFixedIncomePosition(portfolioId, positionId, normalizeForm(form)),
+    onSuccess: () => {
+      setForm(EMPTY_FORM);
+      setShowForm(false);
+      setEditingPositionId(null);
+      queryClient.invalidateQueries({ queryKey: ["fixed-income"] });
     },
   });
 
@@ -172,9 +189,45 @@ export default function FixedIncomePage() {
       importFixedIncomeCSV(targetPortfolioId, file),
     onSuccess: (data) => {
       setImportResult(data);
-      queryClient.invalidateQueries({ queryKey: ["fixed-income", targetPortfolioId] });
+      queryClient.invalidateQueries({ queryKey: ["fixed-income"] });
     },
   });
+
+  const closeMutation = useMutation({
+    mutationFn: ({ portfolioId, positionId }: { portfolioId: string; positionId: number }) =>
+      closeFixedIncomePosition(portfolioId, positionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fixed-income"] });
+    },
+  });
+
+  const redeemMutation = useMutation({
+    mutationFn: ({ portfolioId, positionId }: { portfolioId: string; positionId: number }) =>
+      redeemFixedIncomePosition(portfolioId, positionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fixed-income"] });
+    },
+  });
+
+  const autoReapplyMutation = useMutation({
+    mutationFn: ({
+      portfolioId,
+      positionId,
+      enabled,
+    }: {
+      portfolioId: string;
+      positionId: number;
+      enabled: boolean;
+    }) => setFixedIncomeAutoReapply(portfolioId, positionId, enabled),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fixed-income"] });
+    },
+  });
+
+  const displayedPositions = useMemo(
+    () => positions,
+    [positions],
+  );
 
   if (portfoliosQuery.isLoading) {
     return (
@@ -279,20 +332,38 @@ export default function FixedIncomePage() {
         {showForm && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Cadastrar aplicação</CardTitle>
+              <CardTitle className="text-base">
+                {editingPositionId ? "Editar aplicação" : "Cadastrar aplicação"}
+              </CardTitle>
               <CardDescription>
-                A aplicação será registrada em {targetPortfolio?.name ?? "uma carteira"}. Os campos são suficientes para o cálculo contratual.
+                {editingPositionId
+                  ? "Edite os campos e salve para atualizar o contrato sem alterar o histórico de movimentações."
+                  : `A aplicação será registrada em ${targetPortfolio?.name ?? "uma carteira"}. Os campos são suficientes para o cálculo contratual.`}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <FixedIncomeForm
                 value={form}
                 onChange={setForm}
-                onSubmit={() => createMutation.mutate()}
-                disabled={createMutation.isPending}
+                onSubmit={() => {
+                  if (editingPositionId) {
+                    const row = positions.find((position) => position.id === editingPositionId);
+                    if (!row) return;
+                    updateMutation.mutate({
+                      portfolioId: row.portfolioId,
+                      positionId: row.id,
+                    });
+                    return;
+                  }
+                  createMutation.mutate();
+                }}
+                disabled={createMutation.isPending || updateMutation.isPending}
+                submitLabel={editingPositionId ? "Salvar edição" : "Salvar aplicação"}
                 error={
-                  createMutation.error instanceof Error
-                    ? createMutation.error.message
+                  updateMutation.error instanceof Error
+                    ? updateMutation.error.message
+                    : createMutation.error instanceof Error
+                      ? createMutation.error.message
                     : null
                 }
               />
@@ -424,11 +495,8 @@ export default function FixedIncomePage() {
                 title="Não foi possível carregar a renda fixa"
                 description={error.message}
               />
-            ) : positions.length === 0 ? (
-              <EmptyState
-                title="Nenhuma aplicação registrada"
-                description="Cadastre manualmente ou importe um CSV com seus extratos bancários."
-              />
+            ) : displayedPositions.length === 0 ? (
+              <EmptyState\n                title=\"Nenhuma aplicação registrada\"\n                description=\"Cadastre manualmente ou importe um CSV com seus extratos bancários.\"\n              />
             ) : (
               <Table>
                 <TableHeader>
@@ -444,11 +512,15 @@ export default function FixedIncomePage() {
                     <TableHead className="text-right">IR estimado</TableHead>
                     <TableHead className="text-right">Líquido hoje</TableHead>
                     <TableHead>Faixa IR</TableHead>
+                    <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {positions.map((p) => (
-                    <TableRow key={`${p.portfolioId}-${p.id}`}>
+                  {displayedPositions.map((p) => (
+                    <TableRow
+                      key={`${p.portfolioId}-${p.id}`}
+                      className={p.isMatured && p.status !== "REDEEMED" ? "bg-amber-50/60" : undefined}
+                    >
                       {scope.isGlobalScope ? (
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -461,6 +533,10 @@ export default function FixedIncomePage() {
                         <div className="font-medium">{fixedIncomeDisplayName(p)}</div>
                         <div className="text-xs text-muted-foreground">
                           {p.productName} · {p.daysSinceApplication}d
+                        </div>
+                        <div className="mt-1 flex items-center gap-2">
+                          {p.isMatured ? <Badge variant="outline">Vencido</Badge> : null}
+                          {p.autoReapplyEnabled ? <Badge variant="outline">Auto reapply</Badge> : null}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -491,6 +567,54 @@ export default function FixedIncomePage() {
                       </TableCell>
                       <TableCell className="text-xs">
                         {p.taxBracketCurrent ?? "—"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setShowForm(true);
+                              setEditingPositionId(p.id);
+                              setForm(toFormInput(p));
+                            }}
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              closeMutation.mutate({ portfolioId: p.portfolioId, positionId: p.id })
+                            }
+                            disabled={closeMutation.isPending}
+                          >
+                            Fechar
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() =>
+                              redeemMutation.mutate({ portfolioId: p.portfolioId, positionId: p.id })
+                            }
+                            disabled={!p.isMatured || redeemMutation.isPending}
+                          >
+                            Resgatar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={p.autoReapplyEnabled ? "default" : "outline"}
+                            onClick={() =>
+                              autoReapplyMutation.mutate({
+                                portfolioId: p.portfolioId,
+                                positionId: p.id,
+                                enabled: !p.autoReapplyEnabled,
+                              })
+                            }
+                            disabled={autoReapplyMutation.isPending}
+                          >
+                            {p.autoReapplyEnabled ? "Auto: on" : "Auto: off"}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -544,12 +668,14 @@ function FixedIncomeForm({
   onChange,
   onSubmit,
   disabled,
+  submitLabel,
   error,
 }: {
   value: CreateFixedIncomeInput;
   onChange: (next: CreateFixedIncomeInput) => void;
   onSubmit: () => void;
   disabled: boolean;
+  submitLabel?: string;
   error: string | null;
 }) {
   const update = <K extends keyof CreateFixedIncomeInput>(
@@ -683,7 +809,7 @@ function FixedIncomeForm({
       )}
       <div className="col-span-2">
         <Button type="submit" disabled={disabled}>
-          {disabled ? "Salvando..." : "Salvar aplicação"}
+          {disabled ? "Salvando..." : (submitLabel ?? "Salvar aplicação")}
         </Button>
       </div>
     </form>
@@ -710,4 +836,22 @@ function normalizeForm(form: CreateFixedIncomeInput): CreateFixedIncomeInput {
     return { ...form, benchmark: "NONE", benchmarkPercent: null };
   }
   return { ...form, benchmark: "CDI", fixedRateAnnualPercent: null };
+}
+
+function toFormInput(position: FixedIncomePosition): CreateFixedIncomeInput {
+  return {
+    institution: position.institution,
+    assetType: position.assetType,
+    productName: position.productName,
+    remunerationType: position.remunerationType,
+    benchmark: position.benchmark,
+    applicationDate: position.applicationDate,
+    maturityDate: position.maturityDate,
+    principalAppliedBrl: position.principalAppliedBrl,
+    fixedRateAnnualPercent: position.fixedRateAnnualPercent,
+    benchmarkPercent: position.benchmarkPercent,
+    liquidityLabel: position.liquidityLabel,
+    notes: position.notes,
+    autoReapplyEnabled: position.autoReapplyEnabled,
+  };
 }

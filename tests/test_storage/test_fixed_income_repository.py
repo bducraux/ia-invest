@@ -49,6 +49,7 @@ def test_insert_and_read_back_round_trips_all_fields(tmp_db: Database, sample_po
     assert fetched.fixed_rate_annual_percent == 12.0
     assert fetched.benchmark == "NONE"
     assert fetched.status == "ACTIVE"
+    assert fetched.auto_reapply_enabled is False
     assert fetched.notes == "seed"
 
 
@@ -82,3 +83,16 @@ def test_invalid_position_rejected_at_dataclass_level():
             principal_applied_brl=1_000_000,
             fixed_rate_annual_percent=None,    # missing
         )
+
+
+def test_delete_removes_position(tmp_db: Database, sample_portfolio):
+    _seed_portfolio(tmp_db, sample_portfolio)
+    repo = FixedIncomePositionRepository(tmp_db.connection)
+
+    pos_id = repo.insert(_make())
+    assert repo.get(pos_id) is not None
+
+    repo.delete(pos_id, "test-portfolio")
+
+    assert repo.get(pos_id) is None
+    assert repo.list_by_portfolio("test-portfolio") == []

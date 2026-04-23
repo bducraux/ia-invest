@@ -1,7 +1,8 @@
 """CSV importer for brazilian fixed-income applications (V1 MVP).
 
-The importer accepts a snake_case CSV with one row per application and
-converts each row into a :class:`~domain.fixed_income.FixedIncomePosition`.
+The importer accepts a simplified snake_case CSV with one row per
+application and converts each row into a
+:class:`~domain.fixed_income.FixedIncomePosition`.
 
 Required columns
 ----------------
@@ -11,7 +12,7 @@ Required columns
 - ``remuneration_type``         (PRE | CDI_PERCENT)
 - ``application_date``          (ISO ``YYYY-MM-DD`` or ``DD/MM/YYYY``)
 - ``maturity_date``             (same formats)
-- ``principal_applied_brl``     (must be > 0)
+- ``application_value``         (must be > 0)
 
 Conditionally required
 ----------------------
@@ -23,10 +24,6 @@ Optional columns
 ----------------
 - ``benchmark`` (defaults to ``NONE`` for PRE, ``CDI`` for CDI_PERCENT)
 - ``liquidity_label``
-- ``imported_gross_value_brl``
-- ``imported_net_value_brl``
-- ``imported_estimated_ir_brl``
-- ``valuation_reference_date``
 - ``notes``
 
 Investor type defaults to ``PF`` (V1 product decision).
@@ -55,7 +52,7 @@ REQUIRED_COLUMNS: tuple[str, ...] = (
     "remuneration_type",
     "application_date",
     "maturity_date",
-    "principal_applied_brl",
+    "application_value",
 )
 
 OPTIONAL_COLUMNS: tuple[str, ...] = (
@@ -63,10 +60,6 @@ OPTIONAL_COLUMNS: tuple[str, ...] = (
     "benchmark_percent",
     "fixed_rate_annual_percent",
     "liquidity_label",
-    "imported_gross_value_brl",
-    "imported_net_value_brl",
-    "imported_estimated_ir_brl",
-    "valuation_reference_date",
     "notes",
 )
 
@@ -250,21 +243,11 @@ class FixedIncomeCSVImporter:
         # Dates — parse_date raises ValueError with a clear message.
         application_date = parse_date(row.get("application_date"))
         maturity_date = parse_date(row.get("maturity_date"))
-        valuation_reference_date = (
-            parse_date(row["valuation_reference_date"])
-            if _parse_optional(row.get("valuation_reference_date"))
-            else None
-        )
-
         principal_cents = _parse_brl_to_cents(
-            row["principal_applied_brl"], "principal_applied_brl"
+            row["application_value"], "application_value"
         )
         if principal_cents <= 0:
-            raise ValueError("principal_applied_brl must be > 0")
-
-        def _opt_brl_cents(name: str) -> int | None:
-            raw = _parse_optional(row.get(name))
-            return None if raw is None else _parse_brl_to_cents(raw, name)
+            raise ValueError("application_value must be > 0")
 
         return FixedIncomePosition(
             portfolio_id=portfolio_id,
@@ -281,9 +264,5 @@ class FixedIncomeCSVImporter:
             liquidity_label=_parse_optional(row.get("liquidity_label")),
             fixed_rate_annual_percent=fixed_rate,
             benchmark_percent=benchmark_percent,
-            imported_gross_value_brl=_opt_brl_cents("imported_gross_value_brl"),
-            imported_net_value_brl=_opt_brl_cents("imported_net_value_brl"),
-            imported_estimated_ir_brl=_opt_brl_cents("imported_estimated_ir_brl"),
-            valuation_reference_date=valuation_reference_date,
             notes=_parse_optional(row.get("notes")),
         )

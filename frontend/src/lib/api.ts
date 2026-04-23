@@ -70,6 +70,42 @@ async function apiPost<T>(path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
+async function apiPatch<T>(path: string, payload: unknown): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`API ${response.status}: ${body || response.statusText}`);
+  }
+
+  return (await response.json()) as T;
+}
+
+async function apiPostJson<T>(path: string, payload: unknown): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`API ${response.status}: ${body || response.statusText}`);
+  }
+
+  return (await response.json()) as T;
+}
+
 function toQueryString(params: Record<string, string | number | boolean | undefined>): string {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
@@ -200,11 +236,8 @@ export interface FixedIncomePosition {
   isComplete: boolean;
   incompleteReason: string | null;
   status: string;
-  importedGrossValueBrl: number | null;
-  importedNetValueBrl: number | null;
-  importedEstimatedIrBrl: number | null;
-  grossDiffBrl: number | null;
-  netDiffBrl: number | null;
+  autoReapplyEnabled: boolean;
+  isMatured: boolean;
   notes: string | null;
 }
 
@@ -224,6 +257,22 @@ export interface CreateFixedIncomeInput {
   applicationDate: string;
   maturityDate: string;
   principalAppliedBrl: number;
+  fixedRateAnnualPercent?: number | null;
+  benchmarkPercent?: number | null;
+  liquidityLabel?: string | null;
+  notes?: string | null;
+  autoReapplyEnabled?: boolean;
+}
+
+export interface UpdateFixedIncomeInput {
+  institution?: string;
+  assetType?: "CDB" | "LCI" | "LCA";
+  productName?: string;
+  remunerationType?: "PRE" | "CDI_PERCENT";
+  benchmark?: "NONE" | "CDI";
+  applicationDate?: string;
+  maturityDate?: string;
+  principalAppliedBrl?: number;
   fixedRateAnnualPercent?: number | null;
   benchmarkPercent?: number | null;
   liquidityLabel?: string | null;
@@ -276,4 +325,51 @@ export async function importFixedIncomeCSV(
     throw new Error(`API ${response.status}: ${body || response.statusText}`);
   }
   return (await response.json()) as FixedIncomeImportResponse;
+}
+
+export async function updateFixedIncomePosition(
+  portfolioId: string,
+  positionId: number,
+  input: UpdateFixedIncomeInput,
+): Promise<FixedIncomePosition> {
+  return apiPatch<FixedIncomePosition>(
+    `/api/portfolios/${portfolioId}/fixed-income/${positionId}`,
+    input,
+  );
+}
+
+export async function closeFixedIncomePosition(
+  portfolioId: string,
+  positionId: number,
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE}/api/portfolios/${portfolioId}/fixed-income/${positionId}`,
+    { method: "DELETE", headers: { Accept: "application/json" } },
+  );
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`API ${response.status}: ${body || response.statusText}`);
+  }
+}
+
+export async function redeemFixedIncomePosition(
+  portfolioId: string,
+  positionId: number,
+  asOfDate?: string,
+): Promise<FixedIncomePosition> {
+  return apiPostJson<FixedIncomePosition>(
+    `/api/portfolios/${portfolioId}/fixed-income/${positionId}/redeem`,
+    { asOfDate: asOfDate ?? null },
+  );
+}
+
+export async function setFixedIncomeAutoReapply(
+  portfolioId: string,
+  positionId: number,
+  enabled: boolean,
+): Promise<FixedIncomePosition> {
+  return apiPatch<FixedIncomePosition>(
+    `/api/portfolios/${portfolioId}/fixed-income/${positionId}/auto-reapply`,
+    { enabled },
+  );
 }

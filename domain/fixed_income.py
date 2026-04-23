@@ -45,7 +45,7 @@ BENCHMARKS: tuple[str, ...] = ("NONE", "CDI")
 INVESTOR_TYPES: tuple[str, ...] = ("PF",)
 
 #: Position lifecycle status values.
-STATUSES: tuple[str, ...] = ("ACTIVE", "MATURED", "REDEEMED")
+STATUSES: tuple[str, ...] = ("ACTIVE", "MATURED")
 
 
 # ---------------------------------------------------------------------------
@@ -82,15 +82,12 @@ class FixedIncomePosition:
     fixed_rate_annual_percent: float | None = None
     benchmark_percent: float | None = None
 
-    # Optional importer/conference fields ------------------------------
-    imported_gross_value_brl: int | None = None         # cents
-    imported_net_value_brl: int | None = None           # cents
-    imported_estimated_ir_brl: int | None = None        # cents
-    valuation_reference_date: str | None = None         # ISO 8601 date
+    # Optional free-form notes -----------------------------------------
     notes: str | None = None
 
     # Lifecycle --------------------------------------------------------
     status: str = "ACTIVE"
+    auto_reapply_enabled: bool = False
 
     # Identity ---------------------------------------------------------
     id: int | None = None

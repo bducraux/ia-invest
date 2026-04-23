@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import math
 import os
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -23,6 +23,7 @@ from pydantic import BaseModel
 from domain.fixed_income import FixedIncomePosition
 from domain.fixed_income_rates import FlatCDIRateProvider
 from domain.fixed_income_valuation import FixedIncomeValuationService
+from mcp_server.services.fixed_income_lifecycle import FixedIncomeLifecycleService
 from mcp_server.services.quotes import MarketQuoteService
 from mcp_server.tools.portfolios import get_portfolio_operations
 from normalizers.fixed_income_csv import FixedIncomeCSVImporter
@@ -155,6 +156,30 @@ class FixedIncomePositionCreate(BaseModel):
     benchmarkPercent: float | None = None
     liquidityLabel: str | None = None
     notes: str | None = None
+    autoReapplyEnabled: bool = False
+
+
+class FixedIncomePositionUpdate(BaseModel):
+    institution: str | None = None
+    assetType: str | None = None
+    productName: str | None = None
+    remunerationType: str | None = None
+    benchmark: str | None = None
+    applicationDate: str | None = None
+    maturityDate: str | None = None
+    principalAppliedBrl: int | None = None
+    fixedRateAnnualPercent: float | None = None
+    benchmarkPercent: float | None = None
+    liquidityLabel: str | None = None
+    notes: str | None = None
+
+
+class FixedIncomeLifecycleActionIn(BaseModel):
+    asOfDate: str | None = None
+
+
+class FixedIncomeAutoReapplyUpdate(BaseModel):
+    enabled: bool
 
 
 class FixedIncomePositionOut(BaseModel):
@@ -182,11 +207,8 @@ class FixedIncomePositionOut(BaseModel):
     isComplete: bool
     incompleteReason: str | None = None
     status: str
-    importedGrossValueBrl: int | None = None
-    importedNetValueBrl: int | None = None
-    importedEstimatedIrBrl: int | None = None
-    grossDiffBrl: int | None = None
-    netDiffBrl: int | None = None
+    autoReapplyEnabled: bool
+    isMatured: bool
     notes: str | None = None
 
 
@@ -370,6 +392,65 @@ def _build_fixed_income_valuation_service(db: Database) -> FixedIncomeValuationS
         return FixedIncomeValuationService()
 
     return FixedIncomeValuationService(cdi_provider=provider)
+
+
+def _build_fixed_income_lifecycle_service(db: Database) -> FixedIncomeLifecycleService:
+    repo = FixedIncomePositionRepository(db.connection)
+    valuation = _build_fixed_income_valuation_service(db)
+    return FixedIncomeLifecycleService(repo=repo, valuation_service=valuation)
+
+
+def _is_matured(maturity_date: str, valuation_date: str) -> bool:
+    return maturity_date <= valuation_date
+
+
+def _merge_fixed_income_position(
+    current: FixedIncomePosition,
+    payload: FixedIncomePositionUpdate,
+) -> FixedIncomePosition:
+    remuneration_type = payload.remunerationType or current.remuneration_type
+    merged_benchmark = payload.benchmark
+    if merged_benchmark is None:
+        merged_benchmark = "CDI" if remuneration_type == "CDI_PERCENT" else "NONE"
+
+    return FixedIncomePosition(
+        id=current.id,
+        portfolio_id=current.portfolio_id,
+        import_job_id=current.import_job_id,
+        external_id=current.external_id,
+        institution=payload.institution or current.institution,
+        asset_type=payload.assetType or current.asset_type,
+        product_name=payload.productName or current.product_name,
+        remuneration_type=remuneration_type,
+        benchmark=merged_benchmark,
+        investor_type=current.investor_type,
+        currency=current.currency,
+        application_date=payload.applicationDate or current.application_date,
+        maturity_date=payload.maturityDate or current.maturity_date,
+        principal_applied_brl=(
+            payload.principalAppliedBrl
+            if payload.principalAppliedBrl is not None
+            else current.principal_applied_brl
+        ),
+        liquidity_label=(
+            payload.liquidityLabel
+            if payload.liquidityLabel is not None
+            else current.liquidity_label
+        ),
+        fixed_rate_annual_percent=(
+            payload.fixedRateAnnualPercent
+            if payload.fixedRateAnnualPercent is not None
+            else current.fixed_rate_annual_percent
+        ),
+        benchmark_percent=(
+            payload.benchmarkPercent
+            if payload.benchmarkPercent is not None
+            else current.benchmark_percent
+        ),
+        notes=payload.notes if payload.notes is not None else current.notes,
+        status=current.status,
+        auto_reapply_enabled=current.auto_reapply_enabled,
+    )
 
 
 def _count_operations(
@@ -920,16 +1001,7 @@ def create_http_app(
         valuation_service: FixedIncomeValuationService,
     ) -> FixedIncomePositionOut:
         valuation = valuation_service.revalue(position)
-        diff_gross = (
-            position.imported_gross_value_brl - valuation.gross_value_current_brl
-            if position.imported_gross_value_brl is not None
-            else None
-        )
-        diff_net = (
-            position.imported_net_value_brl - valuation.net_value_current_brl
-            if position.imported_net_value_brl is not None
-            else None
-        )
+        is_matured = _is_matured(position.maturity_date, valuation.valuation_date)
         return FixedIncomePositionOut(
             id=position.id or 0,
             institution=position.institution,
@@ -955,11 +1027,8 @@ def create_http_app(
             isComplete=valuation.is_complete,
             incompleteReason=valuation.incomplete_reason,
             status=position.status,
-            importedGrossValueBrl=position.imported_gross_value_brl,
-            importedNetValueBrl=position.imported_net_value_brl,
-            importedEstimatedIrBrl=position.imported_estimated_ir_brl,
-            grossDiffBrl=diff_gross,
-            netDiffBrl=diff_net,
+            autoReapplyEnabled=position.auto_reapply_enabled,
+            isMatured=is_matured,
             notes=position.notes,
         )
 
@@ -973,6 +1042,7 @@ def create_http_app(
         db: Database = Depends(get_db),  # noqa: B008
     ) -> FixedIncomePositionsResponse:
         require_portfolio(portfolio_id, db)
+        _build_fixed_income_lifecycle_service(db).reconcile_auto_reapply(portfolio_id)
         repo = FixedIncomePositionRepository(db.connection)
         positions = repo.list_by_portfolio(portfolio_id, status=status)
         valuation_service = _build_fixed_income_valuation_service(db)
@@ -989,6 +1059,7 @@ def create_http_app(
         db: Database = Depends(get_db),  # noqa: B008
     ) -> FixedIncomePositionOut:
         require_portfolio(portfolio_id, db)
+        _build_fixed_income_lifecycle_service(db).reconcile_auto_reapply(portfolio_id)
         repo = FixedIncomePositionRepository(db.connection)
         position = repo.get(position_id)
         if position is None or position.portfolio_id != portfolio_id:
@@ -1025,6 +1096,7 @@ def create_http_app(
                 fixed_rate_annual_percent=payload.fixedRateAnnualPercent,
                 benchmark_percent=payload.benchmarkPercent,
                 notes=payload.notes,
+                auto_reapply_enabled=payload.autoReapplyEnabled,
             )
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -1032,6 +1104,99 @@ def create_http_app(
         repo = FixedIncomePositionRepository(db.connection)
         repo.insert(position)
         return _serialize_fi(position, _build_fixed_income_valuation_service(db))
+
+    @app.patch(
+        "/api/portfolios/{portfolio_id}/fixed-income/{position_id}",
+        response_model=FixedIncomePositionOut,
+    )
+    def update_fixed_income(
+        portfolio_id: str,
+        position_id: int,
+        payload: FixedIncomePositionUpdate,
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> FixedIncomePositionOut:
+        require_portfolio(portfolio_id, db)
+        repo = FixedIncomePositionRepository(db.connection)
+        current = repo.get(position_id)
+        if current is None or current.portfolio_id != portfolio_id:
+            raise HTTPException(status_code=404, detail="Position not found")
+
+        try:
+            updated = _merge_fixed_income_position(current, payload)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+        repo.update(updated)
+        persisted = repo.get(position_id)
+        if persisted is None:
+            raise HTTPException(status_code=404, detail="Position not found")
+        return _serialize_fi(persisted, _build_fixed_income_valuation_service(db))
+
+    @app.delete(
+        "/api/portfolios/{portfolio_id}/fixed-income/{position_id}",
+        status_code=204,
+    )
+    def close_fixed_income(
+        portfolio_id: str,
+        position_id: int,
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> None:
+        """Close (delete) a fixed-income position without reinvesting."""
+        require_portfolio(portfolio_id, db)
+        lifecycle = _build_fixed_income_lifecycle_service(db)
+        try:
+            lifecycle.close(portfolio_id, position_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.post(
+        "/api/portfolios/{portfolio_id}/fixed-income/{position_id}/redeem",
+        response_model=FixedIncomePositionOut,
+    )
+    def redeem_fixed_income(
+        portfolio_id: str,
+        position_id: int,
+        payload: FixedIncomeLifecycleActionIn,
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> FixedIncomePositionOut:
+        """Reinvest proceeds: create new position with net value, delete old."""
+        require_portfolio(portfolio_id, db)
+        lifecycle = _build_fixed_income_lifecycle_service(db)
+        try:
+            position = lifecycle.redeem(
+                portfolio_id,
+                position_id,
+                as_of_date=payload.asOfDate,
+            )
+        except ValueError as exc:
+            detail = str(exc)
+            if detail == "Position not found":
+                raise HTTPException(status_code=404, detail=detail) from exc
+            raise HTTPException(status_code=422, detail=detail) from exc
+
+        return _serialize_fi(position, _build_fixed_income_valuation_service(db))
+
+    @app.patch(
+        "/api/portfolios/{portfolio_id}/fixed-income/{position_id}/auto-reapply",
+        response_model=FixedIncomePositionOut,
+    )
+    def toggle_auto_reapply_fixed_income(
+        portfolio_id: str,
+        position_id: int,
+        payload: FixedIncomeAutoReapplyUpdate,
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> FixedIncomePositionOut:
+        require_portfolio(portfolio_id, db)
+        repo = FixedIncomePositionRepository(db.connection)
+        position = repo.get(position_id)
+        if position is None or position.portfolio_id != portfolio_id:
+            raise HTTPException(status_code=404, detail="Position not found")
+
+        repo.set_auto_reapply(position_id, portfolio_id, payload.enabled)
+        updated = repo.get(position_id)
+        if updated is None:
+            raise HTTPException(status_code=404, detail="Position not found")
+        return _serialize_fi(updated, _build_fixed_income_valuation_service(db))
 
     @app.post(
         "/api/portfolios/{portfolio_id}/fixed-income/import-csv",

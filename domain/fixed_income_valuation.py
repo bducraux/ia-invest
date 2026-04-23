@@ -118,11 +118,14 @@ class FixedIncomeValuationService:
 
     def revalue(self, position: FixedIncomePosition) -> FixedIncomeValuation:
         """Recompute valuation for a position against the configured clock."""
+        return self.revalue_as_of(position, self._clock.today())
+
+    def revalue_as_of(self, position: FixedIncomePosition, as_of: date) -> FixedIncomeValuation:
+        """Recompute valuation for a position on a specific calendar date."""
         application = _parse_date(position.application_date)
         maturity = _parse_date(position.maturity_date)
-        today = self._clock.today()
         # Cap at maturity: after maturity, value is frozen at maturity day.
-        valuation_day = min(today, maturity)
+        valuation_day = min(as_of, maturity)
 
         if valuation_day < application:
             # Position not yet started — return principal as-is.

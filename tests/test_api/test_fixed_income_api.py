@@ -8,7 +8,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from domain.models import Portfolio
-from mcp_server.http_api import create_http_app
+from mcp_server.http_api import BenchmarkSyncError, create_http_app
 from storage.repository.db import Database
 from storage.repository.portfolios import PortfolioRepository
 
@@ -168,8 +168,14 @@ def test_positions_filter_by_asset_class_for_fixed_income(tmp_path: Path) -> Non
     assert positions[0]["assetClass"] == "RENDA_FIXA"
 
 
-def test_fixed_income_uses_env_cdi_daily_rate(monkeypatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("IA_INVEST_CDI_DAILY_RATE", "0.0004")
+def test_fixed_income_without_bacen_cache_marks_cdi_position_incomplete(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    def _fail_sync(*_args, **_kwargs):
+        raise BenchmarkSyncError("forced test failure")
+
+    monkeypatch.setattr("mcp_server.http_api.BACENBenchmarkSyncService.sync", _fail_sync)
     client = _client(tmp_path)
 
     payload = {
@@ -188,8 +194,8 @@ def test_fixed_income_uses_env_cdi_daily_rate(monkeypatch, tmp_path: Path) -> No
     listed = client.get("/api/portfolios/rf-portfolio/fixed-income").json()["positions"]
     item = listed[0]
     assert item["remunerationType"] == "CDI_PERCENT"
-    assert item["isComplete"] is True
-    assert item["grossValueCurrentBrl"] > item["principalAppliedBrl"]
+    assert item["isComplete"] is False
+    assert item["grossValueCurrentBrl"] == item["principalAppliedBrl"]
 
 
 def test_fixed_income_lifecycle_endpoints(tmp_path: Path) -> None:

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -15,69 +15,16 @@ import { Input } from "@/components/ui/input";
 import { TopBar } from "@/components/layout/topbar";
 import { PageHeader } from "@/components/layout/page-header";
 import {
-  getAppSettings,
-  updateAppSettings,
-  calculateDailyRateFromAnnual,
   updatePortfolioName,
+  getBenchmarkCoverage,
+  syncBenchmark,
 } from "@/lib/api";
 import { usePortfolios } from "@/lib/queries";
 
 export default function SettingsPage() {
   const portfoliosQuery = usePortfolios();
   const queryClient = useQueryClient();
-  const settingsQuery = useQuery({
-    queryKey: ["app-settings"],
-    queryFn: getAppSettings,
-  });
-  const [draftRates, setDraftRates] = useState<{
-    cdi: string;
-    selic: string;
-    ipca: string;
-  } | null>(null);
   const [draftPortfolioNames, setDraftPortfolioNames] = useState<Record<string, string>>({});
-
-  const baseRates = useMemo(() => {
-    const data = settingsQuery.data;
-    return {
-      cdi: data?.cdiAnnualRate === null || data?.cdiAnnualRate === undefined
-        ? ""
-        : String(data.cdiAnnualRate),
-      selic: data?.selicAnnualRate === null || data?.selicAnnualRate === undefined
-        ? ""
-        : String(data.selicAnnualRate),
-      ipca: data?.ipcaAnnualRate === null || data?.ipcaAnnualRate === undefined
-        ? ""
-        : String(data.ipcaAnnualRate),
-    };
-  }, [settingsQuery.data]);
-
-  const cdiInput = draftRates?.cdi ?? baseRates.cdi;
-  const selicInput = draftRates?.selic ?? baseRates.selic;
-  const ipcaInput = draftRates?.ipca ?? baseRates.ipca;
-
-  function setRateInput(field: "cdi" | "selic" | "ipca", value: string) {
-    setDraftRates((prev) => ({
-      cdi: prev?.cdi ?? baseRates.cdi,
-      selic: prev?.selic ?? baseRates.selic,
-      ipca: prev?.ipca ?? baseRates.ipca,
-      [field]: value,
-    }));
-  }
-
-  const saveSettingsMutation = useMutation({
-    mutationFn: () => {
-      return updateAppSettings({
-        cdiAnnualRate: cdiInput.trim() === "" ? null : Number(cdiInput.trim()),
-        selicAnnualRate: selicInput.trim() === "" ? null : Number(selicInput.trim()),
-        ipcaAnnualRate: ipcaInput.trim() === "" ? null : Number(ipcaInput.trim()),
-      });
-    },
-    onSuccess: () => {
-      setDraftRates(null);
-      queryClient.invalidateQueries({ queryKey: ["app-settings"] });
-      queryClient.invalidateQueries({ queryKey: ["fixed-income"] });
-    },
-  });
 
   const renamePortfolioMutation = useMutation({
     mutationFn: ({ portfolioId, name }: { portfolioId: string; name: string }) =>
@@ -90,6 +37,19 @@ export default function SettingsPage() {
       });
       queryClient.invalidateQueries({ queryKey: ["portfolios"] });
       queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+    },
+  });
+
+  const cdiCoverageQuery = useQuery({
+    queryKey: ["benchmark-coverage", "CDI"],
+    queryFn: () => getBenchmarkCoverage("CDI"),
+  });
+
+  const syncCdiMutation = useMutation({
+    mutationFn: (fullRefresh: boolean) => syncBenchmark("CDI", { fullRefresh }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["benchmark-coverage", "CDI"] });
+      queryClient.invalidateQueries({ queryKey: ["fixed-income"] });
     },
   });
 
@@ -197,88 +157,69 @@ export default function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base text-foreground">Taxas de Referência</CardTitle>
+            <CardTitle className="text-base text-foreground">Histórico CDI (BACEN)</CardTitle>
             <CardDescription>
-              Informe as taxas anuais em <strong>porcentagem</strong> (ex: 14.65 para 14,65% a.a.).
-              O sistema converte automaticamente para taxas diárias usando 252 dias úteis.
+              Série diária do CDI (SGS 12) sincronizada do Banco Central. Esta é
+              a única fonte usada para valorização CDI_PERCENT.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {/* CDI */}
-            <div className="space-y-2">
-              <label htmlFor="cdiAnnualRate" className="text-sm font-medium">
-                CDI anual (%)
-              </label>
-              <Input
-                id="cdiAnnualRate"
-                type="number"
-                step="0.01"
-                placeholder="Ex.: 14.65"
-                value={cdiInput}
-                onChange={(event) => setRateInput("cdi", event.target.value)}
-              />
-              {cdiInput.trim() && !isNaN(Number(cdiInput)) && Number(cdiInput) > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  Equivale a {(calculateDailyRateFromAnnual(Number(cdiInput)) * 100).toFixed(4)}% ao dia útil (base 252 d.u.)
-                </p>
-              )}
-            </div>
+          <CardContent className="space-y-4">
+            {cdiCoverageQuery.isLoading ? (
+              <p className="text-sm text-muted-foreground">Carregando cobertura...</p>
+            ) : cdiCoverageQuery.error instanceof Error ? (
+              <p className="text-xs text-destructive">{cdiCoverageQuery.error.message}</p>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">Início da cobertura</p>
+                  <p className="font-medium">
+                    {cdiCoverageQuery.data?.coverageStart ?? "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Fim da cobertura</p>
+                  <p className="font-medium">
+                    {cdiCoverageQuery.data?.coverageEnd ?? "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Dias úteis em cache</p>
+                  <p className="font-medium">{cdiCoverageQuery.data?.rowCount ?? 0}</p>
+                </div>
+                {cdiCoverageQuery.data?.lastFetchedAt ? (
+                  <div className="sm:col-span-3">
+                    <p className="text-xs text-muted-foreground">
+                      Última atualização: {cdiCoverageQuery.data.lastFetchedAt}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            )}
 
-            {/* SELIC */}
-            <div className="space-y-2">
-              <label htmlFor="selicAnnualRate" className="text-sm font-medium">
-                SELIC anual (%)
-              </label>
-              <Input
-                id="selicAnnualRate"
-                type="number"
-                step="0.01"
-                placeholder="Ex.: 14.65"
-                value={selicInput}
-                onChange={(event) => setRateInput("selic", event.target.value)}
-              />
-              {selicInput.trim() && !isNaN(Number(selicInput)) && Number(selicInput) > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  Equivale a {(calculateDailyRateFromAnnual(Number(selicInput)) * 100).toFixed(4)}% ao dia útil (base 252 d.u.)
-                </p>
-              )}
-            </div>
-
-            {/* IPCA */}
-            <div className="space-y-2">
-              <label htmlFor="ipcaAnnualRate" className="text-sm font-medium">
-                IPCA anual (%)
-              </label>
-              <Input
-                id="ipcaAnnualRate"
-                type="number"
-                step="0.01"
-                placeholder="Ex.: 4.14"
-                value={ipcaInput}
-                onChange={(event) => setRateInput("ipca", event.target.value)}
-              />
-              {ipcaInput.trim() && !isNaN(Number(ipcaInput)) && Number(ipcaInput) > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  Equivale a {(calculateDailyRateFromAnnual(Number(ipcaInput)) * 100).toFixed(4)}% ao dia útil (base 252 d.u.)
-                </p>
-              )}
-            </div>
-
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <Button
-                onClick={() => saveSettingsMutation.mutate()}
-                disabled={saveSettingsMutation.isPending || settingsQuery.isLoading}
+                onClick={() => syncCdiMutation.mutate(false)}
+                disabled={syncCdiMutation.isPending}
               >
-                Salvar Taxas
+                Sincronizar agora
               </Button>
-              {saveSettingsMutation.isSuccess && (
-                <span className="text-xs text-emerald-600">Configuração salva.</span>
-              )}
-              {saveSettingsMutation.error instanceof Error && (
-                <span className="text-xs text-destructive">
-                  {saveSettingsMutation.error.message}
+              <Button
+                variant="outline"
+                onClick={() => syncCdiMutation.mutate(true)}
+                disabled={syncCdiMutation.isPending}
+              >
+                Recarregar histórico completo
+              </Button>
+              {syncCdiMutation.isSuccess ? (
+                <span className="text-xs text-emerald-600">
+                  {syncCdiMutation.data.rowsInserted} dia(s) atualizado(s).
                 </span>
-              )}
+              ) : null}
+              {syncCdiMutation.error instanceof Error ? (
+                <span className="text-xs text-destructive">
+                  {syncCdiMutation.error.message}
+                </span>
+              ) : null}
             </div>
           </CardContent>
         </Card>

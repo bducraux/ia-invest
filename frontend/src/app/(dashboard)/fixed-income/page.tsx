@@ -26,9 +26,18 @@ import {
 import { TopBar } from "@/components/layout/topbar";
 import { PageHeader, EmptyState } from "@/components/layout/page-header";
 import { buildScopedPath, useDashboardScope } from "@/lib/dashboard-scope";
-import { formatBRL } from "@/lib/money";
+import { formatBRL, formatBRLCompact } from "@/lib/money";
 import { formatDate } from "@/lib/date";
 import { usePortfolios } from "@/lib/queries";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import {
   createFixedIncomePosition,
   getFixedIncomePositions,
@@ -62,6 +71,15 @@ const EMPTY_FORM: CreateFixedIncomeInput = {
 type FixedIncomePositionWithPortfolio = FixedIncomePosition & {
   portfolioId: string;
   portfolioName: string;
+};
+
+type InstitutionSummary = {
+  institution: string;
+  count: number;
+  applied: number;
+  gross: number;
+  net: number;
+  incompleteCount: number;
 };
 
 const EMPTY_LIST: FixedIncomePosition[] = [];
@@ -156,32 +174,53 @@ export default function FixedIncomePage() {
     [positions],
   );
 
+  const institutionSummaries = useMemo<InstitutionSummary[]>(() => {
+    const grouped = new Map<string, InstitutionSummary>();
+
+    for (const position of positions) {
+      const institutionName = position.institution.trim() || "Instituição não informada";
+      const current = grouped.get(institutionName) ?? {
+        institution: institutionName,
+        count: 0,
+        applied: 0,
+        gross: 0,
+        net: 0,
+        incompleteCount: 0,
+      };
+
+      current.count += 1;
+      current.applied += position.principalAppliedBrl;
+      current.gross += position.grossValueCurrentBrl;
+      current.net += position.netValueCurrentBrl;
+      if (!position.isComplete) current.incompleteCount += 1;
+
+      grouped.set(institutionName, current);
+    }
+
+    return Array.from(grouped.values()).sort((left, right) => right.net - left.net);
+  }, [positions]);
+
+  const institutionChartData = useMemo(
+    () => institutionSummaries.slice(0, 8),
+    [institutionSummaries],
+  );
+
   const [form, setForm] = useState<CreateFixedIncomeInput>(EMPTY_FORM);
-  const [showForm, setShowForm] = useState(false);
+  const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [editingPositionId, setEditingPositionId] = useState<number | null>(null);
+  const [editAutoReapplyEnabled, setEditAutoReapplyEnabled] = useState(false);
   const [importResult, setImportResult] =
     useState<FixedIncomeImportResponse | null>(null);
+  const [rowActionError, setRowActionError] = useState<string | null>(null);
 
   const createMutation = useMutation({
     mutationFn: () =>
       createFixedIncomePosition(targetPortfolioId, normalizeForm(form)),
-    onSuccess: () => {
-      setForm(EMPTY_FORM);
-      setShowForm(false);
-      setEditingPositionId(null);
-      queryClient.invalidateQueries({ queryKey: ["fixed-income"] });
-    },
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ portfolioId, positionId }: { portfolioId: string; positionId: number }) =>
       updateFixedIncomePosition(portfolioId, positionId, normalizeForm(form)),
-    onSuccess: () => {
-      setForm(EMPTY_FORM);
-      setShowForm(false);
-      setEditingPositionId(null);
-      queryClient.invalidateQueries({ queryKey: ["fixed-income"] });
-    },
   });
 
   const importMutation = useMutation({
@@ -228,6 +267,122 @@ export default function FixedIncomePage() {
     () => positions,
     [positions],
   );
+
+  const editingPosition = useMemo(
+    () => positions.find((position) => position.id === editingPositionId) ?? null,
+    [positions, editingPositionId],
+  );
+
+  const isAnyActionPending =
+    closeMutation.isPending ||
+    redeemMutation.isPending ||
+    autoReapplyMutation.isPending;
+
+  const isFormSaving =
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    autoReapplyMutation.isPending;
+
+  function closeFormDialog() {
+    setForm(EMPTY_FORM);
+    setEditingPositionId(null);
+    setEditAutoReapplyEnabled(false);
+    setIsFormDialogOpen(false);
+  }
+
+  function openCreateForm() {
+    setForm(EMPTY_FORM);
+    setEditingPositionId(null);
+    setEditAutoReapplyEnabled(false);
+    setIsFormDialogOpen(true);
+  }
+
+  function openEditForm(position: FixedIncomePositionWithPortfolio) {
+    setForm(toFormInput(position));
+    setEditingPositionId(position.id);
+    setEditAutoReapplyEnabled(position.autoReapplyEnabled);
+    setIsFormDialogOpen(true);
+  }
+
+  async function handleRowAction(
+    action: string,
+    position: FixedIncomePositionWithPortfolio,
+  ) {
+    setRowActionError(null);
+    switch (action) {
+      case "edit":
+        openEditForm(position);
+        return;
+      case "close":
+        try {
+          await closeMutation.mutateAsync({
+            portfolioId: position.portfolioId,
+            positionId: position.id,
+          });
+          await queryClient.refetchQueries({ queryKey: ["fixed-income"] });
+        } catch (error) {
+          setRowActionError(
+            error instanceof Error
+              ? error.message
+              : "Não foi possível fechar a posição.",
+          );
+        }
+        return;
+      case "redeem":
+        try {
+          await redeemMutation.mutateAsync({
+            portfolioId: position.portfolioId,
+            positionId: position.id,
+          });
+          await queryClient.refetchQueries({ queryKey: ["fixed-income"] });
+        } catch (error) {
+          setRowActionError(
+            error instanceof Error
+              ? error.message
+              : "Não foi possível reinvestir a aplicação.",
+          );
+        }
+        return;
+      default:
+        return;
+    }
+  }
+
+  async function handleSubmitForm() {
+    if (editingPositionId) {
+      const row = positions.find((position) => position.id === editingPositionId);
+      if (!row) return;
+
+      try {
+        await updateMutation.mutateAsync({
+          portfolioId: row.portfolioId,
+          positionId: row.id,
+        });
+
+        if (editAutoReapplyEnabled !== row.autoReapplyEnabled) {
+          await autoReapplyMutation.mutateAsync({
+            portfolioId: row.portfolioId,
+            positionId: row.id,
+            enabled: editAutoReapplyEnabled,
+          });
+        }
+
+        closeFormDialog();
+        queryClient.invalidateQueries({ queryKey: ["fixed-income"] });
+      } catch {
+        // Errors are surfaced by mutation.error and rendered in the form.
+      }
+      return;
+    }
+
+    try {
+      await createMutation.mutateAsync();
+      closeFormDialog();
+      queryClient.invalidateQueries({ queryKey: ["fixed-income"] });
+    } catch {
+      // Errors are surfaced by mutation.error and rendered in the form.
+    }
+  }
 
   if (portfoliosQuery.isLoading) {
     return (
@@ -307,9 +462,9 @@ export default function FixedIncomePage() {
                   </select>
                 </label>
               ) : null}
-              <Button onClick={() => setShowForm((v) => !v)} variant="outline">
+              <Button onClick={openCreateForm} variant="outline">
                 <Plus className="mr-2 h-4 w-4" />
-                {showForm ? "Cancelar" : "Nova aplicação"}
+                Nova aplicação
               </Button>
               <label className="inline-flex cursor-pointer items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground">
                 <Upload className="mr-2 h-4 w-4" />
@@ -329,47 +484,44 @@ export default function FixedIncomePage() {
           }
         />
 
-        {showForm && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">
-                {editingPositionId ? "Editar aplicação" : "Cadastrar aplicação"}
-              </CardTitle>
-              <CardDescription>
-                {editingPositionId
-                  ? "Edite os campos e salve para atualizar o contrato sem alterar o histórico de movimentações."
-                  : `A aplicação será registrada em ${targetPortfolio?.name ?? "uma carteira"}. Os campos são suficientes para o cálculo contratual.`}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <FixedIncomeForm
-                value={form}
-                onChange={setForm}
-                onSubmit={() => {
-                  if (editingPositionId) {
-                    const row = positions.find((position) => position.id === editingPositionId);
-                    if (!row) return;
-                    updateMutation.mutate({
-                      portfolioId: row.portfolioId,
-                      positionId: row.id,
-                    });
-                    return;
-                  }
-                  createMutation.mutate();
-                }}
-                disabled={createMutation.isPending || updateMutation.isPending}
-                submitLabel={editingPositionId ? "Salvar edição" : "Salvar aplicação"}
-                error={
-                  updateMutation.error instanceof Error
-                    ? updateMutation.error.message
-                    : createMutation.error instanceof Error
-                      ? createMutation.error.message
-                    : null
-                }
-              />
-            </CardContent>
-          </Card>
-        )}
+        {isFormDialogOpen ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-border bg-background shadow-2xl">
+              <Card className="border-0 shadow-none">
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    {editingPositionId ? "Editar aplicação" : "Cadastrar aplicação"}
+                  </CardTitle>
+                  <CardDescription>
+                    {editingPositionId
+                      ? "Edite os campos e salve para atualizar o contrato sem alterar o histórico de movimentações."
+                      : `A aplicação será registrada em ${targetPortfolio?.name ?? "uma carteira"}. Os campos são suficientes para o cálculo contratual.`}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <FixedIncomeForm
+                    value={form}
+                    onChange={setForm}
+                    onSubmit={handleSubmitForm}
+                    onCancel={closeFormDialog}
+                    disabled={isFormSaving}
+                    submitLabel={editingPositionId ? "Salvar edição" : "Salvar aplicação"}
+                    showAutoReapplyToggle={Boolean(editingPosition)}
+                    autoReapplyEnabled={editAutoReapplyEnabled}
+                    onAutoReapplyChange={setEditAutoReapplyEnabled}
+                    error={
+                      updateMutation.error instanceof Error
+                        ? updateMutation.error.message
+                        : createMutation.error instanceof Error
+                          ? createMutation.error.message
+                        : null
+                    }
+                  />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        ) : null}
 
         {importResult && (
           <Card>
@@ -398,11 +550,120 @@ export default function FixedIncomePage() {
           </Card>
         )}
 
+        {rowActionError ? (
+          <Card className="border-destructive/40 bg-destructive/5">
+            <CardHeader>
+              <CardTitle className="text-base text-destructive">Falha ao executar ação</CardTitle>
+              <CardDescription className="text-destructive">
+                {rowActionError}
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        ) : null}
+
         <div className="grid gap-4 md:grid-cols-3">
-          <SummaryCard label="Líquido para resgate hoje" value={totalNet} highlight />
+          <SummaryCard label="Líquido disponível hoje" value={totalNet} highlight />
           <SummaryCard label="Bruto atual (antes de IR)" value={totalGross} />
           <SummaryCard label="Aplicado" value={totalInvested} />
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Consolidado por instituição</CardTitle>
+            <CardDescription>
+              Agrupamento por banco/corretora para comparar rapidamente com os apps das instituições.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {institutionSummaries.length === 0 ? (
+              <EmptyState
+                title="Sem instituições para agrupar"
+                description="Cadastre ou importe aplicações para habilitar o consolidado por instituição."
+              />
+            ) : (
+              <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Instituição</TableHead>
+                        <TableHead className="text-right">Aplicações</TableHead>
+                        <TableHead className="text-right">Aplicado</TableHead>
+                        <TableHead className="text-right">Bruto</TableHead>
+                        <TableHead className="text-right">Líquido</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {institutionSummaries.map((summary) => (
+                        <TableRow key={summary.institution}>
+                          <TableCell>
+                            <div className="font-medium">{summary.institution}</div>
+                            {summary.incompleteCount > 0 ? (
+                              <div className="text-xs text-amber-600">
+                                {summary.incompleteCount} com cálculo incompleto
+                              </div>
+                            ) : null}
+                          </TableCell>
+                          <TableCell className="text-right">{summary.count}</TableCell>
+                          <TableCell className="text-right">{formatBRL(summary.applied)}</TableCell>
+                          <TableCell className="text-right">{formatBRL(summary.gross)}</TableCell>
+                          <TableCell className="text-right font-medium">{formatBRL(summary.net)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <div className="rounded-xl border border-border/80 bg-muted/10 p-3">
+                  <p className="mb-3 text-xs text-muted-foreground">
+                    Top {institutionChartData.length} instituições por valor líquido
+                  </p>
+                  <ResponsiveContainer width="100%" height={320}>
+                    <BarChart
+                      data={institutionChartData}
+                      layout="vertical"
+                      margin={{ top: 0, right: 12, left: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" horizontal={false} />
+                      <XAxis
+                        type="number"
+                        tickFormatter={(value) => formatBRLCompact(Number(value) || 0)}
+                        tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="institution"
+                        tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                        axisLine={false}
+                        tickLine={false}
+                        width={140}
+                      />
+                      <Tooltip
+                        cursor={{ fill: "hsl(var(--accent))", opacity: 0.2 }}
+                        contentStyle={{
+                          background: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: 8,
+                          fontSize: 12,
+                        }}
+                        formatter={(value, _name, item) => {
+                          const data = item.payload as InstitutionSummary;
+                          return [
+                            `${formatBRL(Number(value) || 0)} (Bruto: ${formatBRL(data.gross)} | Aplicado: ${formatBRL(data.applied)})`,
+                            "Líquido",
+                          ];
+                        }}
+                      />
+                      <Bar dataKey="net" name="Líquido" fill="hsl(var(--primary))" radius={[0, 6, 6, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {hasIncompleteValuation ? (
           <Card className="border-amber-500/50 bg-amber-50/40">
@@ -496,7 +757,10 @@ export default function FixedIncomePage() {
                 description={error.message}
               />
             ) : displayedPositions.length === 0 ? (
-              <EmptyState\n                title=\"Nenhuma aplicação registrada\"\n                description=\"Cadastre manualmente ou importe um CSV com seus extratos bancários.\"\n              />
+              <EmptyState
+                title="Nenhuma aplicação registrada"
+                description="Cadastre manualmente ou importe um CSV com seus extratos bancários."
+              />
             ) : (
               <Table>
                 <TableHeader>
@@ -519,7 +783,7 @@ export default function FixedIncomePage() {
                   {displayedPositions.map((p) => (
                     <TableRow
                       key={`${p.portfolioId}-${p.id}`}
-                      className={p.isMatured && p.status !== "REDEEMED" ? "bg-amber-50/60" : undefined}
+                      className={isMaturedByCalendar(p.maturityDate) && p.status !== "REDEEMED" ? "bg-amber-50/60" : undefined}
                     >
                       {scope.isGlobalScope ? (
                         <TableCell>
@@ -535,8 +799,8 @@ export default function FixedIncomePage() {
                           {p.productName} · {p.daysSinceApplication}d
                         </div>
                         <div className="mt-1 flex items-center gap-2">
-                          {p.isMatured ? <Badge variant="outline">Vencido</Badge> : null}
-                          {p.autoReapplyEnabled ? <Badge variant="outline">Auto reapply</Badge> : null}
+                          {isMaturedByCalendar(p.maturityDate) ? <Badge variant="outline">Vencido</Badge> : null}
+                          {p.autoReapplyEnabled ? <Badge variant="outline">Auto reinvestir</Badge> : null}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -569,52 +833,24 @@ export default function FixedIncomePage() {
                         {p.taxBracketCurrent ?? "—"}
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setShowForm(true);
-                              setEditingPositionId(p.id);
-                              setForm(toFormInput(p));
-                            }}
-                          >
-                            Editar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              closeMutation.mutate({ portfolioId: p.portfolioId, positionId: p.id })
-                            }
-                            disabled={closeMutation.isPending}
-                          >
-                            Fechar
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() =>
-                              redeemMutation.mutate({ portfolioId: p.portfolioId, positionId: p.id })
-                            }
-                            disabled={!p.isMatured || redeemMutation.isPending}
-                          >
-                            Resgatar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant={p.autoReapplyEnabled ? "default" : "outline"}
-                            onClick={() =>
-                              autoReapplyMutation.mutate({
-                                portfolioId: p.portfolioId,
-                                positionId: p.id,
-                                enabled: !p.autoReapplyEnabled,
-                              })
-                            }
-                            disabled={autoReapplyMutation.isPending}
-                          >
-                            {p.autoReapplyEnabled ? "Auto: on" : "Auto: off"}
-                          </Button>
-                        </div>
+                        <select
+                          className="flex h-8 min-w-36 rounded-md border border-input bg-background px-2 text-sm"
+                          defaultValue=""
+                          onChange={(event) => {
+                            const selected = event.target.value;
+                            if (!selected) return;
+                            void handleRowAction(selected, p);
+                            event.currentTarget.value = "";
+                          }}
+                          disabled={isAnyActionPending}
+                        >
+                          <option value="">Selecionar</option>
+                          <option value="edit">Editar aplicação</option>
+                          {p.status !== "REDEEMED" ? <option value="close">Fechar posição</option> : null}
+                          {isMaturedByCalendar(p.maturityDate) && p.status !== "REDEEMED" && !p.autoReapplyEnabled ? (
+                            <option value="redeem">Reinvestir agora</option>
+                          ) : null}
+                        </select>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -663,10 +899,19 @@ function formatPercent(value: number | null): string {
   return value.toFixed(2).replace(/\.?0+$/, "");
 }
 
+function isMaturedByCalendar(maturityDate: string): boolean {
+  const today = new Date().toISOString().slice(0, 10);
+  return maturityDate <= today;
+}
+
 function FixedIncomeForm({
   value,
   onChange,
   onSubmit,
+  onCancel,
+  showAutoReapplyToggle,
+  autoReapplyEnabled,
+  onAutoReapplyChange,
   disabled,
   submitLabel,
   error,
@@ -674,6 +919,10 @@ function FixedIncomeForm({
   value: CreateFixedIncomeInput;
   onChange: (next: CreateFixedIncomeInput) => void;
   onSubmit: () => void;
+  onCancel?: () => void;
+  showAutoReapplyToggle?: boolean;
+  autoReapplyEnabled?: boolean;
+  onAutoReapplyChange?: (enabled: boolean) => void;
   disabled: boolean;
   submitLabel?: string;
   error: string | null;
@@ -804,10 +1053,27 @@ function FixedIncomeForm({
           onChange={(e) => update("notes", e.target.value || null)}
         />
       </Field>
+      {showAutoReapplyToggle ? (
+        <div className="col-span-2 rounded-md border border-border bg-muted/20 p-3">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={Boolean(autoReapplyEnabled)}
+              onChange={(event) => onAutoReapplyChange?.(event.target.checked)}
+            />
+            <span>Ativar auto reinvestir quando a aplicação vencer</span>
+          </label>
+        </div>
+      ) : null}
       {error && (
         <p className="col-span-2 text-sm text-destructive">{error}</p>
       )}
-      <div className="col-span-2">
+      <div className="col-span-2 flex items-center justify-end gap-2">
+        {onCancel ? (
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancelar
+          </Button>
+        ) : null}
         <Button type="submit" disabled={disabled}>
           {disabled ? "Salvando..." : (submitLabel ?? "Salvar aplicação")}
         </Button>

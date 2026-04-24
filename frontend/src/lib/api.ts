@@ -32,12 +32,6 @@ export interface QuoteRefreshResponse {
   failedCount: number;
 }
 
-export interface AppSettings {
-  cdiAnnualRate: number | null;
-  selicAnnualRate: number | null;
-  ipcaAnnualRate: number | null;
-}
-
 async function apiFetch<T>(path: string): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     method: "GET",
@@ -179,34 +173,38 @@ export function refreshQuotes(portfolioId?: string): Promise<QuoteRefreshRespons
   return apiPost<QuoteRefreshResponse>("/api/quotes/refresh");
 }
 
-export function getAppSettings(): Promise<AppSettings> {
-  return apiFetch<AppSettings>("/api/settings");
+export interface BenchmarkCoverage {
+  benchmark: string;
+  coverageStart: string | null;
+  coverageEnd: string | null;
+  rowCount: number;
+  lastFetchedAt: string | null;
 }
 
-export async function updateAppSettings(payload: Partial<AppSettings>): Promise<AppSettings> {
-  const response = await fetch(`${API_BASE}/api/settings`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`API ${response.status}: ${body || response.statusText}`);
-  }
-  return (await response.json()) as AppSettings;
+export interface BenchmarkSyncResult {
+  benchmark: string;
+  rowsInserted: number;
+  coverageStart: string | null;
+  coverageEnd: string | null;
+  source: string;
+  lastFetchedAt: string | null;
 }
 
-/**
- * Calculate daily rate from annual rate percentage using the formula:
- * daily = (1 + annualPct/100)^(1/252) - 1
- * where 252 is the number of business days per year.
- * @param annualPct - annual rate as percentage (e.g. 14.65 for 14.65%)
- */
-export function calculateDailyRateFromAnnual(annualPct: number): number {
-  return Math.pow(1 + annualPct / 100, 1 / 252) - 1;
+export interface BenchmarkSyncRequest {
+  startDate?: string;
+  endDate?: string;
+  fullRefresh?: boolean;
+}
+
+export function getBenchmarkCoverage(benchmark: string): Promise<BenchmarkCoverage> {
+  return apiFetch<BenchmarkCoverage>(`/api/benchmarks/${benchmark}/coverage`);
+}
+
+export function syncBenchmark(
+  benchmark: string,
+  payload: BenchmarkSyncRequest = {},
+): Promise<BenchmarkSyncResult> {
+  return apiPostJson<BenchmarkSyncResult>(`/api/benchmarks/${benchmark}/sync`, payload);
 }
 
 // --- Fixed income (renda fixa) -----------------------------------------------

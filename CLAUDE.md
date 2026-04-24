@@ -20,7 +20,7 @@ Supported portfolio types: `renda-variavel` (stocks, FIIs, ETFs, BDRs), `renda-f
 ```bash
 make install          # uv sync --extra dev
 make init             # initialize SQLite database (ia_invest.db)
-make reset-db         # drop DB, reinitialize, reimport all portfolios from processed/
+make reset-db         # drop DB, reinitialize, reimport all portfolios from processed/, sync CDI from BACEN
 make import-all       # import all active portfolios from their inbox/ folders
 make lint             # ruff check .
 make type-check       # mypy .
@@ -35,10 +35,9 @@ uv run pytest tests/test_domain/test_fixed_income_valuation.py::test_name -v
 ```bash
 make api-server                          # uvicorn on http://localhost:8010 with --reload
 make api-server API_PORT=8020            # custom port
-make api-server CDI_DAILY_RATE=0.00045  # inject CDI rate (overrides app_settings table)
 ```
 
-Env vars read at startup: `IA_INVEST_DB` (path to SQLite file, default `ia_invest.db`), `IA_INVEST_API_CORS_ORIGINS` (default `http://localhost:3000`), `IA_INVEST_QUOTES_ENABLED`, `IA_INVEST_QUOTES_TTL_SECONDS`, `IA_INVEST_QUOTES_TIMEOUT_SECONDS`, `IA_INVEST_CDI_DAILY_RATE`.
+Env vars read at startup: `IA_INVEST_DB` (path to SQLite file, default `ia_invest.db`), `IA_INVEST_API_CORS_ORIGINS` (default `http://localhost:3000`), `IA_INVEST_QUOTES_ENABLED`, `IA_INVEST_QUOTES_TTL_SECONDS`, `IA_INVEST_QUOTES_TIMEOUT_SECONDS`, `IA_INVEST_BENCHMARK_AUTO_SYNC`.
 
 ### MCP server (for Claude Desktop)
 

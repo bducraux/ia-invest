@@ -1,5 +1,6 @@
 """Repository package — data access layer."""
 
+from storage.repository.benchmark_rates import BenchmarkRatesRepository
 from storage.repository.db import Database
 from storage.repository.import_jobs import ImportJobRepository
 from storage.repository.operations import OperationRepository
@@ -14,4 +15,5 @@ __all__ = [
     "PositionRepository",
     "ImportJobRepository",
     "QuoteRepository",
+    "BenchmarkRatesRepository",
 ]

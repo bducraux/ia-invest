@@ -8,10 +8,8 @@ tool logic to keep business rules centralized.
 from __future__ import annotations
 
 import logging
-import math
 import os
 from datetime import date, datetime
-from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -21,24 +19,31 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from domain.fixed_income import FixedIncomePosition
-from domain.fixed_income_rates import FlatCDIRateProvider
+from domain.fixed_income_rates import SQLiteDailyRateProvider
 from domain.fixed_income_valuation import FixedIncomeValuationService
+from mcp_server.services.benchmark_sync import (
+    BACENBenchmarkSyncService,
+    BenchmarkSyncError,
+    SyncResult,
+)
 from mcp_server.services.fixed_income_lifecycle import FixedIncomeLifecycleService
 from mcp_server.services.quotes import MarketQuoteService
 from mcp_server.tools.portfolios import get_portfolio_operations
 from normalizers.fixed_income_csv import FixedIncomeCSVImporter
+from storage.repository.benchmark_rates import BenchmarkRatesRepository
 from storage.repository.db import Database
 from storage.repository.fixed_income import FixedIncomePositionRepository
 from storage.repository.operations import OperationRepository
 from storage.repository.portfolios import PortfolioRepository
-from storage.repository.previdencia import PrevidenciaSnapshotRepository
 from storage.repository.positions import PositionRepository
+from storage.repository.previdencia import PrevidenciaSnapshotRepository
 
 _DEFAULT_DB_PATH = Path(os.environ.get("IA_INVEST_DB", "ia_invest.db"))
 _DEFAULT_CORS_ORIGINS = os.environ.get("IA_INVEST_API_CORS_ORIGINS", "http://localhost:3000")
 _DEFAULT_QUOTES_ENABLED = os.environ.get("IA_INVEST_QUOTES_ENABLED", "1")
 _DEFAULT_QUOTES_TTL_SECONDS = int(os.environ.get("IA_INVEST_QUOTES_TTL_SECONDS", "300"))
 _DEFAULT_QUOTES_TIMEOUT_SECONDS = float(os.environ.get("IA_INVEST_QUOTES_TIMEOUT_SECONDS", "2.0"))
+_DEFAULT_BENCHMARK_AUTO_SYNC = os.environ.get("IA_INVEST_BENCHMARK_AUTO_SYNC", "1")
 
 
 class PortfolioOut(BaseModel):
@@ -128,16 +133,27 @@ class QuoteRefreshResponse(BaseModel):
     failedCount: int
 
 
-class AppSettingsOut(BaseModel):
-    cdiAnnualRate: float | None = None
-    selicAnnualRate: float | None = None
-    ipcaAnnualRate: float | None = None
+class BenchmarkCoverageOut(BaseModel):
+    benchmark: str
+    coverageStart: str | None = None
+    coverageEnd: str | None = None
+    rowCount: int = 0
+    lastFetchedAt: str | None = None
 
 
-class AppSettingsUpdate(BaseModel):
-    cdiAnnualRate: float | None = None
-    selicAnnualRate: float | None = None
-    ipcaAnnualRate: float | None = None
+class BenchmarkSyncRequest(BaseModel):
+    startDate: str | None = None
+    endDate: str | None = None
+    fullRefresh: bool = False
+
+
+class BenchmarkSyncResultOut(BaseModel):
+    benchmark: str
+    rowsInserted: int
+    coverageStart: str | None = None
+    coverageEnd: str | None = None
+    source: str
+    lastFetchedAt: str | None = None
 
 
 # --- Fixed-income (renda fixa) -----------------------------------------------
@@ -345,53 +361,53 @@ def _parse_bool_flag(value: str) -> bool:
 
 
 def _build_fixed_income_valuation_service(db: Database) -> FixedIncomeValuationService:
-    """Build valuation service with optional CDI provider.
+    """Build valuation service with BACEN-backed historical CDI only.
 
-    Rates are stored as percentages (e.g. 14.65 means 14.65% a.a.).
-    Converts annual percent to daily fraction: daily = (1 + rate/100)^(1/252) - 1
+    Resolution order:
 
-    Priority:
-    1) Persisted SQLite app setting (app_settings key=cdi_annual_rate)
-    2) IA_INVEST_CDI_DAILY_RATE environment variable (legacy daily rate fraction)
+    1. ``daily_benchmark_rates`` table (BACEN SGS cache) — authoritative.
+       When auto-sync is enabled, perform best-effort incremental refresh.
+    2. If cache is empty, perform one best-effort sync immediately.
+    3. If still empty, return valuation service without CDI provider
+       (CDI positions become ``isComplete = false`` until sync succeeds).
     """
-    # Try to get annual CDI rate from database (stored as percent, e.g. 14.65)
-    row = db.connection.execute(
-        "SELECT value FROM app_settings WHERE key = 'cdi_annual_rate'"
-    ).fetchone()
-    configured_annual_rate = row["value"] if row is not None else None
+    repo = BenchmarkRatesRepository(db.connection)
 
-    if configured_annual_rate:
+    auto_sync = _parse_bool_flag(_DEFAULT_BENCHMARK_AUTO_SYNC)
+    if auto_sync:
+        _maybe_auto_sync_cdi(repo)
+
+    _, coverage_end, row_count = repo.get_coverage("CDI")
+    if row_count == 0 or coverage_end is None:
         try:
-            annual_pct = float(configured_annual_rate.strip())
-            if annual_pct > 0 and math.isfinite(annual_pct):
-                # Stored as percentage → convert to fraction first, then to daily:
-                # daily = (1 + annual_pct/100)^(1/252) - 1
-                daily_rate = math.pow(1 + annual_pct / 100, 1 / 252) - 1
-                provider = FlatCDIRateProvider(Decimal(str(daily_rate)))
-                return FixedIncomeValuationService(cdi_provider=provider)
+            BACENBenchmarkSyncService(repo).sync("CDI")
+            _, coverage_end, row_count = repo.get_coverage("CDI")
         except Exception as exc:  # noqa: BLE001
             logging.getLogger(__name__).warning(
-                "cdi_annual_rate_parse_error: could not parse '%s': %s — CDI provider disabled",
-                configured_annual_rate,
+                "cdi_initial_sync_failed: %s — CDI valuations may be incomplete until sync succeeds",
                 exc,
             )
 
-    # Fallback to legacy environment variable (daily rate)
-    configured_daily_rate = os.environ.get("IA_INVEST_CDI_DAILY_RATE")
-    if configured_daily_rate is None or configured_daily_rate.strip() == "":
-        return FixedIncomeValuationService()
+    if row_count > 0 and coverage_end is not None:
+        return FixedIncomeValuationService(cdi_provider=SQLiteDailyRateProvider(repo))
 
+    return FixedIncomeValuationService()
+
+
+def _maybe_auto_sync_cdi(repo: BenchmarkRatesRepository) -> None:
+    """Best-effort incremental BACEN sync. Never raises."""
     try:
-        provider = FlatCDIRateProvider(Decimal(configured_daily_rate.strip()))
+        _, coverage_end, _ = repo.get_coverage("CDI")
+        today = date.today()
+        if coverage_end is not None and coverage_end >= today:
+            return
+        sync = BACENBenchmarkSyncService(repo)
+        sync.sync("CDI")
     except Exception as exc:  # noqa: BLE001
         logging.getLogger(__name__).warning(
-            "cdi_daily_rate_parse_error: could not parse IA_INVEST_CDI_DAILY_RATE='%s': %s — CDI provider disabled",
-            configured_daily_rate,
+            "cdi_auto_sync_failed: %s — keeping existing CDI cache",
             exc,
         )
-        return FixedIncomeValuationService()
-
-    return FixedIncomeValuationService(cdi_provider=provider)
 
 
 def _build_fixed_income_lifecycle_service(db: Database) -> FixedIncomeLifecycleService:
@@ -618,63 +634,61 @@ def create_http_app(
             specialization=_portfolio_specialization(portfolio.allowed_asset_types),
         )
 
-    @app.get("/api/settings", response_model=AppSettingsOut)
-    def get_settings(db: Database = Depends(get_db)) -> AppSettingsOut:  # noqa: B008
-        def get_rate(key: str) -> float | None:
-            row = db.connection.execute(
-                f"SELECT value FROM app_settings WHERE key = '{key}'"
-            ).fetchone()
-            if row is None:
-                return None
-            try:
-                return float(row["value"])
-            except (TypeError, ValueError):
-                return None
-
-        return AppSettingsOut(
-            cdiAnnualRate=get_rate("cdi_annual_rate"),
-            selicAnnualRate=get_rate("selic_annual_rate"),
-            ipcaAnnualRate=get_rate("ipca_annual_rate"),
+    @app.get("/api/benchmarks/{benchmark}/coverage", response_model=BenchmarkCoverageOut)
+    def get_benchmark_coverage(
+        benchmark: str,
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> BenchmarkCoverageOut:
+        bench = benchmark.upper()
+        repo = BenchmarkRatesRepository(db.connection)
+        start, end, count = repo.get_coverage(bench)
+        return BenchmarkCoverageOut(
+            benchmark=bench,
+            coverageStart=start.isoformat() if start else None,
+            coverageEnd=end.isoformat() if end else None,
+            rowCount=count,
+            lastFetchedAt=repo.get_last_fetched_at(bench),
         )
 
-    @app.put("/api/settings", response_model=AppSettingsOut)
-    def update_settings(
-        payload: AppSettingsUpdate,
+    @app.post("/api/benchmarks/{benchmark}/sync", response_model=BenchmarkSyncResultOut)
+    def sync_benchmark(
+        benchmark: str,
+        payload: BenchmarkSyncRequest | None = None,
         db: Database = Depends(get_db),  # noqa: B008
-    ) -> AppSettingsOut:
-        def validate_and_save(key: str, value: float | None) -> None:
-            if value is None:
-                db.connection.execute(
-                    "DELETE FROM app_settings WHERE key = ?",
-                    (key,),
-                )
-            else:
-                # Values stored as percentage (e.g. 14.65 for 14.65% a.a.)
-                if not math.isfinite(value) or value <= 0 or value >= 1000:
-                    raise HTTPException(
-                        status_code=422,
-                        detail=f"{key} must be a percentage between 0 and 1000 (e.g. 14.65 for 14.65% a.a.)",
-                    )
-                db.connection.execute(
-                    """
-                    INSERT INTO app_settings (key, value, updated_at)
-                    VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
-                    ON CONFLICT(key) DO UPDATE SET
-                        value = excluded.value,
-                        updated_at = excluded.updated_at
-                    """,
-                    (key, str(value)),
-                )
+    ) -> BenchmarkSyncResultOut:
+        bench = benchmark.upper()
+        repo = BenchmarkRatesRepository(db.connection)
+        service = BACENBenchmarkSyncService(repo)
+        body = payload or BenchmarkSyncRequest()
 
-        validate_and_save("cdi_annual_rate", payload.cdiAnnualRate)
-        validate_and_save("selic_annual_rate", payload.selicAnnualRate)
-        validate_and_save("ipca_annual_rate", payload.ipcaAnnualRate)
-        db.connection.commit()
+        def _parse_iso_date(label: str, raw: str | None) -> date | None:
+            if raw is None:
+                return None
+            try:
+                return datetime.strptime(raw, "%Y-%m-%d").date()
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"{label} must be ISO date YYYY-MM-DD",
+                ) from exc
 
-        return AppSettingsOut(
-            cdiAnnualRate=payload.cdiAnnualRate,
-            selicAnnualRate=payload.selicAnnualRate,
-            ipcaAnnualRate=payload.ipcaAnnualRate,
+        try:
+            result: SyncResult = service.sync(
+                bench,
+                start_date=_parse_iso_date("startDate", body.startDate),
+                end_date=_parse_iso_date("endDate", body.endDate),
+                full_refresh=body.fullRefresh,
+            )
+        except BenchmarkSyncError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+        return BenchmarkSyncResultOut(
+            benchmark=result.benchmark,
+            rowsInserted=result.rows_inserted,
+            coverageStart=result.coverage_start.isoformat() if result.coverage_start else None,
+            coverageEnd=result.coverage_end.isoformat() if result.coverage_end else None,
+            source=result.source,
+            lastFetchedAt=repo.get_last_fetched_at(bench),
         )
 
     @app.post("/api/quotes/refresh", response_model=QuoteRefreshResponse)

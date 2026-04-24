@@ -100,3 +100,49 @@ def test_auto_reapply_reconciles_idempotently(tmp_db) -> None:
     assert len(positions) == 1
     assert positions[0].auto_reapply_enabled is True
     assert positions[0].status == "ACTIVE"
+
+
+def test_auto_reapply_zero_duration_uses_minimum_one_day(tmp_db) -> None:
+    """Auto-reapply must not keep a same-day maturity that loops on every read."""
+    _seed_portfolio(PortfolioRepository(tmp_db.connection))
+    repo = FixedIncomePositionRepository(tmp_db.connection)
+    service = FixedIncomeLifecycleService(repo, FixedIncomeValuationService())
+
+    original = _position()
+    original.application_date = "2024-01-10"
+    original.maturity_date = "2024-01-10"
+    original.auto_reapply_enabled = True
+    original_id = repo.insert(original)
+
+    first = service.reconcile_auto_reapply("rf-portfolio", as_of_date="2024-01-15")
+    second = service.reconcile_auto_reapply("rf-portfolio", as_of_date="2024-01-15")
+
+    assert first == 1
+    assert second == 0
+    assert repo.get(original_id) is None
+
+    positions = repo.list_by_portfolio("rf-portfolio")
+    assert len(positions) == 1
+    assert positions[0].application_date == "2024-01-15"
+    assert positions[0].maturity_date == "2024-01-16"
+
+
+def test_auto_reapply_preserves_span_when_dates_are_inverted(tmp_db) -> None:
+    """If dates are inverted by manual edit, reapply keeps the same day-span magnitude."""
+    _seed_portfolio(PortfolioRepository(tmp_db.connection))
+    repo = FixedIncomePositionRepository(tmp_db.connection)
+    service = FixedIncomeLifecycleService(repo, FixedIncomeValuationService())
+
+    original = _position()
+    original.application_date = "2024-02-01"
+    original.maturity_date = "2024-01-01"  # 31-day span, inverted.
+    original.auto_reapply_enabled = True
+    repo.insert(original)
+
+    count = service.reconcile_auto_reapply("rf-portfolio", as_of_date="2024-03-01")
+
+    assert count == 1
+    positions = repo.list_by_portfolio("rf-portfolio")
+    assert len(positions) == 1
+    assert positions[0].application_date == "2024-03-01"
+    assert positions[0].maturity_date == "2024-04-01"

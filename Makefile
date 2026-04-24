@@ -1,7 +1,6 @@
 .PHONY: help install init migrate reset-db create-portfolio adjust-balance check-balance import-all portfolio-overview lint type-check test clean server api-server frontend-install frontend-dev frontend-build frontend-test frontend-lint
 
 API_PORT ?= 8010
-CDI_DAILY_RATE ?=
 
 help:
 	@echo "IA-Invest - Available commands:"
@@ -12,7 +11,7 @@ help:
 	@echo "Database:"
 	@echo "  make init                 Initialize database (fresh schema)"
 	@echo "  make migrate              Apply pending migrations to an existing database"
-	@echo "  make reset-db             Delete and reinitialize database, then import all portfolios"
+	@echo "  make reset-db             Delete + reinit DB, import all portfolios, sync CDI from BACEN"
 	@echo ""
 	@echo "Portfolios:"
 	@echo "  make create-portfolio     Create a new portfolio (interactive)"
@@ -28,7 +27,6 @@ help:
 	@echo "  make server               Start MCP server"
 	@echo "  make api-server           Start FastAPI backend (http://localhost:8010)"
 	@echo "                            Example: make api-server API_PORT=8010"
-	@echo "                            Optional: make api-server CDI_DAILY_RATE=0.00045"
 	@echo ""
 	@echo "Frontend:"
 	@echo "  make frontend-install     Install frontend dependencies (npm ci)"
@@ -54,7 +52,7 @@ migrate:
 	uv run python scripts/migrate.py
 
 reset-db:
-	rm -f ia_invest.db
+	rm -f ia_invest.db ia_invest.db-wal ia_invest.db-shm
 	uv run python scripts/init_db.py
 	@for dir in portfolios/*/processed; do \
 		if ls "$$dir"/* 2>/dev/null | grep -qv '.gitkeep'; then \
@@ -62,6 +60,10 @@ reset-db:
 		fi; \
 	done
 	uv run python scripts/import_all.py
+	@echo ""
+	@echo "Bootstrapping CDI historical series from BACEN..."
+	@uv run python scripts/sync_benchmark_rates.py --benchmark CDI --full || \
+		echo "WARNING: CDI sync failed (offline?). Run 'make sync-cdi-full' later."
 
 create-portfolio:
 	uv run python scripts/create_portfolio.py
@@ -82,7 +84,13 @@ server:
 	uv run python -m mcp_server.server
 
 api-server:
-	IA_INVEST_CDI_DAILY_RATE=$(CDI_DAILY_RATE) uv run uvicorn mcp_server.http_api:app --host 0.0.0.0 --port $(API_PORT) --reload
+	uv run uvicorn mcp_server.http_api:app --host 0.0.0.0 --port $(API_PORT) --reload
+
+sync-cdi:
+	uv run python scripts/sync_benchmark_rates.py --benchmark CDI $(ARGS)
+
+sync-cdi-full:
+	uv run python scripts/sync_benchmark_rates.py --benchmark CDI --full
 
 frontend-install:
 	cd frontend && npm ci

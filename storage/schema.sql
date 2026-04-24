@@ -250,6 +250,25 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
     applied_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 
+-- ---------------------------------------------------------------------------
+-- daily_benchmark_rates
+-- Historical daily benchmark rate cache (CDI, Selic, ...). Rates stored
+-- as TEXT to preserve Decimal precision. Weekends and bank holidays are
+-- simply absent from the table — see migration 0004.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS daily_benchmark_rates (
+    benchmark   TEXT NOT NULL,
+    rate_date   TEXT NOT NULL,
+    rate        TEXT NOT NULL,
+    fetched_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    PRIMARY KEY (benchmark, rate_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_daily_benchmark_rates_lookup
+    ON daily_benchmark_rates(benchmark, rate_date DESC);
+
 -- Record this baseline schema version
 INSERT OR IGNORE INTO schema_migrations (version, description)
 VALUES ('0001', 'initial schema — all tables, indexes, and constraints');
+INSERT OR IGNORE INTO schema_migrations (version, description)
+VALUES ('0004', 'historical daily benchmark rate cache (CDI, Selic, ...)');

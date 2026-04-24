@@ -16,7 +16,7 @@ Both actions are non-reversible and leave no history in the database.
 reconcile_auto_reapply(portfolio_id, as_of_date)
     Called on every read of the fixed-income list. Finds all positions with
     auto_reapply_enabled=True whose maturity date has passed and calls
-    redeem() on each. Natural idempotency: once redeemed the old row is gone.
+    redeem() on each.
 """
 
 from __future__ import annotations
@@ -72,7 +72,13 @@ class FixedIncomeLifecycleService:
         action_date = _parse_iso_date(as_of_date) if as_of_date else date.today()
         valuation = self._valuation.revalue_as_of(original, action_date)
 
-        duration_days = _duration_days(original.application_date, original.maturity_date)
+        # Reapply must preserve the original contract span in days.
+        # If dates were edited in reverse order, keep the same magnitude.
+        # A true zero-day span is promoted to 1 day to avoid reapply loops.
+        duration_days = max(
+            1,
+            _duration_days_span(original.application_date, original.maturity_date),
+        )
         new_maturity = action_date + timedelta(days=duration_days)
 
         replacement = replace(
@@ -114,8 +120,6 @@ class FixedIncomeLifecycleService:
         """Redeem all matured positions that have auto_reapply_enabled.
 
         Returns the number of positions processed.
-        Natural idempotency: once redeemed the old row is deleted, so
-        subsequent calls will not find it again.
         """
         action_date = _parse_iso_date(as_of_date) if as_of_date else date.today()
         action_date_iso = action_date.isoformat()
@@ -148,7 +152,7 @@ def _parse_iso_date(value: str) -> date:
     return datetime.strptime(value, "%Y-%m-%d").date()
 
 
-def _duration_days(application_date: str, maturity_date: str) -> int:
+def _duration_days_span(application_date: str, maturity_date: str) -> int:
     app = _parse_iso_date(application_date)
     mat = _parse_iso_date(maturity_date)
-    return (mat - app).days
+    return abs((mat - app).days)

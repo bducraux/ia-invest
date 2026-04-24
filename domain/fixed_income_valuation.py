@@ -223,24 +223,44 @@ class FixedIncomeValuationService:
             import logging
             logging.getLogger(__name__).warning(
                 "CDI rate provider not configured — returning principal unchanged. "
-                "Set IA_INVEST_CDI_DAILY_RATE or configure a DailyRateProvider."
+                "Run BACEN benchmark sync to populate daily_benchmark_rates."
             )
             return principal, False, "CDI rate provider not configured"
 
         # Apply CDI for accrual dates ``d`` such that
         # ``application_date < d <= valuation_day``.
         accrual_start = start + timedelta(days=1)
-        rates = self._cdi_provider.get_daily_rates(accrual_start, end, benchmark="CDI")
 
-        # Detect missing business days inside the window. We treat
-        # Mon..Fri as business candidates and rely on the provider to
-        # exclude bank holidays — when a candidate day has no rate, the
-        # calculation is flagged incomplete.
+        # Coverage horizon — when the provider knows the most recent date
+        # it can authoritatively serve, missing weekdays *inside* coverage
+        # are real bank holidays (skip silently) and missing weekdays
+        # *past* coverage are unfetched future days. BACEN publishes CDI
+        # for day D on day D+1, so the accrual end is naturally capped at
+        # the latest published day. We clamp ``accrual_end`` accordingly
+        # and the calculation stays *complete* — that one-day lag is the
+        # expected behaviour the bank app itself shows.
+        coverage_end = self._cdi_provider.get_coverage_end("CDI")
+        accrual_end = end
+        if coverage_end is not None and accrual_end > coverage_end:
+            accrual_end = coverage_end
+
+        if accrual_end < accrual_start:
+            return principal, True, None
+
+        rates = self._cdi_provider.get_daily_rates(accrual_start, accrual_end, benchmark="CDI")
+
+        # Detect missing business days inside the relevant window.
         missing: list[date] = []
         cursor = accrual_start
         one_day = timedelta(days=1)
-        while cursor <= end:
-            if cursor.weekday() < 5 and cursor not in rates:
+        while cursor <= accrual_end:
+            # weekday with no row past coverage_end ⇒ unfetched (incomplete);
+            # weekday with no row inside coverage ⇒ real holiday (silent skip).
+            if (
+                cursor.weekday() < 5
+                and cursor not in rates
+                and (coverage_end is None or cursor > coverage_end)
+            ):
                 missing.append(cursor)
             cursor += one_day
 

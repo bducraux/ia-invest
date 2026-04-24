@@ -9,9 +9,16 @@ Only CDI is supported in V1, but the interface accepts a ``benchmark``
 name so future implementations (Selic, IPCA, etc.) can plug in without
 breaking the contract.
 
-The V1 MVP ships an in-memory provider only; real implementations
-(BACEN/BCB time series, broker exports, etc.) should subclass
-:class:`DailyRateProvider` and be wired up by the application layer.
+Two production-grade providers ship with the codebase:
+
+* :class:`SQLiteDailyRateProvider` — backed by the ``daily_benchmark_rates``
+  cache populated from BACEN SGS. This is the recommended provider; it
+  exposes a *coverage horizon* via :meth:`DailyRateProvider.get_coverage_end`
+  so the valuation service knows the difference between a holiday (BACEN
+  intentionally omits these — silently skip) and an unfetched future day
+  (true gap — flag the calculation as incomplete).
+* :class:`FlatCDIRateProvider` — fallback for fresh installs and tests
+  where the historical series has not been synced yet.
 """
 
 from __future__ import annotations
@@ -42,15 +49,26 @@ class DailyRateProvider(ABC):
         Implementations should:
 
         * Return rates **only for business days** (weekends/holidays
-          omitted). The valuation service treats missing dates as
-          non-business days and skips them.
-        * Cover the inclusive range ``[start_date, end_date]``. If part
-          of the range is unavailable, return what is available — the
-          valuation service is responsible for detecting gaps and
-          flagging the calculation as incomplete.
+          omitted). The valuation service treats missing dates inside
+          the provider's coverage window as non-business days and skips
+          them silently.
+        * Cover the inclusive range ``[start_date, end_date]``. The
+          valuation service uses :meth:`get_coverage_end` to detect
+          whether unreturned dates are holidays or unfetched future
+          days.
         * Use :class:`~decimal.Decimal` for rate values to preserve
           precision.
         """
+
+    def get_coverage_end(self, benchmark: str = "CDI") -> date | None:
+        """Return the most recent date the provider can authoritatively serve.
+
+        When ``None`` (the default), the valuation service falls back to
+        the legacy strict gap-detection mode that flags every missing
+        weekday as incomplete. Providers backed by a real published
+        series (BACEN SGS) should override this.
+        """
+        return None
 
 
 class InMemoryCDIRateProvider(DailyRateProvider):
@@ -109,3 +127,28 @@ class FlatCDIRateProvider(DailyRateProvider):
                 out[cursor] = self._rate
             cursor += one_day
         return out
+
+
+class SQLiteDailyRateProvider(DailyRateProvider):
+    """Provider backed by the ``daily_benchmark_rates`` SQLite cache.
+
+    The cache is populated from an external source (BACEN SGS) by the
+    sync service. Missing weekdays inside the covered range are real
+    bank holidays; missing weekdays past :meth:`get_coverage_end` are
+    unfetched future days that should flag the valuation as incomplete.
+    """
+
+    def __init__(self, repo: BenchmarkRatesRepository) -> None:    # noqa: F821
+        self._repo = repo
+
+    def get_daily_rates(
+        self,
+        start_date: date | str,
+        end_date: date | str,
+        benchmark: str = "CDI",
+    ) -> dict[date, Decimal]:
+        return self._repo.get_range(benchmark, start_date, end_date)
+
+    def get_coverage_end(self, benchmark: str = "CDI") -> date | None:
+        _, max_date, _ = self._repo.get_coverage(benchmark)
+        return max_date

@@ -37,6 +37,8 @@ export function PortfolioSpecializedOverviewRoute() {
       return <ClassFamilyOverviewPage classFamily="CRIPTO" />;
     case "PREVIDENCIA":
       return <ClassFamilyOverviewPage classFamily="PREVIDENCIA" />;
+    case "INTERNACIONAL":
+      return <ClassFamilyOverviewPage classFamily="INTERNACIONAL" />;
     default:
       return <OverviewPage />;
   }
@@ -55,6 +57,8 @@ export function PortfolioSpecializedPositionsRoute() {
       return <ClassFamilyPositionsPage classFamily="CRIPTO" />;
     case "PREVIDENCIA":
       return <ClassFamilyPositionsPage classFamily="PREVIDENCIA" />;
+    case "INTERNACIONAL":
+      return <ClassFamilyPositionsPage classFamily="INTERNACIONAL" />;
     default:
       return <PositionsPage />;
   }
@@ -73,6 +77,8 @@ export function PortfolioSpecializedOperationsRoute() {
       return <ClassFamilyOperationsPage classFamily="CRIPTO" />;
     case "PREVIDENCIA":
       return <ClassFamilyOperationsPage classFamily="PREVIDENCIA" />;
+    case "INTERNACIONAL":
+      return <ClassFamilyOperationsPage classFamily="INTERNACIONAL" />;
     default:
       return <OperationsPage />;
   }

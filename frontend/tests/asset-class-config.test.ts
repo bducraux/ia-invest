@@ -9,6 +9,7 @@ describe("asset class config", () => {
       "/renda-variavel",
       "/cripto",
       "/previdencia",
+      "/internacional",
     ]);
   });
 
@@ -17,5 +18,6 @@ describe("asset class config", () => {
     expect(specializationLabel("RENDA_VARIAVEL")).toBe("Renda variável");
     expect(specializationLabel("CRIPTO")).toBe("Criptomoedas");
     expect(specializationLabel("PREVIDENCIA")).toBe("Previdência");
+    expect(specializationLabel("INTERNACIONAL")).toBe("Internacional");
   });
 });

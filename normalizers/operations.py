@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import hashlib
-from typing import Any
+from decimal import ROUND_HALF_EVEN, Decimal
+from typing import Any, Protocol
 
 from domain.models import NormalizationError, NormalizationResult, Operation
 from normalizers.base import BaseNormalizer
@@ -17,6 +18,12 @@ from normalizers.validator import (
 )
 
 
+class _FxResolver(Protocol):
+    """Minimal protocol for an FX service usable by the normalizer."""
+
+    def get_rate_for_trade(self, pair: str, trade_date: str) -> Any: ...
+
+
 class OperationNormalizer(BaseNormalizer):
     """Normalizes raw records from any extractor into Operation domain objects.
 
@@ -27,7 +34,11 @@ class OperationNormalizer(BaseNormalizer):
     - Operation type aliasing
     - Asset type inference (when not provided by the extractor)
     - Required field validation
+    - Currency conversion for non-BRL trades when an ``fx_service`` is provided.
     """
+
+    def __init__(self, fx_service: _FxResolver | None = None) -> None:
+        self._fx_service = fx_service
 
     def normalize(
         self,
@@ -59,6 +70,11 @@ class OperationNormalizer(BaseNormalizer):
         portfolio_id: str,
         import_job_id: int | None,
     ) -> list[Operation]:
+        # --- unsupported / parked rows from extractors ---
+        if raw.get("_unsupported"):
+            reason = str(raw.get("_unsupported_reason") or "unsupported operation")
+            raise ValueError(f"unsupported_operation: {reason}")
+
         # --- required fields ---
         asset_code = normalise_asset_code(raw.get("asset_code"))
         source = str(raw.get("source", "unknown"))
@@ -67,23 +83,47 @@ class OperationNormalizer(BaseNormalizer):
         operation_type = normalise_operation_type(str(raw.get("operation_type", "")))
         quantity = parse_quantity(raw.get("quantity"))
 
-        # --- financial values ---
-        unit_price = parse_monetary_cents(raw.get("unit_price"), "unit_price")
-        gross_value = parse_monetary_cents(raw.get("gross_value"), "gross_value")
-        fees = parse_monetary_cents(raw.get("fees", 0), "fees")
+        # --- financial values (in trade currency) ---
+        unit_price_native = parse_monetary_cents(raw.get("unit_price"), "unit_price")
+        gross_value_native = parse_monetary_cents(raw.get("gross_value"), "gross_value")
+        fees_native = parse_monetary_cents(raw.get("fees", 0), "fees")
 
         # Derive gross_value or unit_price if one is missing
-        if gross_value == 0 and unit_price > 0 and quantity > 0:
-            gross_value = round(unit_price * quantity)
-        if unit_price == 0 and gross_value > 0 and quantity > 0:
-            unit_price = round(gross_value / quantity)
+        if gross_value_native == 0 and unit_price_native > 0 and quantity > 0:
+            gross_value_native = round(unit_price_native * quantity)
+        if unit_price_native == 0 and gross_value_native > 0 and quantity > 0:
+            unit_price_native = round(gross_value_native / quantity)
+
+        # --- currency conversion to BRL ---
+        trade_currency = str(raw.get("trade_currency") or "BRL").upper()
+        if trade_currency == "BRL":
+            unit_price = unit_price_native
+            gross_value = gross_value_native
+            fees = fees_native
+            fx_rate_str: str | None = "1"
+            fx_source: str | None = "native_brl"
+        else:
+            if self._fx_service is None:
+                raise ValueError(
+                    f"trade_currency={trade_currency!r} requires an FX service "
+                    "but none was provided to OperationNormalizer"
+                )
+            pair = f"{trade_currency}BRL"
+            fx_date = self._safe_date(raw.get("settlement_date")) or operation_date
+            resolved = self._fx_service.get_rate_for_trade(pair, fx_date)
+            rate = Decimal(str(resolved.rate))
+            unit_price = int((Decimal(unit_price_native) * rate).to_integral_value(rounding=ROUND_HALF_EVEN))
+            gross_value = int((Decimal(gross_value_native) * rate).to_integral_value(rounding=ROUND_HALF_EVEN))
+            fees = int((Decimal(fees_native) * rate).to_integral_value(rounding=ROUND_HALF_EVEN))
+            fx_rate_str = str(rate)
+            fx_source = str(resolved.source)
 
         # A buy or sell with zero gross_value after derivation is almost always
         # a parse error for broker/exchange sources that always export prices.
         # Gorila and similar portfolio-aggregator sources may legitimately omit
         # prices for transfers or cost-basis-unknown operations, so we skip the
         # check for those sources.
-        _STRICT_PRICE_SOURCES = {"b3_csv", "broker_csv"}
+        _STRICT_PRICE_SOURCES = {"b3_csv", "broker_csv", "avenue_csv"}
         _BUY_SELL = {"buy", "sell"}
         if operation_type in _BUY_SELL and gross_value == 0 and source in _STRICT_PRICE_SOURCES:
             raise ValueError(
@@ -127,6 +167,12 @@ class OperationNormalizer(BaseNormalizer):
             unit_price=unit_price,
             gross_value=gross_value,
             fees=fees,
+            trade_currency=trade_currency,
+            unit_price_native=unit_price_native,
+            gross_value_native=gross_value_native,
+            fees_native=fees_native,
+            fx_rate_at_trade=fx_rate_str,
+            fx_rate_source=fx_source,
             broker=raw.get("broker"),
             account=raw.get("account"),
             notes=raw.get("notes"),

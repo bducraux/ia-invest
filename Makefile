@@ -1,4 +1,4 @@
-.PHONY: help install init migrate reset-db create-portfolio adjust-balance check-balance import-all portfolio-overview lint type-check test clean server api-server frontend-install frontend-dev frontend-build frontend-test frontend-lint
+.PHONY: help install init migrate reset-db clear-cache create-portfolio adjust-balance check-balance import-all portfolio-overview lint type-check test clean server api-server frontend-install frontend-dev frontend-build frontend-test frontend-lint
 
 API_PORT ?= 8010
 
@@ -12,6 +12,7 @@ help:
 	@echo "  make init                 Initialize database (fresh schema)"
 	@echo "  make migrate              Apply pending migrations to an existing database"
 	@echo "  make reset-db             Delete + reinit DB, import all portfolios, sync CDI from BACEN"
+	@echo "  make clear-cache          Delete extraction caches (portfolios/*/.cache/)"
 	@echo ""
 	@echo "Portfolios:"
 	@echo "  make create-portfolio     Create a new portfolio (interactive)"
@@ -59,11 +60,15 @@ reset-db:
 			cp "$$dir"/* "$$(dirname $$dir)/inbox/" 2>/dev/null || true; \
 		fi; \
 	done
-	uv run python scripts/import_all.py
+	uv run python scripts/import_all.py --verbose
 	@echo ""
 	@echo "Bootstrapping CDI historical series from BACEN..."
 	@uv run python scripts/sync_benchmark_rates.py --benchmark CDI --full || \
 		echo "WARNING: CDI sync failed (offline?). Run 'make sync-cdi-full' later."
+	@echo ""
+	@echo "Bootstrapping USDBRL PTAX historical series from BACEN..."
+	@uv run python scripts/sync_fx_rates.py --pair USDBRL --full || \
+		echo "WARNING: USDBRL sync failed (offline?). Run 'make sync-fx-full' later."
 
 create-portfolio:
 	uv run python scripts/create_portfolio.py
@@ -80,6 +85,16 @@ portfolio-overview:
 import-all:
 	uv run python scripts/import_all.py
 
+clear-cache:
+	@count=$$(find portfolios -type d -name .cache 2>/dev/null | wc -l); \
+	if [ "$$count" -eq 0 ]; then \
+		echo "No extraction caches found."; \
+	else \
+		size=$$(du -sh portfolios/*/.cache 2>/dev/null | awk '{s+=$$1} END {print s"K (approx)"}'); \
+		find portfolios -type d -name .cache -exec rm -rf {} +; \
+		echo "Removed $$count extraction cache director(ies)."; \
+	fi
+
 server:
 	uv run python -m mcp_server.server
 
@@ -91,6 +106,12 @@ sync-cdi:
 
 sync-cdi-full:
 	uv run python scripts/sync_benchmark_rates.py --benchmark CDI --full
+
+sync-fx:
+	uv run python scripts/sync_fx_rates.py $(ARGS)
+
+sync-fx-full:
+	uv run python scripts/sync_fx_rates.py --full
 
 frontend-install:
 	cd frontend && npm ci

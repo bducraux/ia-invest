@@ -59,10 +59,10 @@ class Operation:
     operation_type: str
     operation_date: str            # ISO 8601 YYYY-MM-DD
     quantity: float
-    unit_price: int                # cents
-    gross_value: int               # cents
-    fees: int = 0                  # cents
-    net_value: int = 0             # cents
+    unit_price: int                # cents (in BRL after FX conversion)
+    gross_value: int               # cents (in BRL after FX conversion)
+    fees: int = 0                  # cents (in BRL after FX conversion)
+    net_value: int = 0             # cents (in BRL)
     external_id: str | None = None
     asset_name: str | None = None
     settlement_date: str | None = None
@@ -71,6 +71,13 @@ class Operation:
     notes: str | None = None
     raw_data: dict[str, Any] | None = None
     import_job_id: int | None = None
+    # Multi-currency: native amounts in trade_currency cents + FX snapshot.
+    trade_currency: str = "BRL"
+    unit_price_native: int = 0
+    gross_value_native: int = 0
+    fees_native: int = 0
+    fx_rate_at_trade: str | None = None
+    fx_rate_source: str | None = None
 
     def __post_init__(self) -> None:
         if self.net_value == 0:
@@ -79,6 +86,18 @@ class Operation:
                 self.net_value = -(self.gross_value + self.fees)
             else:
                 self.net_value = self.gross_value - self.fees
+        # Backfill native fields for BRL trades so storage stays consistent.
+        if self.trade_currency == "BRL":
+            if self.unit_price_native == 0:
+                self.unit_price_native = self.unit_price
+            if self.gross_value_native == 0:
+                self.gross_value_native = self.gross_value
+            if self.fees_native == 0:
+                self.fees_native = self.fees
+            if self.fx_rate_at_trade is None:
+                self.fx_rate_at_trade = "1"
+            if self.fx_rate_source is None:
+                self.fx_rate_source = "native_brl"
 
 
 # ---------------------------------------------------------------------------

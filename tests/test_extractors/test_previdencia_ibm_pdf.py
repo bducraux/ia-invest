@@ -7,10 +7,9 @@ from extractors.previdencia_ibm_pdf import PrevidenciaIbmPdfExtractor
 
 def _sample_pdf_path() -> Path:
     return (
-        Path(__file__).resolve().parents[2]
-        / "portfolios"
-        / "fundacao-ibm"
-        / "inbox"
+        Path(__file__).resolve().parents[1]
+        / "fixtures"
+        / "previdencia"
         / "extrato_março_2026.pdf"
     )
 

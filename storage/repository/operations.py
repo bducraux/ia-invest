@@ -30,12 +30,16 @@ class OperationRepository:
                         asset_code, asset_type, asset_name,
                         operation_type, operation_date, settlement_date,
                         quantity, unit_price, gross_value, fees, net_value,
+                        trade_currency, unit_price_native, gross_value_native,
+                        fees_native, fx_rate_at_trade, fx_rate_source,
                         broker, account, notes, raw_data_json
                     ) VALUES (
                         :portfolio_id, :import_job_id, :source, :external_id,
                         :asset_code, :asset_type, :asset_name,
                         :operation_type, :operation_date, :settlement_date,
                         :quantity, :unit_price, :gross_value, :fees, :net_value,
+                        :trade_currency, :unit_price_native, :gross_value_native,
+                        :fees_native, :fx_rate_at_trade, :fx_rate_source,
                         :broker, :account, :notes, :raw_data_json
                     )
                     """,
@@ -55,6 +59,12 @@ class OperationRepository:
                         "gross_value": op.gross_value,
                         "fees": op.fees,
                         "net_value": op.net_value,
+                        "trade_currency": op.trade_currency,
+                        "unit_price_native": op.unit_price_native,
+                        "gross_value_native": op.gross_value_native,
+                        "fees_native": op.fees_native,
+                        "fx_rate_at_trade": op.fx_rate_at_trade,
+                        "fx_rate_source": op.fx_rate_source,
                         "broker": op.broker,
                         "account": op.account,
                         "notes": op.notes,

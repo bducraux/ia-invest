@@ -183,6 +183,7 @@ Cada portfólio é uma entidade lógica independente. Exemplos típicos:
 | B3 CSV/XLSX      | `B3CsvExtractor`        | ✅ Fase 2   |
 | CSV de corretora | `BrokerCsvExtractor`    | ✅ Fase 2   |
 | Binance CSV      | `BinanceCsvExtractor`   | ✅ Fase 2   |
+| Avenue Apex PDF (US) | `AvenueApexPdfExtractor` | ✅ MVP — extrato Apex Clearing oficial (ver [docs/avenue-apex-download.md](docs/avenue-apex-download.md)) |
 | CSV renda fixa   | `fixed_income_csv`      | ✅ MVP      |
 
 ---

@@ -29,16 +29,22 @@ from domain.portfolio_service import PortfolioService
 from domain.position_service import PositionService
 from domain.previdencia import PrevidenciaSnapshot
 from extractors import get_extractor, list_source_types
+from extractors.avenue_apex_pdf import AvenueApexPdfExtractor
+from extractors.cache import load_cached_extraction, save_cached_extraction
 from extractors.previdencia_ibm_pdf import PrevidenciaIbmPdfExtractor
-from normalizers.fixed_income_csv import FixedIncomeCSVImporter, REQUIRED_COLUMNS as FIXED_INCOME_REQUIRED_COLUMNS
+from mcp_server.services.fx_rates import FxRateService
+from normalizers.fixed_income_csv import REQUIRED_COLUMNS as FIXED_INCOME_REQUIRED_COLUMNS
+from normalizers.fixed_income_csv import FixedIncomeCSVImporter
 from normalizers.operations import OperationNormalizer
+from storage.repository.avenue_aliases import AvenueAliasesRepository
 from storage.repository.db import Database
 from storage.repository.fixed_income import FixedIncomePositionRepository
+from storage.repository.fx_rates import FxRatesRepository
 from storage.repository.import_jobs import ImportJobRepository
 from storage.repository.operations import OperationRepository
 from storage.repository.portfolios import PortfolioRepository
-from storage.repository.previdencia import PrevidenciaSnapshotRepository
 from storage.repository.positions import PositionRepository
+from storage.repository.previdencia import PrevidenciaSnapshotRepository
 
 structlog.configure(
     processors=[
@@ -65,13 +71,25 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
-def _find_extractor_for_file(file_path: Path, enabled_sources: list[str]) -> Any | None:
+def _find_extractor_for_file(
+    file_path: Path,
+    enabled_sources: list[str],
+    *,
+    portfolio_id: str | None = None,
+    alias_repo: AvenueAliasesRepository | None = None,
+) -> Any | None:
     """Find the first enabled extractor that can handle the file."""
     for source_type in enabled_sources:
         if source_type in _SPECIAL_SOURCE_TYPES:
             continue
         try:
-            extractor = get_extractor(source_type)
+            if source_type == "avenue_apex_pdf":
+                extractor: Any = AvenueApexPdfExtractor(
+                    alias_repo=alias_repo,
+                    portfolio_id=portfolio_id,
+                )
+            else:
+                extractor = get_extractor(source_type)
             if extractor.can_handle(file_path):
                 return extractor
         except KeyError:
@@ -313,7 +331,10 @@ def import_portfolio(
         fi_repo = FixedIncomePositionRepository(db.connection)
         prev_repo = PrevidenciaSnapshotRepository(db.connection)
         job_repo = ImportJobRepository(db.connection)
-        normalizer = OperationNormalizer()
+        fx_repo = FxRatesRepository(db.connection)
+        fx_service = FxRateService(fx_repo)
+        alias_repo = AvenueAliasesRepository(db.connection)
+        normalizer = OperationNormalizer(fx_service=fx_service)
         dedup_svc = DeduplicationService()
         pos_svc = PositionService()
 
@@ -331,6 +352,52 @@ def import_portfolio(
         if portfolio_id == "fundacao-ibm":
             latest_previdencia_file = _select_latest_previdencia_file(files, enabled_sources)
 
+        # Pre-pass: harvest Avenue/Apex aliases (description → ticker) from
+        # ALL Apex PDFs before the main import so chronologically-early
+        # statements without a PORTFOLIO SUMMARY (e.g. cash-only months)
+        # can still resolve their BOUGHT lines via the cache.
+        if "avenue_apex_pdf" in enabled_sources:
+            from extractors.cache import file_sha256, load_cached_aliases
+
+            harvest_extractor = AvenueApexPdfExtractor(
+                alias_repo=alias_repo, portfolio_id=portfolio_id
+            )
+            for file_path in files:
+                if file_path.suffix.lower() != ".pdf":
+                    continue
+                try:
+                    pdf_hash = file_sha256(file_path)
+                    cached_aliases = load_cached_aliases(
+                        file_path, harvest_extractor, file_hash=pdf_hash
+                    )
+                    if cached_aliases is not None:
+                        # Cache hit: replay aliases without opening the PDF.
+                        for entry in cached_aliases:
+                            name = entry.get("name")
+                            symbol = entry.get("symbol")
+                            if not name or not symbol:
+                                continue
+                            alias_repo.upsert(
+                                portfolio_id,
+                                name,
+                                symbol,
+                                cusip=entry.get("cusip"),
+                                commit=False,
+                            )
+                        continue
+                    if harvest_extractor.can_handle(file_path):
+                        harvest_extractor.harvest_aliases(
+                            file_path, file_hash=pdf_hash
+                        )
+                except Exception as exc:  # noqa: BLE001
+                    log.warning(
+                        "alias_harvest_failed",
+                        file=file_path.name,
+                        error=str(exc),
+                    )
+            if not dry_run:
+                db.connection.commit()
+
         for file_path in sorted(files):
             log.info("processing_file", file=file_path.name, portfolio=portfolio_id)
 
@@ -345,7 +412,12 @@ def import_portfolio(
                     previdencia_extractor = maybe_prev_extractor
                     is_previdencia_file = previdencia_extractor.can_handle(file_path)
 
-            extractor = None if (is_fixed_income_file or is_previdencia_file) else _find_extractor_for_file(file_path, enabled_sources)
+            extractor = None if (is_fixed_income_file or is_previdencia_file) else _find_extractor_for_file(
+                file_path,
+                enabled_sources,
+                portfolio_id=portfolio_id,
+                alias_repo=alias_repo,
+            )
             if extractor is None and not is_fixed_income_file and not is_previdencia_file:
                 log.warning("no_extractor_found", file=file_path.name)
                 if not dry_run and portfolio.move_processed_files:
@@ -422,8 +494,18 @@ def import_portfolio(
                 total = file_result["total"]
                 error_count = file_result["errors"]
             else:
-                # Extract
-                extraction = extractor.extract(staged_path)
+                # Extract (with per-file cache for slow extractors that opt in)
+                cached_extraction = load_cached_extraction(
+                    staged_path, extractor, file_hash=file_hash
+                )
+                if cached_extraction is not None:
+                    extraction = cached_extraction
+                    log.info("extraction_cache_hit", file=staged_path.name)
+                else:
+                    extraction = extractor.extract(staged_path)
+                    save_cached_extraction(
+                        staged_path, extractor, extraction, file_hash=file_hash
+                    )
 
                 # Log extraction errors
                 if extraction.has_errors:
@@ -526,6 +608,7 @@ def import_portfolio(
 
     # Checkpoint the WAL file so it doesn't grow unboundedly.
     if not dry_run:
+        db.connection.commit()
         db.connection.execute("PRAGMA wal_checkpoint(PASSIVE)")
 
     log.info("import_complete", **summary)

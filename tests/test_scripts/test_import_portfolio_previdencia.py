@@ -8,10 +8,9 @@ from storage.repository.db import Database
 
 def test_import_portfolio_previdencia_processes_only_latest_pdf(monkeypatch, tmp_path: Path) -> None:
     source_inbox = (
-        Path(__file__).resolve().parents[2]
-        / "portfolios"
-        / "fundacao-ibm"
-        / "inbox"
+        Path(__file__).resolve().parents[1]
+        / "fixtures"
+        / "previdencia"
     )
 
     portfolios_dir = tmp_path / "portfolios"

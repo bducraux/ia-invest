@@ -109,7 +109,7 @@ One extractor per file format/source. Each implements `BaseExtractor`:
 - `can_handle(file_path) -> bool` — determine if this extractor applies
 - `extract(file_path) -> list[dict]` — return raw records, no business logic
 
-Existing extractors: `B3CsvExtractor`, `BrokerCsvExtractor`, `BinanceCsvExtractor`, `BinanceSimpleEarnExtractor`, `GorilaCsvExtractor`, `GorilaBXlsxExtractor`, `PrevidenciaIBMPDFExtractor`. Register new ones in `extractors/__init__.py`.
+Existing extractors: `B3CsvExtractor`, `BrokerCsvExtractor`, `BinanceCsvExtractor`, `BinanceSimpleEarnExtractor`, `GorilaCsvExtractor`, `GorilaBXlsxExtractor`, `PrevidenciaIBMPDFExtractor`, `AvenueApexPdfExtractor`. Register new ones in `extractors/__init__.py`.
 
 ### Normalizers (`normalizers/`)
 

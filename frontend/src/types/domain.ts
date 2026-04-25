@@ -5,7 +5,8 @@ export type PortfolioSpecialization =
   | "RENDA_FIXA"
   | "RENDA_VARIAVEL"
   | "CRIPTO"
-  | "PREVIDENCIA";
+  | "PREVIDENCIA"
+  | "INTERNACIONAL";
 
 export type AssetClass =
   | "ACAO"
@@ -14,7 +15,8 @@ export type AssetClass =
   | "RENDA_FIXA"
   | "PREVIDENCIA"
   | "CAIXA"
-  | "CRIPTO";
+  | "CRIPTO"
+  | "INTERNACIONAL";
 
 export type OperationType = "COMPRA" | "VENDA" | "DIVIDENDO" | "JCP" | "DESDOBRAMENTO";
 

@@ -27,12 +27,16 @@ from mcp_server.services.benchmark_sync import (
     SyncResult,
 )
 from mcp_server.services.fixed_income_lifecycle import FixedIncomeLifecycleService
+from mcp_server.services.fx_rates import SUPPORTED_PAIRS as FX_SUPPORTED_PAIRS
+from mcp_server.services.fx_rates import FxRateService
+from mcp_server.services.fx_sync import FxSyncError, FxSyncResult, FxSyncService
 from mcp_server.services.quotes import MarketQuoteService
 from mcp_server.tools.portfolios import get_portfolio_operations
 from normalizers.fixed_income_csv import FixedIncomeCSVImporter
 from storage.repository.benchmark_rates import BenchmarkRatesRepository
 from storage.repository.db import Database
 from storage.repository.fixed_income import FixedIncomePositionRepository
+from storage.repository.fx_rates import FxRatesRepository
 from storage.repository.operations import OperationRepository
 from storage.repository.portfolios import PortfolioRepository
 from storage.repository.positions import PositionRepository
@@ -156,6 +160,29 @@ class BenchmarkSyncResultOut(BaseModel):
     lastFetchedAt: str | None = None
 
 
+class FxCoverageOut(BaseModel):
+    pair: str
+    coverageStart: str | None = None
+    coverageEnd: str | None = None
+    rowCount: int = 0
+    lastFetchedAt: str | None = None
+
+
+class FxSyncRequest(BaseModel):
+    startDate: str | None = None
+    endDate: str | None = None
+    fullRefresh: bool = False
+
+
+class FxSyncResultOut(BaseModel):
+    pair: str
+    rowsInserted: int
+    coverageStart: str | None = None
+    coverageEnd: str | None = None
+    source: str
+    lastFetchedAt: str | None = None
+
+
 # --- Fixed-income (renda fixa) -----------------------------------------------
 
 
@@ -267,6 +294,10 @@ def _to_ui_asset_class(asset_type: str) -> str:
         "previdencia": "PREVIDENCIA",
         "crypto": "CRIPTO",
         "cash": "CAIXA",
+        "stock_us": "INTERNACIONAL",
+        "etf_us": "INTERNACIONAL",
+        "reit_us": "INTERNACIONAL",
+        "bdr_us": "INTERNACIONAL",
     }
     return mapping.get(asset_type, "ACAO")
 
@@ -280,6 +311,7 @@ def _asset_class_label(asset_class: str) -> str:
         "PREVIDENCIA": "Previdencia",
         "CRIPTO": "Cripto",
         "CAIXA": "Caixa",
+        "INTERNACIONAL": "Internacional",
     }
     return labels.get(asset_class, asset_class)
 
@@ -296,6 +328,8 @@ def _portfolio_specialization(allowed_asset_types: list[str]) -> str:
         return "RENDA_VARIAVEL"
     if normalized <= {"crypto"}:
         return "CRIPTO"
+    if normalized <= {"stock_us", "etf_us", "reit_us", "bdr_us"}:
+        return "INTERNACIONAL"
     return "GENERIC"
 
 
@@ -534,11 +568,14 @@ def create_http_app(
     )
 
     def build_quote_service(db: Database, *, force_live: bool = False) -> MarketQuoteService:
+        fx_repo = FxRatesRepository(db.connection)
+        fx_service = FxRateService(fx_repo, live_ttl_seconds=_DEFAULT_QUOTES_TTL_SECONDS)
         return MarketQuoteService(
             db.connection,
             enabled=(resolved_quotes_enabled or force_live),
             ttl_seconds=_DEFAULT_QUOTES_TTL_SECONDS,
             timeout_seconds=_DEFAULT_QUOTES_TIMEOUT_SECONDS,
+            fx_service=fx_service,
         )
 
     def refresh_quotes_for_portfolios(
@@ -689,6 +726,73 @@ def create_http_app(
             coverageEnd=result.coverage_end.isoformat() if result.coverage_end else None,
             source=result.source,
             lastFetchedAt=repo.get_last_fetched_at(bench),
+        )
+
+    @app.get("/api/fx/{pair}/coverage", response_model=FxCoverageOut)
+    def get_fx_coverage(
+        pair: str,
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> FxCoverageOut:
+        pair_u = pair.upper()
+        if pair_u not in FX_SUPPORTED_PAIRS:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Unsupported FX pair '{pair}'. Supported: {', '.join(FX_SUPPORTED_PAIRS)}",
+            )
+        repo = FxRatesRepository(db.connection)
+        start, end, count = repo.get_coverage(pair_u)
+        return FxCoverageOut(
+            pair=pair_u,
+            coverageStart=start.isoformat() if start else None,
+            coverageEnd=end.isoformat() if end else None,
+            rowCount=count,
+            lastFetchedAt=repo.get_last_fetched_at(pair_u),
+        )
+
+    @app.post("/api/fx/{pair}/sync", response_model=FxSyncResultOut)
+    def sync_fx(
+        pair: str,
+        payload: FxSyncRequest | None = None,
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> FxSyncResultOut:
+        pair_u = pair.upper()
+        if pair_u not in FX_SUPPORTED_PAIRS:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Unsupported FX pair '{pair}'. Supported: {', '.join(FX_SUPPORTED_PAIRS)}",
+            )
+        repo = FxRatesRepository(db.connection)
+        service = FxSyncService(repo)
+        body = payload or FxSyncRequest()
+
+        def _parse_iso_date(label: str, raw: str | None) -> date | None:
+            if raw is None:
+                return None
+            try:
+                return datetime.strptime(raw, "%Y-%m-%d").date()
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"{label} must be ISO date YYYY-MM-DD",
+                ) from exc
+
+        try:
+            result: FxSyncResult = service.sync(
+                pair_u,
+                start_date=_parse_iso_date("startDate", body.startDate),
+                end_date=_parse_iso_date("endDate", body.endDate),
+                full_refresh=body.fullRefresh,
+            )
+        except FxSyncError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+        return FxSyncResultOut(
+            pair=result.pair,
+            rowsInserted=result.rows_inserted,
+            coverageStart=result.coverage_start.isoformat() if result.coverage_start else None,
+            coverageEnd=result.coverage_end.isoformat() if result.coverage_end else None,
+            source=result.source,
+            lastFetchedAt=repo.get_last_fetched_at(result.pair),
         )
 
     @app.post("/api/quotes/refresh", response_model=QuoteRefreshResponse)

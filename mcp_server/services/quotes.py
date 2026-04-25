@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from decimal import Decimal
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -12,11 +13,20 @@ from storage.repository.quotes import QuoteRepository
 
 
 class MarketQuoteService:
-    def __init__(self, conn: Any, *, enabled: bool, ttl_seconds: int = 300, timeout_seconds: float = 2.0) -> None:
+    def __init__(
+        self,
+        conn: Any,
+        *,
+        enabled: bool,
+        ttl_seconds: int = 300,
+        timeout_seconds: float = 2.0,
+        fx_service: Any | None = None,
+    ) -> None:
         self._cache = QuoteRepository(conn)
         self._enabled = enabled
         self._ttl_seconds = ttl_seconds
         self._timeout_seconds = timeout_seconds
+        self._fx_service = fx_service
 
     def get_price_cents(self, asset_code: str, asset_type: str) -> int | None:
         resolved = self.resolve_price(asset_code, asset_type)
@@ -107,9 +117,48 @@ class MarketQuoteService:
             if yahoo is not None:
                 return yahoo
             return self._fetch_google(code)
+        if normalized in {"stock_us", "etf_us", "reit_us", "bdr_us"}:
+            return self._fetch_us_ticker(code)
         if normalized == "crypto":
             return self._fetch_binance(code)
         return None
+
+    def _fetch_us_ticker(self, code: str) -> tuple[int, str] | None:
+        """Fetch a US ticker price (USD) and convert to BRL cents via FxRateService."""
+        usd_price = self._fetch_yahoo_us_price(code)
+        if usd_price is None:
+            return None
+        if self._fx_service is None:
+            return None
+        resolved = self._fx_service.get_current_rate("USDBRL")
+        if resolved is None:
+            return None
+        rate = Decimal(str(resolved.rate))
+        cents = int((Decimal(str(usd_price)) * rate * Decimal(100)).to_integral_value())
+        return cents, f"yahoo_us+{resolved.source}"
+
+    def _fetch_yahoo_us_price(self, code: str) -> float | None:
+        """Fetch USD price for a US-listed ticker (no .SA suffix)."""
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{code}?interval=1d&range=5d"
+        payload = self._fetch_json(url)
+        if not isinstance(payload, dict):
+            return None
+        chart = payload.get("chart")
+        if not isinstance(chart, dict):
+            return None
+        results = chart.get("result")
+        if not isinstance(results, list) or not results:
+            return None
+        first = results[0]
+        if not isinstance(first, dict):
+            return None
+        meta = first.get("meta")
+        if not isinstance(meta, dict):
+            return None
+        raw_price = meta.get("regularMarketPrice")
+        if not isinstance(raw_price, (int, float)):
+            return None
+        return float(raw_price)
 
     def _fetch_binance(self, code: str) -> tuple[int, str] | None:
         symbol_aliases = {

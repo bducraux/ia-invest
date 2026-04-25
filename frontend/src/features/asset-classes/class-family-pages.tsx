@@ -75,6 +75,13 @@ const FAMILY_META: Record<ClassFamily, {
     emptyDescription: "Importe extratos de previdência para consolidar esta visão.",
     operationsDescription: "A aplicação hoje consolida snapshots; movimentações detalhadas ainda não são expostas nesta classe.",
   },
+  INTERNACIONAL: {
+    title: "Internacional",
+    description: "Posições e movimentações de ativos negociados no exterior (Avenue, etc).",
+    emptyTitle: "Nenhuma posição internacional",
+    emptyDescription: "Importe extratos da Avenue (CSV) para consolidar esta visão.",
+    operationsDescription: "Compras de ações, ETFs e REITs nos EUA convertidas para BRL via PTAX.",
+  },
 };
 
 const RENDA_VARIAVEL_EXPOSURE_CHART = {

@@ -9,6 +9,7 @@ classes.  Use ``get_extractor(source_type)`` to retrieve the right one.
 
 from __future__ import annotations
 
+from extractors.avenue_apex_pdf import AvenueApexPdfExtractor
 from extractors.b3_csv import B3CsvExtractor
 from extractors.base import BaseExtractor, ExtractionResult
 from extractors.binance_csv import BinanceCsvExtractor
@@ -23,6 +24,7 @@ _REGISTRY: dict[str, type[BaseExtractor]] = {
     "broker_csv": BrokerCsvExtractor,
     "binance_csv": BinanceCsvExtractor,
     "binance_simple_earn": BinanceSimpleEarnExtractor,
+    "avenue_apex_pdf": AvenueApexPdfExtractor,
     "gorila_b3_xlsx": GorilaB3XlsxExtractor,
     "gorila_xlsx": GorilaXlsxExtractor,
     "previdencia_ibm_pdf": PrevidenciaIbmPdfExtractor,
@@ -50,6 +52,7 @@ __all__ = [
     "B3CsvExtractor",
     "BrokerCsvExtractor",
     "BinanceCsvExtractor",
+    "AvenueApexPdfExtractor",
     "GorilaB3XlsxExtractor",
     "GorilaXlsxExtractor",
     "PrevidenciaIbmPdfExtractor",

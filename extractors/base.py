@@ -41,6 +41,15 @@ class BaseExtractor(ABC):
     #: Unique identifier for this extractor, e.g. 'b3_csv'.
     source_type: str = ""
 
+    #: Opt-in flag for the per-file extraction cache (see ``extractors.cache``).
+    #: Set to ``True`` on slow extractors (PDFs, OCR, etc.) so that re-imports
+    #: of unchanged files skip parsing.
+    ENABLE_EXTRACTION_CACHE: bool = False
+
+    #: Bumped whenever the parser semantics change. Cached results from older
+    #: versions are ignored automatically.
+    EXTRACTOR_VERSION: int = 1
+
     @abstractmethod
     def can_handle(self, file_path: Path) -> bool:
         """Return True if this extractor can process the given file."""

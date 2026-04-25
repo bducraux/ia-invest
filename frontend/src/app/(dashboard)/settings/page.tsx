@@ -18,6 +18,8 @@ import {
   updatePortfolioName,
   getBenchmarkCoverage,
   syncBenchmark,
+  getFxCoverage,
+  syncFx,
 } from "@/lib/api";
 import { usePortfolios } from "@/lib/queries";
 
@@ -50,6 +52,18 @@ export default function SettingsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["benchmark-coverage", "CDI"] });
       queryClient.invalidateQueries({ queryKey: ["fixed-income"] });
+    },
+  });
+
+  const usdbrlCoverageQuery = useQuery({
+    queryKey: ["fx-coverage", "USDBRL"],
+    queryFn: () => getFxCoverage("USDBRL"),
+  });
+
+  const syncUsdbrlMutation = useMutation({
+    mutationFn: (fullRefresh: boolean) => syncFx("USDBRL", { fullRefresh }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fx-coverage", "USDBRL"] });
     },
   });
 
@@ -218,6 +232,76 @@ export default function SettingsPage() {
               {syncCdiMutation.error instanceof Error ? (
                 <span className="text-xs text-destructive">
                   {syncCdiMutation.error.message}
+                </span>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base text-foreground">Histórico USDBRL PTAX (BACEN)</CardTitle>
+            <CardDescription>
+              Série diária da PTAX USD/BRL (venda) sincronizada do Banco Central.
+              Usada para converter operações em dólar (Avenue/Apex) para BRL pela
+              data de liquidação.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {usdbrlCoverageQuery.isLoading ? (
+              <p className="text-sm text-muted-foreground">Carregando cobertura...</p>
+            ) : usdbrlCoverageQuery.error instanceof Error ? (
+              <p className="text-xs text-destructive">{usdbrlCoverageQuery.error.message}</p>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">Início da cobertura</p>
+                  <p className="font-medium">
+                    {usdbrlCoverageQuery.data?.coverageStart ?? "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Fim da cobertura</p>
+                  <p className="font-medium">
+                    {usdbrlCoverageQuery.data?.coverageEnd ?? "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Dias úteis em cache</p>
+                  <p className="font-medium">{usdbrlCoverageQuery.data?.rowCount ?? 0}</p>
+                </div>
+                {usdbrlCoverageQuery.data?.lastFetchedAt ? (
+                  <div className="sm:col-span-3">
+                    <p className="text-xs text-muted-foreground">
+                      Última atualização: {usdbrlCoverageQuery.data.lastFetchedAt}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                onClick={() => syncUsdbrlMutation.mutate(false)}
+                disabled={syncUsdbrlMutation.isPending}
+              >
+                Sincronizar agora
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => syncUsdbrlMutation.mutate(true)}
+                disabled={syncUsdbrlMutation.isPending}
+              >
+                Recarregar histórico completo
+              </Button>
+              {syncUsdbrlMutation.isSuccess ? (
+                <span className="text-xs text-emerald-600">
+                  {syncUsdbrlMutation.data.rowsInserted} dia(s) atualizado(s).
+                </span>
+              ) : null}
+              {syncUsdbrlMutation.error instanceof Error ? (
+                <span className="text-xs text-destructive">
+                  {syncUsdbrlMutation.error.message}
                 </span>
               ) : null}
             </div>

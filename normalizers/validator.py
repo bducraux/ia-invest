@@ -14,6 +14,7 @@ _OPERATION_TYPES = {
 _ASSET_TYPES = {
     "stock", "fii", "etf", "bdr", "bond", "treasury", "crypto",
     "international", "option", "fund",
+    "stock_us", "etf_us", "reit_us", "bdr_us",
 }
 
 _ASSET_ALIASES = {

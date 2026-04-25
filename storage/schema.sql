@@ -48,10 +48,20 @@ CREATE TABLE IF NOT EXISTS operations (
 
     -- financials (stored as integer cents)
     quantity        REAL NOT NULL DEFAULT 0,    -- number of shares/units (can be fractional)
-    unit_price      INTEGER NOT NULL DEFAULT 0, -- cents
-    gross_value     INTEGER NOT NULL DEFAULT 0, -- cents
-    fees            INTEGER NOT NULL DEFAULT 0, -- cents (brokerage, taxes, etc.)
-    net_value       INTEGER NOT NULL DEFAULT 0, -- cents (gross ± fees)
+    unit_price      INTEGER NOT NULL DEFAULT 0, -- cents (in BRL after fx conversion)
+    gross_value     INTEGER NOT NULL DEFAULT 0, -- cents (in BRL after fx conversion)
+    fees            INTEGER NOT NULL DEFAULT 0, -- cents (in BRL after fx conversion)
+    net_value       INTEGER NOT NULL DEFAULT 0, -- cents (gross ± fees, in BRL)
+
+    -- multi-currency: native (trade-currency) amounts and fx rate snapshot.
+    -- For BRL trades: trade_currency='BRL', *_native == BRL columns,
+    -- fx_rate_at_trade='1', fx_rate_source='native_brl'.
+    trade_currency      TEXT NOT NULL DEFAULT 'BRL',
+    unit_price_native   INTEGER NOT NULL DEFAULT 0,  -- cents in trade_currency
+    gross_value_native  INTEGER NOT NULL DEFAULT 0,  -- cents in trade_currency
+    fees_native         INTEGER NOT NULL DEFAULT 0,  -- cents in trade_currency
+    fx_rate_at_trade    TEXT,                        -- Decimal as string
+    fx_rate_source      TEXT,                        -- 'bacen_ptax', 'yahoo', ...
 
     -- metadata
     broker          TEXT,
@@ -267,8 +277,52 @@ CREATE TABLE IF NOT EXISTS daily_benchmark_rates (
 CREATE INDEX IF NOT EXISTS idx_daily_benchmark_rates_lookup
     ON daily_benchmark_rates(benchmark, rate_date DESC);
 
+-- ---------------------------------------------------------------------------
+-- fx_rates
+-- Historical FX rate cache for currency pair conversions (USDBRL, EURBRL, ...).
+-- Rates stored as TEXT to preserve Decimal precision. One row per (pair, date).
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS fx_rates (
+    pair        TEXT NOT NULL,
+    rate_date   TEXT NOT NULL,
+    rate        TEXT NOT NULL,
+    source      TEXT NOT NULL,
+    fetched_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    PRIMARY KEY (pair, rate_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_fx_rates_lookup
+    ON fx_rates(pair, rate_date DESC);
+
+-- ---------------------------------------------------------------------------
+-- avenue_symbol_aliases
+-- Persistent description→ticker cache for Avenue/Apex monthly PDF statements.
+-- Apex statements identify equities by long descriptions in the BUY/SELL
+-- section; the ticker symbol only appears in the PORTFOLIO SUMMARY. This
+-- table learns from every imported statement so subsequent PDFs can resolve
+-- the ticker even when the position is absent from that month's summary.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS avenue_symbol_aliases (
+    portfolio_id    TEXT NOT NULL,
+    asset_name      TEXT NOT NULL,
+    asset_code      TEXT NOT NULL,
+    cusip           TEXT,
+    first_seen_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    updated_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    PRIMARY KEY (portfolio_id, asset_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_avenue_aliases_code
+    ON avenue_symbol_aliases(portfolio_id, asset_code);
+
 -- Record this baseline schema version
 INSERT OR IGNORE INTO schema_migrations (version, description)
 VALUES ('0001', 'initial schema — all tables, indexes, and constraints');
 INSERT OR IGNORE INTO schema_migrations (version, description)
 VALUES ('0004', 'historical daily benchmark rate cache (CDI, Selic, ...)');
+INSERT OR IGNORE INTO schema_migrations (version, description)
+VALUES ('0007', 'multi-currency support on operations (trade_currency + native amounts + fx_rate)');
+INSERT OR IGNORE INTO schema_migrations (version, description)
+VALUES ('0008', 'fx_rates cache (PTAX/Yahoo historical currency pair rates)');
+INSERT OR IGNORE INTO schema_migrations (version, description)
+VALUES ('0009', 'avenue_symbol_aliases (persistent description→ticker cache for Apex PDFs)');

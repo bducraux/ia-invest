@@ -207,6 +207,42 @@ export function syncBenchmark(
   return apiPostJson<BenchmarkSyncResult>(`/api/benchmarks/${benchmark}/sync`, payload);
 }
 
+// --- FX rates (PTAX) ---------------------------------------------------------
+
+export interface FxCoverage {
+  pair: string;
+  coverageStart: string | null;
+  coverageEnd: string | null;
+  rowCount: number;
+  lastFetchedAt: string | null;
+}
+
+export interface FxSyncResult {
+  pair: string;
+  rowsInserted: number;
+  coverageStart: string | null;
+  coverageEnd: string | null;
+  source: string;
+  lastFetchedAt: string | null;
+}
+
+export interface FxSyncRequest {
+  startDate?: string;
+  endDate?: string;
+  fullRefresh?: boolean;
+}
+
+export function getFxCoverage(pair: string): Promise<FxCoverage> {
+  return apiFetch<FxCoverage>(`/api/fx/${pair}/coverage`);
+}
+
+export function syncFx(
+  pair: string,
+  payload: FxSyncRequest = {},
+): Promise<FxSyncResult> {
+  return apiPostJson<FxSyncResult>(`/api/fx/${pair}/sync`, payload);
+}
+
 // --- Fixed income (renda fixa) -----------------------------------------------
 
 export interface FixedIncomePosition {

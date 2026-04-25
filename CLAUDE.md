@@ -198,6 +198,15 @@ Key test files:
 - `get_dividends_summary(portfolio_id, period_months=12)` — proventos (`dividend`, `jcp`, `rendimento`) breakdown over a rolling window: per-asset, per-month and per-type totals plus a moving-window DY estimate (`received / current_market_value`). Powered by `domain.dividends_service.DividendsService`.
 - `get_concentration_analysis(portfolio_id)` — top-N percentages, normalised Herfindahl-Hirschman index (HHI) and threshold-based alerts (single-asset 15%/25%, top-5 60%/75%, top-10 90%, low diversification < 5 assets). Powered by `domain.concentration_service.ConcentrationService`. Falls back to cost basis when a quote is unavailable; the affected assets are listed in `valuation_warnings`.
 
+**Available analysis tools (Marco H — performance & benchmarks):**
+- `get_portfolio_performance(portfolio_id, period_months=12)` — lifetime metrics (current market value, capital/income/total return % over cost basis, lifetime dividends and realised P&L) plus a rolling window block with dividends received and CDI accumulated over the same window. CDI is compounded from `daily_benchmark_rates`; the block is `null` when the cache is empty and a `cdi_partial_series` warning is emitted when the cache does not fully cover the window. Powered by `domain.performance_service.PortfolioPerformanceService`. Honest about limitations: this is **not** a TWR/MWR — IA-Invest does not store historical position snapshots.
+
+**Available analysis tools (Marco I — fixed income summary):**
+- `get_fixed_income_summary(portfolio_id, as_of=None)` — CDB/LCI/LCA portfolio overview: aggregate principal vs current gross/net values, total estimated IR, per-position rows, maturity ladder (`<=30d`, `<=90d`, `<=365d`, `>365d`) and `upcoming_maturities` (≤ 30 days, sorted ascending). Already-matured positions appear in a separate `matured_totals` block. Powered by `domain.fixed_income_summary_service.FixedIncomeSummaryService`; valuations are recomputed on-the-fly via `FixedIncomeValuationService` against the SQLite CDI cache (falls back to a flat-zero provider when the cache is empty so the call never crashes; positions affected are surfaced in `incomplete_valuations`).
+
+**Available analysis tools (Marco J — unified alerts):**
+- `get_portfolio_alerts(portfolio_id)` — aggregator that merges concentration alerts + upcoming RF maturities + missing-quote signals + incomplete RF valuations into a single, severity-sorted list (`critical` > `warning` > `info`). Reuses `get_concentration_analysis`, `get_fixed_income_summary` and `get_position_with_quote` so each alert source remains a single source of truth. Powered by `domain.portfolio_alerts_service.PortfolioAlertsService`.
+
 **New HTTP endpoint:**
 Add to `mcp_server/http_api.py` reusing existing repositories — no direct SQL.
 

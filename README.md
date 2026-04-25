@@ -142,19 +142,26 @@ ia-invest/
 │       ├── staging/         # Em pré-processamento
 │       ├── processed/       # Importados com sucesso
 │       ├── rejected/        # Rejeitados com log de erro
-│       └── exports/         # Relatórios gerados
-├── extractors/              # Parsers por fonte/layout
-├── normalizers/             # Normalização e validação
-├── domain/                  # Regras de negócio e modelos
+│       ├── exports/         # Relatórios gerados
+│       └── .cache/          # Cache opcional de extração (gitignored)
+├── templates/               # Templates de portfólio (renda-variavel, renda-fixa,
+│                            #   cripto, internacional, ...)
+├── extractors/              # Parsers por fonte/layout (B3, Binance, Avenue, ...)
+├── normalizers/             # Normalização e validação de operações
+├── domain/                  # Regras de negócio (posições, valuation RF, FX, ...)
 ├── storage/
 │   ├── schema.sql           # Schema SQLite canônico
-│   ├── migrations/          # Scripts de migração versionados
-│   └── repository/          # Camada de acesso a dados
-├── mcp_server/              # Servidor MCP local
-│   ├── tools/               # Ferramentas expostas ao agente
+│   ├── migrations/          # Scripts de migração versionados (NNNN_*.sql)
+│   └── repository/          # Camada de acesso a dados (um repo por agregado)
+├── mcp_server/              # Backend Python
+│   ├── server.py            # Servidor MCP (stdin/stdout) p/ Claude Desktop
+│   ├── http_api.py          # API HTTP (FastAPI) consumida pelo frontend
+│   ├── tools/               # Ferramentas MCP expostas ao agente
+│   ├── services/            # CDI/PTAX sync, quotes, fixed-income lifecycle
 │   └── resources/           # Recursos estáticos MCP
 ├── frontend/                # Frontend Next.js (UI web, separado do backend)
-├── scripts/                 # Scripts operacionais
+├── scripts/                 # Scripts operacionais (import, sync CDI/PTAX, ...)
+├── docs/                    # Guias operacionais (ex.: avenue-apex-download)
 └── tests/                   # Testes automatizados
 ```
 

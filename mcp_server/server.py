@@ -37,6 +37,7 @@ from mcp.server import Server
 from mcp.server.lowlevel.server import NotificationOptions
 from mcp.server.models import InitializationOptions
 
+from mcp_server.tools.app_settings import get_app_settings
 from mcp_server.tools.portfolios import (
     compare_portfolios,
     get_consolidated_summary,
@@ -45,6 +46,7 @@ from mcp_server.tools.portfolios import (
     get_portfolio_summary,
     list_portfolios,
 )
+from mcp_server.tools.positions_with_quote import get_position_with_quote
 from storage.repository.db import Database
 
 _DB_PATH = Path(os.environ.get("IA_INVEST_DB", "ia_invest.db"))
@@ -155,6 +157,35 @@ async def handle_list_tools() -> list[types.Tool]:
             description="Get a consolidated view across all active portfolios.",
             inputSchema={"type": "object", "properties": {}, "required": []},
         ),
+        types.Tool(
+            name="get_app_settings",
+            description=(
+                "Return current global financial settings (CDI, SELIC, IPCA): "
+                "annual and daily rates plus their last sync date. Missing "
+                "series are reported as null with a warning, never an error."
+            ),
+            inputSchema={"type": "object", "properties": {}, "required": []},
+        ),
+        types.Tool(
+            name="get_position_with_quote",
+            description=(
+                "Return positions for a portfolio enriched with the latest "
+                "available quote, current market value and unrealised P&L. "
+                "Positions without a quote are still returned with quote "
+                "fields set to null."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "portfolio_id": {"type": "string"},
+                    "asset_code": {
+                        "type": "string",
+                        "description": "Optional ticker filter (case-insensitive).",
+                    },
+                },
+                "required": ["portfolio_id"],
+            },
+        ),
     ]
 
 
@@ -196,6 +227,14 @@ async def handle_call_tool(
             result = compare_portfolios(db, args["portfolio_ids"])
         elif name == "get_consolidated_summary":
             result = get_consolidated_summary(db)
+        elif name == "get_app_settings":
+            result = get_app_settings(db)
+        elif name == "get_position_with_quote":
+            result = get_position_with_quote(
+                db,
+                args["portfolio_id"],
+                asset_code=args.get("asset_code"),
+            )
         else:
             result = {"error": f"Unknown tool: {name}"}
     except Exception as exc:  # noqa: BLE001

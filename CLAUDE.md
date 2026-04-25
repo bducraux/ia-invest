@@ -128,7 +128,7 @@ Deterministic business rules — **never delegate these calculations to an AI ag
 
 Two runtimes share the same repositories and domain logic:
 
-- **`server.py`** — MCP protocol over stdin/stdout for Claude Desktop. Tools: `list_portfolios`, `get_portfolio_summary`, `get_portfolio_positions`, `get_portfolio_operations`, `compare_portfolios`, `get_consolidated_summary`.
+- **`server.py`** — MCP protocol over stdin/stdout for Claude Desktop. Tools: `list_portfolios`, `get_portfolio_summary`, `get_portfolio_positions`, `get_portfolio_operations`, `compare_portfolios`, `get_consolidated_summary`, `get_app_settings`, `get_position_with_quote`.
 - **`http_api.py`** — FastAPI REST API for the frontend. All Pydantic response models use **camelCase** field names. Key routes: `/api/portfolios`, `/api/portfolios/{id}/summary`, `/api/portfolios/{id}/positions`, `/api/portfolios/{id}/operations`, `/api/portfolios/{id}/fixed-income`, `/api/portfolios/{id}/previdencia`, `/api/quotes/refresh`, `/api/settings`.
 - **`services/quotes.py`** — `MarketQuoteService` fetches live prices (brapi.dev/Yahoo Finance fallback) with a configurable TTL cache in `market_quotes_cache`.
 
@@ -189,6 +189,10 @@ Key test files:
 **New MCP tool:**
 1. Add function in `mcp_server/tools/`.
 2. Register in `mcp_server/server.py`.
+
+**Available analysis tools (Marco F — foundation):**
+- `get_app_settings()` — current CDI/SELIC/IPCA rates (annual + daily) and last sync dates. Daily rates from `daily_benchmark_rates` are annualised with the Brazilian 252-business-day convention. Missing series surface as `null` in `rates`/`last_sync` plus a `warnings` list — never an error.
+- `get_position_with_quote(portfolio_id, asset_code=None)` — positions enriched with current market quote, market value and unrealised P&L. Computed by `domain.position_valuation_service.PositionValuationService` (pure, `Decimal`-based). Negative/zero quantities are preserved (historical-data-gap signal). Positions without a quote are still returned with quote fields set to `null`.
 
 **New HTTP endpoint:**
 Add to `mcp_server/http_api.py` reusing existing repositories — no direct SQL.

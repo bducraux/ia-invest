@@ -37,6 +37,12 @@ from mcp.server import Server
 from mcp.server.lowlevel.server import NotificationOptions
 from mcp.server.models import InitializationOptions
 
+from mcp_server.tools.app_settings import get_app_settings
+from mcp_server.tools.concentration import get_concentration_analysis
+from mcp_server.tools.dividends_summary import get_dividends_summary
+from mcp_server.tools.fixed_income_summary import get_fixed_income_summary
+from mcp_server.tools.performance import get_portfolio_performance
+from mcp_server.tools.portfolio_alerts import get_portfolio_alerts
 from mcp_server.tools.portfolios import (
     compare_portfolios,
     get_consolidated_summary,
@@ -45,6 +51,7 @@ from mcp_server.tools.portfolios import (
     get_portfolio_summary,
     list_portfolios,
 )
+from mcp_server.tools.positions_with_quote import get_position_with_quote
 from storage.repository.db import Database
 
 _DB_PATH = Path(os.environ.get("IA_INVEST_DB", "ia_invest.db"))
@@ -155,6 +162,125 @@ async def handle_list_tools() -> list[types.Tool]:
             description="Get a consolidated view across all active portfolios.",
             inputSchema={"type": "object", "properties": {}, "required": []},
         ),
+        types.Tool(
+            name="get_app_settings",
+            description=(
+                "Return current global financial settings (CDI, SELIC, IPCA): "
+                "annual and daily rates plus their last sync date. Missing "
+                "series are reported as null with a warning, never an error."
+            ),
+            inputSchema={"type": "object", "properties": {}, "required": []},
+        ),
+        types.Tool(
+            name="get_position_with_quote",
+            description=(
+                "Return positions for a portfolio enriched with the latest "
+                "available quote, current market value and unrealised P&L. "
+                "Positions without a quote are still returned with quote "
+                "fields set to null."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "portfolio_id": {"type": "string"},
+                    "asset_code": {
+                        "type": "string",
+                        "description": "Optional ticker filter (case-insensitive).",
+                    },
+                },
+                "required": ["portfolio_id"],
+            },
+        ),
+        types.Tool(
+            name="get_dividends_summary",
+            description=(
+                "Summarise proventos (dividend, JCP, rendimento) received in a "
+                "rolling window. Returns totals, per-asset/per-month/per-type "
+                "breakdowns and a moving-window DY estimate based on the "
+                "current portfolio market value."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "portfolio_id": {"type": "string"},
+                    "period_months": {
+                        "type": "integer",
+                        "description": "Rolling window in months (default 12).",
+                        "default": 12,
+                        "minimum": 1,
+                    },
+                },
+                "required": ["portfolio_id"],
+            },
+        ),
+        types.Tool(
+            name="get_concentration_analysis",
+            description=(
+                "Concentration risk analysis: top-N percentages, normalised "
+                "Herfindahl-Hirschman index and threshold-based alerts "
+                "(single-asset, top-5, top-10, low diversification)."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "portfolio_id": {"type": "string"},
+                },
+                "required": ["portfolio_id"],
+            },
+        ),
+        types.Tool(
+            name="get_portfolio_performance",
+            description=(
+                "Lifetime + period performance metrics for a portfolio: "
+                "current market value, lifetime capital/income/total return, "
+                "dividends received in the rolling window and CDI accumulated "
+                "over the same window for benchmark comparison."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "portfolio_id": {"type": "string"},
+                    "period_months": {
+                        "type": "integer",
+                        "description": "Rolling window in months (default 12).",
+                        "default": 12,
+                        "minimum": 1,
+                    },
+                },
+                "required": ["portfolio_id"],
+            },
+        ),
+        types.Tool(
+            name="get_fixed_income_summary",
+            description=(
+                "CDB/LCI/LCA summary: principal vs current gross/net values, "
+                "estimated IR, maturity ladder (<=30d, <=90d, <=365d, >365d) "
+                "and upcoming maturities."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "portfolio_id": {"type": "string"},
+                },
+                "required": ["portfolio_id"],
+            },
+        ),
+        types.Tool(
+            name="get_portfolio_alerts",
+            description=(
+                "Aggregated portfolio alerts merging concentration risks, "
+                "upcoming fixed-income maturities, missing market quotes "
+                "and incomplete fixed-income valuations into a single, "
+                "severity-sorted list."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "portfolio_id": {"type": "string"},
+                },
+                "required": ["portfolio_id"],
+            },
+        ),
     ]
 
 
@@ -196,6 +322,32 @@ async def handle_call_tool(
             result = compare_portfolios(db, args["portfolio_ids"])
         elif name == "get_consolidated_summary":
             result = get_consolidated_summary(db)
+        elif name == "get_app_settings":
+            result = get_app_settings(db)
+        elif name == "get_position_with_quote":
+            result = get_position_with_quote(
+                db,
+                args["portfolio_id"],
+                asset_code=args.get("asset_code"),
+            )
+        elif name == "get_dividends_summary":
+            result = get_dividends_summary(
+                db,
+                args["portfolio_id"],
+                period_months=int(args.get("period_months", 12)),
+            )
+        elif name == "get_concentration_analysis":
+            result = get_concentration_analysis(db, args["portfolio_id"])
+        elif name == "get_portfolio_performance":
+            result = get_portfolio_performance(
+                db,
+                args["portfolio_id"],
+                period_months=int(args.get("period_months", 12)),
+            )
+        elif name == "get_fixed_income_summary":
+            result = get_fixed_income_summary(db, args["portfolio_id"])
+        elif name == "get_portfolio_alerts":
+            result = get_portfolio_alerts(db, args["portfolio_id"])
         else:
             result = {"error": f"Unknown tool: {name}"}
     except Exception as exc:  # noqa: BLE001

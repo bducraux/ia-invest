@@ -22,9 +22,19 @@ const COLORS = [
   "hsl(160 50% 45%)",
   "hsl(250 70% 65%)",
   "hsl(340 70% 60%)",
+  "hsl(173 58% 45%)",
+  "hsl(96 55% 55%)",
+  "hsl(15 85% 62%)",
+  "hsl(48 95% 55%)",
+  "hsl(210 70% 55%)",
+  "hsl(290 50% 55%)",
+  "hsl(120 40% 50%)",
+  "hsl(50 70% 50%)",
+  "hsl(190 60% 50%)",
+  "hsl(355 65% 55%)",
 ];
 
-const MAX_SLICES = 9;
+const MIN_WEIGHT_FOR_OWN_SLICE = 0.02;
 
 interface AssetSlice {
   label: string;
@@ -45,25 +55,24 @@ export function AssetAllocationDonut({ positions }: { positions: Position[] }) {
   }
 
   const sorted = [...open].sort((a, b) => b.marketValue - a.marketValue);
+  const allSlices: AssetSlice[] = sorted.map((p) => ({
+    label: p.assetCode,
+    value: p.marketValue,
+    weight: p.marketValue / total,
+  }));
+
+  const major = allSlices.filter((s) => s.weight >= MIN_WEIGHT_FOR_OWN_SLICE);
+  const minor = allSlices.filter((s) => s.weight < MIN_WEIGHT_FOR_OWN_SLICE);
 
   let slices: AssetSlice[];
-  if (sorted.length <= MAX_SLICES) {
-    slices = sorted.map((p) => ({
-      label: p.assetCode,
-      value: p.marketValue,
-      weight: p.marketValue / total,
-    }));
+  if (minor.length === 0) {
+    slices = allSlices;
   } else {
-    const top = sorted.slice(0, MAX_SLICES - 1);
-    const rest = sorted.slice(MAX_SLICES - 1);
-    const othersValue = rest.reduce((sum, p) => sum + p.marketValue, 0);
+    const othersValue = minor.reduce((sum, s) => sum + s.value, 0);
+    const othersWeight = minor.reduce((sum, s) => sum + s.weight, 0);
     slices = [
-      ...top.map((p) => ({
-        label: p.assetCode,
-        value: p.marketValue,
-        weight: p.marketValue / total,
-      })),
-      { label: "Outros", value: othersValue, weight: othersValue / total },
+      ...major,
+      { label: "Outros", value: othersValue, weight: othersWeight },
     ];
   }
 

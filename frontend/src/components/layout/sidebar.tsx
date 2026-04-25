@@ -15,6 +15,7 @@ import {
   ChartCandlestick,
   Bitcoin,
   ShieldCheck,
+  Globe,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -34,6 +35,7 @@ const patrimonioItems = [
   { href: "/renda-variavel", label: "Renda variável", icon: ChartCandlestick },
   { href: "/cripto", label: "Criptomoedas", icon: Bitcoin },
   { href: "/previdencia", label: "Previdência", icon: ShieldCheck },
+  { href: "/internacional", label: "Internacional", icon: Globe },
 ];
 
 const systemItems = [

@@ -86,6 +86,7 @@ const FAMILY_META: Record<ClassFamily, {
 
 const RENDA_VARIAVEL_EXPOSURE_CHART = {
   minWeightForOwnSlice: 0.02,
+  maxOthersWeight: 0.05,
 };
 
 const quoteStatusLabel: Record<string, string> = {
@@ -125,41 +126,60 @@ function buildExposureSlices(
   data: ValueAllocationSlice[],
   options: {
     minWeightForOwnSlice: number;
+    maxOthersWeight: number;
   },
 ): ValueAllocationSlice[] {
-  const { minWeightForOwnSlice } = options;
+  const { minWeightForOwnSlice, maxOthersWeight } = options;
 
   if (data.length === 0) {
     return data;
   }
 
-  const majorSlices = data.filter((item) => item.weight >= minWeightForOwnSlice);
-  const minorSlices = data.filter((item) => item.weight < minWeightForOwnSlice);
+  const sorted = [...data].sort((a, b) => b.weight - a.weight);
+  const majorSlices = sorted.filter((item) => item.weight >= minWeightForOwnSlice);
+  const minorSlices = sorted.filter((item) => item.weight < minWeightForOwnSlice);
 
   if (minorSlices.length === 0) {
-    return data;
+    return sorted;
   }
 
-  const othersValue = minorSlices.reduce((sum, item) => sum + item.value, 0);
-  const othersWeight = minorSlices.reduce((sum, item) => sum + item.weight, 0);
+  // Promove ativos da cauda (do maior para o menor) até "Outros" caber sob o teto.
+  // Evita que uma cauda longa de ativos pequenos forme uma fatia "Outros" desproporcional.
+  let othersWeight = minorSlices.reduce((sum, item) => sum + item.weight, 0);
+  let promotedCount = 0;
+  while (othersWeight > maxOthersWeight && promotedCount < minorSlices.length) {
+    othersWeight -= minorSlices[promotedCount].weight;
+    promotedCount += 1;
+  }
 
-  if (majorSlices.length === 0) {
+  const promoted = minorSlices.slice(0, promotedCount);
+  const remaining = minorSlices.slice(promotedCount);
+
+  if (remaining.length === 0) {
+    return [...majorSlices, ...promoted];
+  }
+
+  const othersValue = remaining.reduce((sum, item) => sum + item.value, 0);
+  const othersWeightFinal = remaining.reduce((sum, item) => sum + item.weight, 0);
+
+  if (majorSlices.length === 0 && promoted.length === 0) {
     return [
       {
         label: "Outros",
         value: othersValue,
-        weight: othersWeight,
+        weight: othersWeightFinal,
       },
     ];
   }
 
   return [
     ...majorSlices,
+    ...promoted,
     {
       label: "Outros",
       value: othersValue,
-      weight: othersWeight,
-    }
+      weight: othersWeightFinal,
+    },
   ];
 }
 
@@ -289,11 +309,12 @@ export function ClassFamilyOverviewPage({ classFamily }: { classFamily: ClassFam
   const rendaVariavelTypeSlices = classFamily === "RENDA_VARIAVEL"
     ? buildRendaVariavelTypeSlices(positions)
     : [];
-  const rendaVariavelAssetExposure = classFamily === "RENDA_VARIAVEL"
+  const showExposureChart = classFamily === "RENDA_VARIAVEL" || classFamily === "CRIPTO" || classFamily === "INTERNACIONAL";
+  const assetExposure = showExposureChart
     ? aggregateRendaVariavelExposure(positions)
     : [];
-  const rendaVariavelExposureSlices = classFamily === "RENDA_VARIAVEL"
-    ? buildExposureSlices(rendaVariavelAssetExposure.map((item) => ({
+  const exposureSlices = showExposureChart
+    ? buildExposureSlices(assetExposure.map((item) => ({
         label: item.assetCode,
         value: item.marketValue,
         weight: item.weight,
@@ -340,14 +361,32 @@ export function ClassFamilyOverviewPage({ classFamily }: { classFamily: ClassFam
                 <CardTitle className="text-base text-foreground">Exposição agregada por ativo</CardTitle>
                 <CardDescription>
                   Soma o valor de mercado do mesmo ticker para mostrar a exposição total por ativo.
-                  Ativos com menos de 2% são agrupados em Outros.
+                  Ativos com menos de 2% são agrupados em Outros (com promoção dos maiores se Outros ultrapassar 5%).
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ValueAllocationDonut data={rendaVariavelExposureSlices} />
+                <ValueAllocationDonut data={exposureSlices} />
               </CardContent>
             </Card>
           </div>
+        ) : null}
+
+        {(classFamily === "CRIPTO" || classFamily === "INTERNACIONAL") && assetExposure.length > 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base text-foreground">Exposição agregada por ativo</CardTitle>
+              <CardDescription>
+                {classFamily === "INTERNACIONAL"
+                  ? "Soma o valor de mercado (em BRL) do mesmo ticker entre corretoras para mostrar a exposição total."
+                  : "Soma o valor de mercado do mesmo ativo entre carteiras/exchanges para mostrar a exposição total."}
+                {" "}
+                Ativos com menos de 2% são agrupados em Outros (com promoção dos maiores se Outros ultrapassar 5%).
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ValueAllocationDonut data={exposureSlices} />
+            </CardContent>
+          </Card>
         ) : null}
 
         <Card>
@@ -361,7 +400,7 @@ export function ClassFamilyOverviewPage({ classFamily }: { classFamily: ClassFam
           </CardHeader>
           <CardContent className="px-0">
             {classFamily === "RENDA_VARIAVEL" ? (
-              rendaVariavelAssetExposure.length === 0 ? (
+              assetExposure.length === 0 ? (
                 <EmptyState title={meta.emptyTitle} description={meta.emptyDescription} />
               ) : (
                 <Table>
@@ -375,7 +414,7 @@ export function ClassFamilyOverviewPage({ classFamily }: { classFamily: ClassFam
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {rendaVariavelAssetExposure.map((position) => (
+                    {assetExposure.map((position) => (
                       <TableRow key={position.assetCode}>
                         <TableCell>
                           <div className="flex flex-col">

@@ -128,7 +128,7 @@ Deterministic business rules — **never delegate these calculations to an AI ag
 
 Two runtimes share the same repositories and domain logic:
 
-- **`server.py`** — MCP protocol over stdin/stdout for Claude Desktop. Tools: `list_portfolios`, `get_portfolio_summary`, `get_portfolio_positions`, `get_portfolio_operations`, `compare_portfolios`, `get_consolidated_summary`, `get_app_settings`, `get_position_with_quote`.
+- **`server.py`** — MCP protocol over stdin/stdout for Claude Desktop. Tools: `list_portfolios`, `get_portfolio_summary`, `get_portfolio_positions`, `get_portfolio_operations`, `compare_portfolios`, `get_consolidated_summary`, `get_app_settings`, `get_position_with_quote`, `get_dividends_summary`, `get_concentration_analysis`.
 - **`http_api.py`** — FastAPI REST API for the frontend. All Pydantic response models use **camelCase** field names. Key routes: `/api/portfolios`, `/api/portfolios/{id}/summary`, `/api/portfolios/{id}/positions`, `/api/portfolios/{id}/operations`, `/api/portfolios/{id}/fixed-income`, `/api/portfolios/{id}/previdencia`, `/api/quotes/refresh`, `/api/settings`.
 - **`services/quotes.py`** — `MarketQuoteService` fetches live prices (brapi.dev/Yahoo Finance fallback) with a configurable TTL cache in `market_quotes_cache`.
 
@@ -193,6 +193,10 @@ Key test files:
 **Available analysis tools (Marco F — foundation):**
 - `get_app_settings()` — current CDI/SELIC/IPCA rates (annual + daily) and last sync dates. Daily rates from `daily_benchmark_rates` are annualised with the Brazilian 252-business-day convention. Missing series surface as `null` in `rates`/`last_sync` plus a `warnings` list — never an error.
 - `get_position_with_quote(portfolio_id, asset_code=None)` — positions enriched with current market quote, market value and unrealised P&L. Computed by `domain.position_valuation_service.PositionValuationService` (pure, `Decimal`-based). Negative/zero quantities are preserved (historical-data-gap signal). Positions without a quote are still returned with quote fields set to `null`.
+
+**Available analysis tools (Marco G — risk & income):**
+- `get_dividends_summary(portfolio_id, period_months=12)` — proventos (`dividend`, `jcp`, `rendimento`) breakdown over a rolling window: per-asset, per-month and per-type totals plus a moving-window DY estimate (`received / current_market_value`). Powered by `domain.dividends_service.DividendsService`.
+- `get_concentration_analysis(portfolio_id)` — top-N percentages, normalised Herfindahl-Hirschman index (HHI) and threshold-based alerts (single-asset 15%/25%, top-5 60%/75%, top-10 90%, low diversification < 5 assets). Powered by `domain.concentration_service.ConcentrationService`. Falls back to cost basis when a quote is unavailable; the affected assets are listed in `valuation_warnings`.
 
 **New HTTP endpoint:**
 Add to `mcp_server/http_api.py` reusing existing repositories — no direct SQL.

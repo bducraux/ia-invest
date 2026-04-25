@@ -38,6 +38,8 @@ from mcp.server.lowlevel.server import NotificationOptions
 from mcp.server.models import InitializationOptions
 
 from mcp_server.tools.app_settings import get_app_settings
+from mcp_server.tools.concentration import get_concentration_analysis
+from mcp_server.tools.dividends_summary import get_dividends_summary
 from mcp_server.tools.portfolios import (
     compare_portfolios,
     get_consolidated_summary,
@@ -186,6 +188,43 @@ async def handle_list_tools() -> list[types.Tool]:
                 "required": ["portfolio_id"],
             },
         ),
+        types.Tool(
+            name="get_dividends_summary",
+            description=(
+                "Summarise proventos (dividend, JCP, rendimento) received in a "
+                "rolling window. Returns totals, per-asset/per-month/per-type "
+                "breakdowns and a moving-window DY estimate based on the "
+                "current portfolio market value."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "portfolio_id": {"type": "string"},
+                    "period_months": {
+                        "type": "integer",
+                        "description": "Rolling window in months (default 12).",
+                        "default": 12,
+                        "minimum": 1,
+                    },
+                },
+                "required": ["portfolio_id"],
+            },
+        ),
+        types.Tool(
+            name="get_concentration_analysis",
+            description=(
+                "Concentration risk analysis: top-N percentages, normalised "
+                "Herfindahl-Hirschman index and threshold-based alerts "
+                "(single-asset, top-5, top-10, low diversification)."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "portfolio_id": {"type": "string"},
+                },
+                "required": ["portfolio_id"],
+            },
+        ),
     ]
 
 
@@ -235,6 +274,14 @@ async def handle_call_tool(
                 args["portfolio_id"],
                 asset_code=args.get("asset_code"),
             )
+        elif name == "get_dividends_summary":
+            result = get_dividends_summary(
+                db,
+                args["portfolio_id"],
+                period_months=int(args.get("period_months", 12)),
+            )
+        elif name == "get_concentration_analysis":
+            result = get_concentration_analysis(db, args["portfolio_id"])
         else:
             result = {"error": f"Unknown tool: {name}"}
     except Exception as exc:  # noqa: BLE001

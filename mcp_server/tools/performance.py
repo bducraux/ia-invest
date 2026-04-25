@@ -51,6 +51,25 @@ def _value_positions(
     return valued, lifetime_div, lifetime_realized_pnl
 
 
+def _count_weekdays(start: date, end: date) -> int:
+    """Count Mon–Fri days in the inclusive range ``[start, end]``.
+
+    Approximates "expected BACEN business days": ignores national holidays,
+    so the figure is a slight upper bound. Good enough for surfacing how
+    much of the requested window is missing from the BACEN cache.
+    """
+    if end < start:
+        return 0
+    total = (end - start).days + 1
+    full_weeks, remainder = divmod(total, 7)
+    weekdays = full_weeks * 5
+    start_weekday = start.weekday()  # Mon=0 .. Sun=6
+    for offset in range(remainder):
+        if (start_weekday + offset) % 7 < 5:
+            weekdays += 1
+    return weekdays
+
+
 def _build_cdi_block(
     db: Database, period_start: date, period_end: date
 ) -> CdiAccumulation | None:
@@ -70,11 +89,13 @@ def _build_cdi_block(
     complete = coverage_min <= period_start and coverage_max >= period_end
     if complete:
         return accumulation
+    expected = _count_weekdays(period_start, period_end)
+    missing = max(0, expected - accumulation.business_days)
     return CdiAccumulation(
         accumulated_pct=accumulation.accumulated_pct,
         business_days=accumulation.business_days,
         coverage_complete=False,
-        missing_days=0,
+        missing_days=missing,
     )
 
 

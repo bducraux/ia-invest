@@ -58,88 +58,6 @@ def _safe_pct(numer: int, denom: int) -> float | None:
 class PortfolioPerformanceService:
     """Aggregate per-position valuations into portfolio-level performance."""
 
-    def aggregate(
-        self,
-        valued_positions: Iterable[ValuedPosition],
-        *,
-        period_dividends_cents: int,
-        period_months: int,
-        period_start: date,
-        period_end: date,
-        cdi: CdiAccumulation | None,
-        lifetime_realized_pnl_cents: int = 0,
-    ) -> dict[str, Any]:
-        """Build the performance payload.
-
-        Args:
-            valued_positions: Positions already enriched by
-                :class:`~domain.position_valuation_service.PositionValuationService`.
-                Positions with ``quantity <= 0`` are skipped (historical
-                data-gap signal — see ``WALLET_MODEL.md``).
-            period_dividends_cents: Sum of provento operations (dividend +
-                JCP + rendimento) in the requested window. Pre-computed by
-                the tool layer so this service stays pure.
-            period_months: Window size used for the ``period`` block.
-            period_start, period_end: ISO bounds documented in the payload.
-            cdi: Optional CDI accumulation over the same window. ``None``
-                when the daily series does not cover the window or the
-                provider is not available.
-            lifetime_realized_pnl_cents: Aggregated realised P&L from the
-                positions table. Optional; defaults to zero.
-        """
-        if period_months < 1:
-            raise ValueError(
-                f"period_months must be >= 1 (got {period_months})"
-            )
-        if period_end < period_start:
-            raise ValueError(
-                "period_end must be on or after period_start "
-                f"(got {period_start.isoformat()} → {period_end.isoformat()})"
-            )
-
-        total_cost = 0
-        total_value = 0
-        total_unrealized = 0
-        lifetime_dividends = 0
-        valued_count = 0
-        unvalued_assets: list[str] = []
-
-        for vp in valued_positions:
-            if vp.quantity <= 0:
-                continue
-            total_cost += int(vp.total_cost_cents)
-            # ``dividends`` lives on the underlying Position; it is the
-            # cumulative cents value maintained by PositionService. We pull
-            # it from the dict shape exposed by ValuedPosition.to_dict()
-            # via a separate input to keep this service pure of model
-            # imports — see callers for the wiring.
-            if vp.current_value_cents is None:
-                unvalued_assets.append(vp.asset_code)
-                continue
-            total_value += int(vp.current_value_cents)
-            total_unrealized += int(vp.unrealized_pnl_cents or 0)
-            valued_count += 1
-
-        # Lifetime dividends are not on ValuedPosition; the caller passes
-        # them via period_dividends_cents *and* we accept lifetime through
-        # a side channel. To keep the API tight, lifetime dividends are
-        # supplied via the second argument set on a private hook below.
-        # Use a safe access pattern: callers may override via attribute.
-        # (See _aggregate_with_lifetime below for the public seam.)
-        return self._finalise(
-            total_cost=total_cost,
-            total_value=total_value if valued_count else None,
-            total_unrealized=total_unrealized if valued_count else None,
-            lifetime_dividends=lifetime_dividends,  # set by caller path
-            lifetime_realized_pnl=lifetime_realized_pnl_cents,
-            period_dividends=period_dividends_cents,
-            period_months=period_months,
-            period_start=period_start,
-            period_end=period_end,
-            cdi=cdi,
-            unvalued_assets=unvalued_assets,
-        )
-
     def aggregate_with_lifetime_dividends(
         self,
         valued_positions: Iterable[ValuedPosition],
@@ -255,6 +173,7 @@ class PortfolioPerformanceService:
         }
 
         return {
+            "method": "simple_total_return_on_cost_basis",
             "totals": {
                 "total_cost_cents": int(total_cost),
                 "current_value_cents": total_value,

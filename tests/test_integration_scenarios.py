@@ -81,7 +81,7 @@ def test_scenario_db(tmp_path: Path) -> Database:
 def portfolio_cripto(test_scenario_db: Database) -> str:
     """Register a crypto portfolio."""
     portfolio = PortfolioService().load_from_yaml(
-        Path("portfolios/cripto/portfolio.yml")
+        Path("templates/cripto/portfolio.yml")
     )
     PortfolioRepository(test_scenario_db.connection).upsert(portfolio)
     return portfolio.id

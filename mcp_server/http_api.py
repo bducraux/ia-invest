@@ -31,7 +31,14 @@ from mcp_server.services.fx_rates import SUPPORTED_PAIRS as FX_SUPPORTED_PAIRS
 from mcp_server.services.fx_rates import FxRateService
 from mcp_server.services.fx_sync import FxSyncError, FxSyncResult, FxSyncService
 from mcp_server.services.quotes import MarketQuoteService
+from mcp_server.tools.app_settings import get_app_settings
+from mcp_server.tools.concentration import get_concentration_analysis
+from mcp_server.tools.dividends_summary import get_dividends_summary
+from mcp_server.tools.fixed_income_summary import get_fixed_income_summary
+from mcp_server.tools.performance import get_portfolio_performance
+from mcp_server.tools.portfolio_alerts import get_portfolio_alerts
 from mcp_server.tools.portfolios import get_portfolio_operations
+from mcp_server.tools.positions_with_quote import get_position_with_quote
 from normalizers.fixed_income_csv import FixedIncomeCSVImporter
 from storage.repository.benchmark_rates import BenchmarkRatesRepository
 from storage.repository.db import Database
@@ -1353,6 +1360,119 @@ def create_http_app(
             positions=items,
             errors=errors,
         )
+
+    # ------------------------------------------------------------------
+    # MCP analytical tools exposed as read-only REST endpoints.
+    #
+    # These are thin proxies over ``mcp_server.tools.*`` so the Next.js
+    # frontend can consume the same payloads the MCP server returns.
+    # Responses are emitted verbatim (snake_case) — the tool dicts are the
+    # contract; the frontend adapts when needed. No Pydantic remapping is
+    # applied to keep these mirrors of the MCP protocol.
+    # ------------------------------------------------------------------
+
+    @app.get("/api/settings", response_model=None)
+    def settings_endpoint() -> dict[str, Any]:
+        db = get_db()
+        return get_app_settings(db)
+
+    @app.get("/api/portfolios/{portfolio_id}/positions-with-quote", response_model=None)
+    def positions_with_quote_endpoint(
+        portfolio_id: str,
+        asset_code: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        db = get_db()
+        require_portfolio(portfolio_id, db)
+        result = get_position_with_quote(
+            db,
+            portfolio_id,
+            asset_code=asset_code,
+            quote_service=build_quote_service(db),
+        )
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        return result
+
+    @app.get("/api/portfolios/{portfolio_id}/dividends-summary", response_model=None)
+    def dividends_summary_endpoint(
+        portfolio_id: str,
+        period_months: int = Query(default=12, ge=1, le=120),
+    ) -> dict[str, Any]:
+        db = get_db()
+        require_portfolio(portfolio_id, db)
+        result = get_dividends_summary(
+            db,
+            portfolio_id,
+            period_months=period_months,
+            quote_service=build_quote_service(db),
+        )
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        return result
+
+    @app.get("/api/portfolios/{portfolio_id}/concentration", response_model=None)
+    def concentration_endpoint(portfolio_id: str) -> dict[str, Any]:
+        db = get_db()
+        require_portfolio(portfolio_id, db)
+        result = get_concentration_analysis(
+            db,
+            portfolio_id,
+            quote_service=build_quote_service(db),
+        )
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        return result
+
+    @app.get("/api/portfolios/{portfolio_id}/performance", response_model=None)
+    def performance_endpoint(
+        portfolio_id: str,
+        period_months: int = Query(default=12, ge=1, le=120),
+    ) -> dict[str, Any]:
+        db = get_db()
+        require_portfolio(portfolio_id, db)
+        result = get_portfolio_performance(
+            db,
+            portfolio_id,
+            period_months=period_months,
+            quote_service=build_quote_service(db),
+        )
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        return result
+
+    @app.get("/api/portfolios/{portfolio_id}/fixed-income-summary", response_model=None)
+    def fixed_income_summary_endpoint(
+        portfolio_id: str,
+        as_of: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        db = get_db()
+        require_portfolio(portfolio_id, db)
+        as_of_date: date | None = None
+        if as_of:
+            try:
+                as_of_date = datetime.strptime(as_of, "%Y-%m-%d").date()
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid as_of (expected YYYY-MM-DD): {as_of}",
+                ) from exc
+        result = get_fixed_income_summary(db, portfolio_id, as_of=as_of_date)
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        return result
+
+    @app.get("/api/portfolios/{portfolio_id}/alerts", response_model=None)
+    def alerts_endpoint(portfolio_id: str) -> dict[str, Any]:
+        db = get_db()
+        require_portfolio(portfolio_id, db)
+        result = get_portfolio_alerts(
+            db,
+            portfolio_id,
+            quote_service=build_quote_service(db),
+        )
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        return result
 
     return app
 

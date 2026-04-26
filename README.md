@@ -19,115 +19,32 @@ organizado sem acoplar o runtime Node.js ao backend Python.
 
 ## Quickstart
 
-### 1. Instalar o uv e sincronizar dependências
-
-Instale o uv (uma vez na máquina):
-
 ```bash
+# 1. instalar o uv (se ainda não tiver)
 curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 2. instalar deps e iniciar banco
+make install
+make init
+
+# 3. criar a primeira carteira (interativo)
+make create-portfolio
+
+# 4. dropar arquivos da corretora/exchange em portfolios/<id>/inbox/
+#    e importar
+make import-all
+
+# 5. subir backend e frontend (em terminais separados)
+make api-server         # http://localhost:8010
+make frontend-install   # primeira vez apenas
+make frontend-dev       # http://localhost:3000
 ```
 
-Sincronize o ambiente do projeto (cria/atualiza `.venv` automaticamente):
+**Guia completo, com troubleshooting e integração com o Claude Desktop:**
+[**`docs/primeiros-passos.md`**](docs/primeiros-passos.md).
 
-```bash
-uv sync --extra dev
-```
-
-### 2. Inicializar o banco de dados
-
-```bash
-uv run python scripts/init_db.py
-```
-
-### 3. Criar um portfólio
-
-Gere um portfólio a partir do template (interativo):
-
-```bash
-uv run python scripts/create_portfolio.py
-```
-
-No modo interativo, você escolhe o tipo (`generic`, `renda-variavel`, `renda-fixa`, `cripto`) e o nome.
-
-Ou informe nome e tipo diretamente:
-
-```bash
-uv run python scripts/create_portfolio.py --type renda-variavel --name "Meu Portfólio"
-```
-
-O script cria `portfolios/<id>/` e ajusta `portfolio.yml` com o `id` e `name`.
-
-Para adicionar novos tipos de portfólio, basta criar uma nova pasta em
-`templates/<novo-tipo>/` contendo apenas `portfolio.yml`.
-As subpastas `{inbox,staging,processed,rejected,exports}` são criadas
-automaticamente pelo script.
-Ela aparecerá automaticamente no menu interativo.
-
-Fluxo manual (alternativo):
-
-```bash
-cp portfolio.example.yml portfolios/meu-portfolio/portfolio.yml
-# edite portfolios/meu-portfolio/portfolio.yml conforme necessário
-```
-
-Crie as subpastas necessárias:
-
-```bash
-mkdir -p portfolios/meu-portfolio/{inbox,staging,processed,rejected,exports}
-```
-
-### 4. Colocar arquivos em `inbox/`
-
-```bash
-cp ~/Downloads/nota-corretagem.pdf portfolios/meu-portfolio/inbox/
-```
-
-### 5. Importar portfólio
-
-```bash
-uv run python scripts/import_portfolio.py --portfolio meu-portfolio
-```
-
-Importar todos os portfólios de uma vez:
-
-```bash
-uv run python scripts/import_all.py
-```
-
-### 6. Iniciar servidor MCP
-
-```bash
-uv run python -m mcp_server.server
-```
-
-O servidor MCP ficará acessível para clientes como o Claude Desktop via stdin/stdout.
-
-### Comandos úteis com uv
-
-```bash
-uv run pytest
-uv run ruff check .
-uv run mypy .
-```
-
-### 7. Rodar o frontend (pasta separada)
-
-Pré-requisito: Node.js 20.9+ (recomendado 22+) e npm 10+.
-
-```bash
-make frontend-install
-make frontend-dev
-```
-
-A interface abrirá em http://localhost:3000.
-
-Outros comandos úteis:
-
-```bash
-make frontend-lint
-make frontend-test
-make frontend-build
-```
+Para preparar arquivos de cada fonte (B3, Binance, Avenue, planilha
+manual, etc.), veja [`docs/fontes-de-dados/`](docs/fontes-de-dados/README.md).
 
 ---
 
@@ -161,7 +78,7 @@ ia-invest/
 │   └── resources/           # Recursos estáticos MCP
 ├── frontend/                # Frontend Next.js (UI web, separado do backend)
 ├── scripts/                 # Scripts operacionais (import, sync CDI/PTAX, ...)
-├── docs/                    # Guias operacionais (ex.: avenue-apex-download)
+├── docs/                    # Documentação para usuários (PT-BR)
 └── tests/                   # Testes automatizados
 ```
 
@@ -185,13 +102,17 @@ Cada portfólio é uma entidade lógica independente. Exemplos típicos:
 
 ## Fontes de dados suportadas
 
-| Fonte                | Extractor               |
-|----------------------|-------------------------|
-| B3 CSV/XLSX          | `B3CsvExtractor`        |
-| CSV de corretora     | `BrokerCsvExtractor`    |
-| Binance CSV          | `BinanceCsvExtractor`   |
-| Avenue Apex PDF (US) | `AvenueApexPdfExtractor`| 
-| CSV renda fixa       | `fixed_income_csv`      |
+| Fonte                              | `source_type`           | Documentação |
+|------------------------------------|-------------------------|--------------|
+| B3 — Movimentação CSV/XLSX         | `b3_csv`                | [b3-csv.md](docs/fontes-de-dados/b3-csv.md) |
+| CSV genérico de corretora          | `broker_csv`            | [broker-csv.md](docs/fontes-de-dados/broker-csv.md) |
+| Binance — Spot CSV                 | `binance_csv`           | [binance-csv.md](docs/fontes-de-dados/binance-csv.md) |
+| Binance — Simple Earn CSV          | `binance_simple_earn`   | — |
+| Avenue — Apex PDF (US)             | `avenue_apex_pdf`       | [avenue-apex.md](docs/fontes-de-dados/avenue-apex.md) |
+| XLSX manual (bootstrap, B3)        | `manual_xlsx_b3`        | [manual-xlsx.md](docs/fontes-de-dados/manual-xlsx.md) |
+| XLSX manual (bootstrap, cripto)    | `manual_xlsx_crypto`    | [manual-xlsx.md](docs/fontes-de-dados/manual-xlsx.md) |
+| CSV de renda fixa (CDB/LCI/LCA)    | `fixed_income_csv`      | [renda-fixa.md](docs/renda-fixa.md) |
+| Previdência — Fundação IBM (PDF)   | `previdencia_ibm_pdf`   | [previdencia-ibm.md](docs/fontes-de-dados/previdencia-ibm.md) |
 
 ---
 

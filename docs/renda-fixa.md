@@ -158,9 +158,7 @@ domain/
 normalizers/
   fixed_income_csv.py
 storage/
-  schema.sql                         # inclui tabela daily_benchmark_rates
-  migrations/0002_fixed_income_lifecycle.sql
-  migrations/0003_drop_fi_lineage_columns.sql
+  schema.sql                         # inclui fixed_income_positions e daily_benchmark_rates
   repository/fixed_income.py
   repository/benchmark_rates.py     # cache do CDI/Selic histórico
 mcp_server/

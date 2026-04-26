@@ -95,7 +95,10 @@ def test_includes_upcoming_fixed_income_maturity(tmp_db: Database) -> None:
     # (PRE doesn't use CDI but the provider is built when the cache is empty.)
     _ = FlatCDIRateProvider(Decimal("0"))
 
-    result = get_portfolio_alerts(tmp_db, pid)
+    # Pin as_of to the local today() so the maturity-ladder math is not
+    # sensitive to UTC vs local timezone (the tool's default uses UTC,
+    # which can be a day ahead of date.today() in BRT/UTC-3).
+    result = get_portfolio_alerts(tmp_db, pid, as_of=date.today())
     fi_alerts = [a for a in result["alerts"] if a["source"] == "fixed_income"]
     assert any(a["code"] == "upcoming_maturity" for a in fi_alerts)
 

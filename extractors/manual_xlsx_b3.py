@@ -1,14 +1,15 @@
-"""Gorila XLSX extractor for Brazilian equity/fixed-income portfolios."""
+"""Manual XLSX extractor for B3 (Brazilian equity) portfolio bootstrap files."""
 
 from __future__ import annotations
 
-from extractors.gorila_base import BaseGorilaXlsxExtractor
+from extractors.manual_xlsx_base import BaseManualXlsxExtractor
 
 
-class GorilaB3XlsxExtractor(BaseGorilaXlsxExtractor):
-    """Extracts Gorila XLSX exports for B3 portfolios."""
+class ManualXlsxB3Extractor(BaseManualXlsxExtractor):
+    """Extracts manually-prepared XLSX files for B3 portfolios."""
 
-    source_type = "gorila_b3_xlsx"
+    source_type = "manual_xlsx_b3"
+    external_id_prefix = "manual_xlsx"
     operation_type_map = {
         "compra": "buy",
         "venda": "sell",

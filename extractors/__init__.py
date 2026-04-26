@@ -15,8 +15,8 @@ from extractors.base import BaseExtractor, ExtractionResult
 from extractors.binance_csv import BinanceCsvExtractor
 from extractors.binance_simple_earn import BinanceSimpleEarnExtractor
 from extractors.broker_csv import BrokerCsvExtractor
-from extractors.gorila_b3_xlsx import GorilaB3XlsxExtractor
-from extractors.gorila_xlsx import GorilaXlsxExtractor
+from extractors.manual_xlsx_b3 import ManualXlsxB3Extractor
+from extractors.manual_xlsx_crypto import ManualXlsxCryptoExtractor
 from extractors.previdencia_ibm_pdf import PrevidenciaIbmPdfExtractor
 
 _REGISTRY: dict[str, type[BaseExtractor]] = {
@@ -25,8 +25,8 @@ _REGISTRY: dict[str, type[BaseExtractor]] = {
     "binance_csv": BinanceCsvExtractor,
     "binance_simple_earn": BinanceSimpleEarnExtractor,
     "avenue_apex_pdf": AvenueApexPdfExtractor,
-    "gorila_b3_xlsx": GorilaB3XlsxExtractor,
-    "gorila_xlsx": GorilaXlsxExtractor,
+    "manual_xlsx_b3": ManualXlsxB3Extractor,
+    "manual_xlsx_crypto": ManualXlsxCryptoExtractor,
     "previdencia_ibm_pdf": PrevidenciaIbmPdfExtractor,
 }
 
@@ -53,8 +53,8 @@ __all__ = [
     "BrokerCsvExtractor",
     "BinanceCsvExtractor",
     "AvenueApexPdfExtractor",
-    "GorilaB3XlsxExtractor",
-    "GorilaXlsxExtractor",
+    "ManualXlsxB3Extractor",
+    "ManualXlsxCryptoExtractor",
     "PrevidenciaIbmPdfExtractor",
     "get_extractor",
     "list_source_types",

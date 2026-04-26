@@ -1,4 +1,4 @@
-"""Tests for GorilaB3XlsxExtractor."""
+"""Tests for ManualXlsxB3Extractor."""
 
 from __future__ import annotations
 
@@ -7,11 +7,11 @@ from pathlib import Path
 import openpyxl
 import pytest
 
-from extractors.gorila_b3_xlsx import GorilaB3XlsxExtractor
+from extractors.manual_xlsx_b3 import ManualXlsxB3Extractor
 from normalizers.operations import OperationNormalizer
 
 
-def _make_b3_gorila_xlsx(tmp_path: Path, rows: list[tuple]) -> Path:
+def _make_b3_manual_xlsx(tmp_path: Path, rows: list[tuple]) -> Path:
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.append([
@@ -26,19 +26,19 @@ def _make_b3_gorila_xlsx(tmp_path: Path, rows: list[tuple]) -> Path:
     ])
     for row in rows:
         ws.append(list(row))
-    path = tmp_path / "gorila_b3.xlsx"
+    path = tmp_path / "manual_xlsx_b3.xlsx"
     wb.save(path)
     return path
 
 
 @pytest.fixture
-def extractor() -> GorilaB3XlsxExtractor:
-    return GorilaB3XlsxExtractor()
+def extractor() -> ManualXlsxB3Extractor:
+    return ManualXlsxB3Extractor()
 
 
 @pytest.fixture
-def b3_gorila_file(tmp_path: Path) -> Path:
-    return _make_b3_gorila_xlsx(
+def b3_manual_file(tmp_path: Path) -> Path:
+    return _make_b3_manual_xlsx(
         tmp_path,
         [
             ("BBAS3", "Compra", 45994, 5, "R$ 22,54", "R$ 112,70", "INTER DTVM", None),
@@ -67,14 +67,14 @@ def b3_gorila_file(tmp_path: Path) -> Path:
     )
 
 
-def test_can_handle_gorila_b3_xlsx(extractor: GorilaB3XlsxExtractor, b3_gorila_file: Path) -> None:
-    assert extractor.can_handle(b3_gorila_file) is True
+def test_can_handle_manual_b3_xlsx(extractor: ManualXlsxB3Extractor, b3_manual_file: Path) -> None:
+    assert extractor.can_handle(b3_manual_file) is True
 
 
-def test_extract_maps_gorila_b3_records(extractor: GorilaB3XlsxExtractor, b3_gorila_file: Path) -> None:
-    result = extractor.extract(b3_gorila_file)
+def test_extract_maps_manual_b3_records(extractor: ManualXlsxB3Extractor, b3_manual_file: Path) -> None:
+    result = extractor.extract(b3_manual_file)
 
-    assert result.source_type == "gorila_b3_xlsx"
+    assert result.source_type == "manual_xlsx_b3"
     assert result.errors == []
     assert len(result.records) == 4
 
@@ -89,19 +89,19 @@ def test_extract_maps_gorila_b3_records(extractor: GorilaB3XlsxExtractor, b3_gor
 
 
 def test_extract_maps_transfer_and_initial_adjustment_to_transfer_in(
-    extractor: GorilaB3XlsxExtractor, b3_gorila_file: Path
+    extractor: ManualXlsxB3Extractor, b3_manual_file: Path
 ) -> None:
-    records = extractor.extract(b3_gorila_file).records
+    records = extractor.extract(b3_manual_file).records
     ops_by_asset = {record["asset_code"]: record["operation_type"] for record in records}
 
     assert ops_by_asset["RBRY11"] == "transfer_in"
     assert ops_by_asset["TRPL4"] == "transfer_in"
 
 
-def test_normalizer_infers_b3_asset_types_from_generic_gorila_records(
-    extractor: GorilaB3XlsxExtractor, b3_gorila_file: Path
+def test_normalizer_infers_b3_asset_types_from_generic_manual_records(
+    extractor: ManualXlsxB3Extractor, b3_manual_file: Path
 ) -> None:
-    records = extractor.extract(b3_gorila_file).records
+    records = extractor.extract(b3_manual_file).records
     normalizer = OperationNormalizer()
 
     result = normalizer.normalize(records, portfolio_id="renda-variavel-bruno")
@@ -114,16 +114,16 @@ def test_normalizer_infers_b3_asset_types_from_generic_gorila_records(
 
 
 class TestRealFile:
-    """Smoke tests against the B3 Gorila export fixture."""
+    """Smoke tests against the B3 manual-bootstrap XLSX fixture."""
 
     FIXTURE_FILE = Path("tests/fixtures/b3_transactions.xlsx")
 
     @pytest.fixture(autouse=True)
     def skip_if_missing(self):
         if not self.FIXTURE_FILE.exists():
-            pytest.skip(f"B3 Gorila test fixture not found: {self.FIXTURE_FILE}")
+            pytest.skip(f"B3 manual XLSX test fixture not found: {self.FIXTURE_FILE}")
 
-    def test_extracts_multiple_operation_types(self, extractor: GorilaB3XlsxExtractor) -> None:
+    def test_extracts_multiple_operation_types(self, extractor: ManualXlsxB3Extractor) -> None:
         result = extractor.extract(self.FIXTURE_FILE)
         assert result.errors == []
         assert len(result.records) == 17
@@ -133,7 +133,7 @@ class TestRealFile:
         assert "sell" in operation_types
         assert "transfer_in" in operation_types
 
-    def test_normalizer_infers_stock_and_fii_types(self, extractor: GorilaB3XlsxExtractor) -> None:
+    def test_normalizer_infers_stock_and_fii_types(self, extractor: ManualXlsxB3Extractor) -> None:
         result = extractor.extract(self.FIXTURE_FILE)
         records = result.records
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from domain.portfolio_alerts_service import PortfolioAlertsService
@@ -23,12 +23,16 @@ def get_portfolio_alerts(
     portfolio_id: str,
     *,
     quote_service: MarketQuoteService | None = None,
+    as_of: date | None = None,
 ) -> dict[str, Any]:
     """Aggregate concentration, fixed-income and quote alerts.
 
     The tool reuses the read-only sub-tools so each alert source remains
     a single source of truth. Sub-tool errors (missing portfolio) are
     propagated unchanged.
+
+    The optional ``as_of`` parameter is forwarded to the fixed-income
+    summary so the maturity ladder is deterministic in tests.
     """
     portfolio_repo = PortfolioRepository(db.connection)
     if portfolio_repo.get(portfolio_id) is None:
@@ -37,7 +41,7 @@ def get_portfolio_alerts(
     quotes = quote_service or MarketQuoteService(db.connection, enabled=False)
 
     concentration = get_concentration_analysis(db, portfolio_id, quote_service=quotes)
-    fixed_income = get_fixed_income_summary(db, portfolio_id)
+    fixed_income = get_fixed_income_summary(db, portfolio_id, as_of=as_of)
     positions = get_position_with_quote(db, portfolio_id, quote_service=quotes)
 
     missing_assets: list[str] = []

@@ -120,9 +120,9 @@ class OperationNormalizer(BaseNormalizer):
 
         # A buy or sell with zero gross_value after derivation is almost always
         # a parse error for broker/exchange sources that always export prices.
-        # Gorila and similar portfolio-aggregator sources may legitimately omit
-        # prices for transfers or cost-basis-unknown operations, so we skip the
-        # check for those sources.
+        # Manual-bootstrap and similar aggregator-style sources may legitimately
+        # omit prices for transfers or cost-basis-unknown operations, so we
+        # skip the check for those sources.
         _STRICT_PRICE_SOURCES = {"b3_csv", "broker_csv", "avenue_csv"}
         _BUY_SELL = {"buy", "sell"}
         if operation_type in _BUY_SELL and gross_value == 0 and source in _STRICT_PRICE_SOURCES:

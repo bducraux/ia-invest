@@ -264,7 +264,7 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 -- daily_benchmark_rates
 -- Historical daily benchmark rate cache (CDI, Selic, ...). Rates stored
 -- as TEXT to preserve Decimal precision. Weekends and bank holidays are
--- simply absent from the table — see migration 0004.
+-- simply absent from the table (the BACEN feed itself is the calendar).
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS daily_benchmark_rates (
     benchmark   TEXT NOT NULL,
@@ -318,11 +318,3 @@ CREATE INDEX IF NOT EXISTS idx_avenue_aliases_code
 -- Record this baseline schema version
 INSERT OR IGNORE INTO schema_migrations (version, description)
 VALUES ('0001', 'initial schema — all tables, indexes, and constraints');
-INSERT OR IGNORE INTO schema_migrations (version, description)
-VALUES ('0004', 'historical daily benchmark rate cache (CDI, Selic, ...)');
-INSERT OR IGNORE INTO schema_migrations (version, description)
-VALUES ('0007', 'multi-currency support on operations (trade_currency + native amounts + fx_rate)');
-INSERT OR IGNORE INTO schema_migrations (version, description)
-VALUES ('0008', 'fx_rates cache (PTAX/Yahoo historical currency pair rates)');
-INSERT OR IGNORE INTO schema_migrations (version, description)
-VALUES ('0009', 'avenue_symbol_aliases (persistent description→ticker cache for Apex PDFs)');

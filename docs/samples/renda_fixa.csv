@@ -1,0 +1,5 @@
+institution,asset_type,product_name,remuneration_type,benchmark,benchmark_percent,fixed_rate_annual_percent,liquidity_label,application_date,maturity_date,application_value
+BANCO INTER,CDB,CDB Inter Liquidez Diária,CDI_PERCENT,CDI,100,,Diária,2024-01-15,2026-01-15,5000.00
+NUBANK,LCI,LCI Nubank 12m,CDI_PERCENT,CDI,90,,No vencimento,2024-03-01,2025-03-01,10000.00
+ITAU,LCA,LCA Itaú Pré 12m,PRE,NONE,,12.5,No vencimento,2024-06-10,2025-06-10,3000.00
+XP,CDB,CDB XP Pré 24m,PRE,NONE,,11.8,No vencimento,2024-08-01,2026-08-01,8000.00

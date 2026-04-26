@@ -131,7 +131,9 @@ Camada de persistência usando SQLite único com separação lógica por `portfo
 **Convenções:**
 - Todas as queries ficam nas classes de repositório.
 - O MCP server **não** executa SQL diretamente.
-- Migrations versionadas em `storage/migrations/` (formato: `NNNN_descricao.sql`).
+- Schema canônico em `storage/schema.sql` (aplicado por `make init`).
+  Migrations futuras vão em `storage/migrations/` (formato:
+  `NNNN_descricao.sql`) e são aplicadas por `make migrate`.
 
 ---
 

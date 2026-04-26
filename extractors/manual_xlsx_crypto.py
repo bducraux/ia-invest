@@ -1,10 +1,10 @@
-"""Gorila XLSX extractor for crypto portfolio exports."""
+"""Manual XLSX extractor for crypto portfolio bootstrap files."""
 
 from __future__ import annotations
 
-from extractors.gorila_base import BaseGorilaXlsxExtractor, excel_serial_to_date, parse_brl
+from extractors.manual_xlsx_base import BaseManualXlsxExtractor, excel_serial_to_date, parse_brl
 
-# Gorila uses some ticker aliases that differ from Binance
+# Some users still type ticker aliases for assets that have been renamed.
 _ASSET_CODE_ALIASES: dict[str, str] = {
     "RNDR": "RENDER",
     "MATIC": "POL",  # Polygon renamed MATIC→POL in 2023
@@ -15,11 +15,11 @@ _excel_serial_to_date = excel_serial_to_date
 _parse_brl = parse_brl
 
 
-class GorilaXlsxExtractor(BaseGorilaXlsxExtractor):
-    """Extracts trade records from Gorila.io portfolio XLSX exports."""
+class ManualXlsxCryptoExtractor(BaseManualXlsxExtractor):
+    """Extracts trade records from manually-prepared crypto XLSX files."""
 
-    source_type = "gorila_xlsx"
-    external_id_prefix = "gorila"
+    source_type = "manual_xlsx_crypto"
+    external_id_prefix = "manual_xlsx"
     default_asset_type = "crypto"
     asset_code_aliases = _ASSET_CODE_ALIASES
 

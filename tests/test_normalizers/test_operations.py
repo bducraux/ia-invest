@@ -214,9 +214,9 @@ def test_sell_with_zero_gross_value_returns_error(normalizer: OperationNormalize
     assert "gross_value is 0" in result.errors[0].message
 
 
-def test_gorila_buy_with_zero_gross_value_is_allowed(normalizer: OperationNormalizer) -> None:
-    # Gorila may omit prices for transfers/cost-unknown operations.
-    raw = _raw({"source": "gorila_xlsx", "operation_type": "compra", "gross_value": "0", "unit_price": "0"})
+def test_manual_xlsx_buy_with_zero_gross_value_is_allowed(normalizer: OperationNormalizer) -> None:
+    # Manual-bootstrap files may omit prices for transfers/cost-unknown operations.
+    raw = _raw({"source": "manual_xlsx_crypto", "operation_type": "compra", "gross_value": "0", "unit_price": "0"})
     result = normalizer.normalize([raw], "test-portfolio")
     assert not any("gross_value is 0" in e.message for e in result.errors)
 

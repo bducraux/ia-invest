@@ -1,9 +1,11 @@
-"""Shared Gorila XLSX extraction primitives.
+"""Shared primitives for manually-prepared XLSX bootstrap files.
 
-Gorila exports across portfolios share a common tabular shape with columns like:
+Useful for users that already have an existing portfolio history and want to
+seed IA-Invest from a spreadsheet they fill in by hand. Files share a common
+tabular shape with columns like:
     Ativo | Tipo | Data da transação | Quantidade | Preço | Valor total | Custodiante
 
-Some exports also include an extra leading ``Data de modificação`` column.
+An optional leading ``Data de modificação`` column is also accepted.
 Portfolio-specific subclasses configure the source type, default asset type,
 operation mapping, and any asset-code aliases.
 """
@@ -72,8 +74,8 @@ def parse_quantity_value(value: Any) -> float:
     return float(raw)
 
 
-class BaseGorilaXlsxExtractor(BaseExtractor):
-    """Base extractor for Gorila XLSX portfolio exports."""
+class BaseManualXlsxExtractor(BaseExtractor):
+    """Base extractor for manually-prepared XLSX bootstrap files."""
 
     source_type = ""
     external_id_prefix = ""

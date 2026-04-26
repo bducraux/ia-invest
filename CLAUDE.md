@@ -101,7 +101,7 @@ Single database file with `portfolio_id` as the multi-tenancy key. All monetary 
 | `app_settings` | Global settings: CDI, Selic, IPCA rates |
 | `schema_migrations` | Migration version tracking |
 
-Migrations are in `storage/migrations/` as `NNNN_description.sql`.
+The canonical schema lives in `storage/schema.sql` and is applied to fresh databases by `make init`. Future schema changes (after the initial release) go in `storage/migrations/` as `NNNN_description.sql` and are applied by `make migrate`.
 
 ### Extractors (`extractors/`)
 
@@ -109,7 +109,7 @@ One extractor per file format/source. Each implements `BaseExtractor`:
 - `can_handle(file_path) -> bool` — determine if this extractor applies
 - `extract(file_path) -> list[dict]` — return raw records, no business logic
 
-Existing extractors: `B3CsvExtractor`, `BrokerCsvExtractor`, `BinanceCsvExtractor`, `BinanceSimpleEarnExtractor`, `GorilaCsvExtractor`, `GorilaBXlsxExtractor`, `PrevidenciaIBMPDFExtractor`, `AvenueApexPdfExtractor`. Register new ones in `extractors/__init__.py`.
+Existing extractors: `B3CsvExtractor`, `BrokerCsvExtractor`, `BinanceCsvExtractor`, `BinanceSimpleEarnExtractor`, `ManualXlsxB3Extractor`, `ManualXlsxCryptoExtractor`, `PrevidenciaIbmPdfExtractor`, `AvenueApexPdfExtractor`. Register new ones in `extractors/__init__.py`.
 
 ### Normalizers (`normalizers/`)
 

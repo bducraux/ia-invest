@@ -1,4 +1,4 @@
-"""Tests for GorilaXlsxExtractor."""
+"""Tests for ManualXlsxCryptoExtractor."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 import openpyxl
 
-from extractors.gorila_xlsx import (
-    GorilaXlsxExtractor,
+from extractors.manual_xlsx_crypto import (
+    ManualXlsxCryptoExtractor,
     _excel_serial_to_date,
     _parse_brl,
 )
@@ -66,7 +66,7 @@ class TestParseBrl:
 
 
 def _make_xlsx(tmp_path: Path, rows: list[tuple]) -> Path:
-    """Create a minimal Gorila-style XLSX with given data rows."""
+    """Create a minimal manual-bootstrap XLSX with given data rows."""
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.append([
@@ -83,7 +83,7 @@ def _make_xlsx(tmp_path: Path, rows: list[tuple]) -> Path:
     ])
     for row in rows:
         ws.append(list(row))
-    path = tmp_path / "gorila_test.xlsx"
+    path = tmp_path / "manual_xlsx_test.xlsx"
     wb.save(path)
     return path
 
@@ -94,8 +94,8 @@ def _make_xlsx(tmp_path: Path, rows: list[tuple]) -> Path:
 
 
 @pytest.fixture
-def extractor() -> GorilaXlsxExtractor:
-    return GorilaXlsxExtractor()
+def extractor() -> ManualXlsxCryptoExtractor:
+    return ManualXlsxCryptoExtractor()
 
 
 @pytest.fixture
@@ -134,7 +134,7 @@ def multi_row_file(tmp_path: Path) -> Path:
 
 
 class TestCanHandle:
-    def test_accepts_gorila_xlsx(self, extractor, simple_buy_file):
+    def test_accepts_manual_xlsx(self, extractor, simple_buy_file):
         assert extractor.can_handle(simple_buy_file) is True
 
     def test_rejects_csv(self, extractor, tmp_path):
@@ -192,7 +192,7 @@ class TestExtractBuy:
 
     def test_source_type(self, extractor, simple_buy_file):
         rec = extractor.extract(simple_buy_file).records[0]
-        assert rec["source"] == "gorila_xlsx"
+        assert rec["source"] == "manual_xlsx_crypto"
 
     def test_asset_type_is_crypto(self, extractor, simple_buy_file):
         rec = extractor.extract(simple_buy_file).records[0]
@@ -200,7 +200,7 @@ class TestExtractBuy:
 
     def test_external_id_includes_date_and_asset(self, extractor, simple_buy_file):
         rec = extractor.extract(simple_buy_file).records[0]
-        assert "gorila:" in rec["external_id"]
+        assert "manual_xlsx:" in rec["external_id"]
         assert "2026-02-06" in rec["external_id"]
         assert "BTC" in rec["external_id"]
 
@@ -260,14 +260,14 @@ class TestExternalIdUniqueness:
 
 
 class TestRealFile:
-    """Smoke tests against the actual Gorila export fixture."""
+    """Smoke tests against the manual-bootstrap XLSX fixture."""
 
-    FIXTURE_FILE = Path("tests/fixtures/gorila_transactions.xlsx")
+    FIXTURE_FILE = Path("tests/fixtures/manual_xlsx_transactions.xlsx")
 
     @pytest.fixture(autouse=True)
     def skip_if_missing(self):
         if not self.FIXTURE_FILE.exists():
-            pytest.skip(f"Gorila test fixture not found: {self.FIXTURE_FILE}")
+            pytest.skip(f"Manual XLSX test fixture not found: {self.FIXTURE_FILE}")
 
     def test_extracts_94_records(self, extractor):
         result = extractor.extract(self.FIXTURE_FILE)
@@ -281,7 +281,7 @@ class TestRealFile:
         assert sells[0]["asset_code"] == "USDT"
 
     def test_btc_total_quantity(self, extractor):
-        """BTC net quantity from Gorila data matches expected accumulation."""
+        """BTC net quantity from manual XLSX data matches expected accumulation."""
         records = extractor.extract(self.FIXTURE_FILE).records
         btc = [r for r in records if r["asset_code"] == "BTC"]
         total = sum(r["quantity"] for r in btc)

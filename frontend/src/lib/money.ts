@@ -37,12 +37,20 @@ function centsToBRL(value: Cents | number): number {
   return Number(value) / 100;
 }
 
+// Normaliza espaços não-quebráveis (U+00A0) e estreitos (U+202F) usados pelo
+// Intl em "R$ 1.234,56" / "1,23 %". As versões de ICU do Node e do navegador
+// nem sempre concordam no caractere usado, o que provoca erros de hidratação
+// no Next.js. Forçamos espaço comum em todas as saídas.
+function normalizeSpaces(value: string): string {
+  return value.replace(/[\u00A0\u202F]/g, " ");
+}
+
 export function formatBRL(value: Cents | number): string {
-  return brlCurrency.format(centsToBRL(value));
+  return normalizeSpaces(brlCurrency.format(centsToBRL(value)));
 }
 
 export function formatBRLCompact(value: Cents | number): string {
-  return brlCurrencyCompact.format(centsToBRL(value));
+  return normalizeSpaces(brlCurrencyCompact.format(centsToBRL(value)));
 }
 
 export function formatBRLSigned(value: Cents | number): string {
@@ -56,9 +64,9 @@ export function formatBRLSigned(value: Cents | number): string {
 }
 
 export function formatPercent(value: number): string {
-  return percentPtBr.format(value);
+  return normalizeSpaces(percentPtBr.format(value));
 }
 
 export function formatQuantity(value: number): string {
-  return numberPtBr.format(value);
+  return normalizeSpaces(numberPtBr.format(value));
 }

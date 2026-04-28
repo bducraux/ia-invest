@@ -11,12 +11,18 @@ const monthPtBr = new Intl.DateTimeFormat("pt-BR", {
   timeZone: "UTC",
 });
 
+// Espaços NBSP (U+00A0) e NNBSP (U+202F) usados pelo Intl variam entre as
+// versões de ICU do Node e do navegador, causando erros de hidratação no Next.
+function normalizeSpaces(value: string): string {
+  return value.replace(/[\u00A0\u202F]/g, " ");
+}
+
 export function formatDate(isoDate: string): string {
   const date = new Date(isoDate);
   if (Number.isNaN(date.getTime())) {
     return isoDate;
   }
-  return datePtBr.format(date);
+  return normalizeSpaces(datePtBr.format(date));
 }
 
 export function formatMonth(isoDate: string): string {
@@ -24,5 +30,5 @@ export function formatMonth(isoDate: string): string {
   if (Number.isNaN(date.getTime())) {
     return isoDate;
   }
-  return monthPtBr.format(date);
+  return normalizeSpaces(monthPtBr.format(date));
 }

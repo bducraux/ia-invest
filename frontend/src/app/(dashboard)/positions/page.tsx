@@ -1,7 +1,7 @@
 "use client";
 
 import { useDeferredValue, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 
 import {
   Card,
@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -32,10 +33,13 @@ import {
 } from "@/lib/money";
 import { mergePositions, type PositionWithPortfolio } from "@/lib/portfolio-aggregation";
 import {
+  useClosePosition,
+  useDeletePrevidenciaSnapshot,
   usePortfolioPositions,
   usePortfolioPositionsList,
   usePortfolios,
 } from "@/lib/queries";
+import { useToastContext } from "@/lib/toast-context";
 
 const classLabels: Record<string, string> = {
   ACAO: "Ação",
@@ -112,6 +116,36 @@ export default function PositionsPage() {
   const portfolios = portfoliosQuery.data ?? [];
   const portfolioIds = portfolios.map((p) => p.id);
   const activePortfolio = portfolios.find((p) => p.id === scope.portfolioId);
+
+  const toast = useToastContext();
+  const [closeTarget, setCloseTarget] = useState<PositionWithPortfolio | null>(
+    null,
+  );
+  const closePositionMutation = useClosePosition(closeTarget?.portfolioId ?? "");
+  const deletePrevidenciaMutation = useDeletePrevidenciaSnapshot(
+    closeTarget?.portfolioId ?? "",
+  );
+  const closeBusy =
+    closePositionMutation.isPending || deletePrevidenciaMutation.isPending;
+
+  function handleConfirmClose() {
+    if (!closeTarget) return;
+    const target = closeTarget;
+    const onSuccess = () => {
+      toast.success(`Posição ${target.assetCode} encerrada.`);
+      setCloseTarget(null);
+    };
+    const onError = (err: unknown) => {
+      toast.error(
+        err instanceof Error ? err.message : "Falha ao encerrar posição.",
+      );
+    };
+    if (target.assetClass === "PREVIDENCIA") {
+      deletePrevidenciaMutation.mutate(target.assetCode, { onSuccess, onError });
+    } else {
+      closePositionMutation.mutate(target.assetCode, { onSuccess, onError });
+    }
+  }
 
   const scopedPositionsQuery = usePortfolioPositions(
     scope.isGlobalScope ? undefined : scope.portfolioId,
@@ -322,13 +356,14 @@ export default function PositionsPage() {
                   <SortableHead col="weight" sortKey={sort.key} direction={sort.dir} onSort={handleSort} className="text-right">
                     Peso
                   </SortableHead>
+                  <TableHead className="w-12 text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedPositions.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={scope.isGlobalScope ? 9 : 8}
+                      colSpan={scope.isGlobalScope ? 10 : 9}
                       className="py-8 text-center text-sm text-muted-foreground"
                     >
                       Nenhum ativo encontrado para o filtro atual.
@@ -389,6 +424,23 @@ export default function PositionsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">{formatPercent(p.weight)}</TableCell>
+                      <TableCell className="text-right">
+                        {p.assetClass === "RENDA_FIXA" ? (
+                          <span className="text-xs text-muted-foreground">
+                            Ver Renda Fixa
+                          </span>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Encerrar posição ${p.assetCode}`}
+                            title="Encerrar posição"
+                            onClick={() => setCloseTarget(p)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -430,6 +482,32 @@ export default function PositionsPage() {
           </CardContent>
         </Card>
       </main>
+      <ConfirmDialog
+        open={closeTarget !== null}
+        title={`Encerrar posição ${closeTarget?.assetCode ?? ""}`}
+        description={
+          closeTarget ? (
+            <div className="space-y-2">
+              <p>
+                Esta ação removerá a posição{" "}
+                <strong>{closeTarget.assetCode}</strong> da carteira{" "}
+                <strong>{closeTarget.portfolioName}</strong>
+                {closeTarget.assetClass === "PREVIDENCIA"
+                  ? " (snapshot de previdência)."
+                  : " e apagará todas as operações associadas (compras, vendas, proventos, transferências)."}
+              </p>
+              <p className="font-medium text-destructive">
+                Esta operação é irreversível.
+              </p>
+            </div>
+          ) : null
+        }
+        confirmLabel="Encerrar posição"
+        destructive
+        busy={closeBusy}
+        onCancel={() => setCloseTarget(null)}
+        onConfirm={handleConfirmClose}
+      />
     </>
   );
 }

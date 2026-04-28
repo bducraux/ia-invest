@@ -119,6 +119,112 @@ class OperationRepository:
         ).fetchall()
         return [dict(r) for r in rows]
 
+    # ------------------------------------------------------------------
+    # Single-row CRUD
+    # ------------------------------------------------------------------
+
+    def get(self, operation_id: int) -> dict[str, Any] | None:
+        row = self._conn.execute(
+            "SELECT * FROM operations WHERE id = ?",
+            (operation_id,),
+        ).fetchone()
+        return dict(row) if row else None
+
+    # Whitelist of fields that can be edited via update().
+    _UPDATABLE_FIELDS: tuple[str, ...] = (
+        "asset_code",
+        "asset_name",
+        "asset_type",
+        "operation_type",
+        "operation_date",
+        "settlement_date",
+        "quantity",
+        "unit_price",
+        "gross_value",
+        "fees",
+        "net_value",
+        "notes",
+        "broker",
+        "account",
+    )
+
+    def update(
+        self,
+        operation_id: int,
+        portfolio_id: str,
+        fields: dict[str, Any],
+        *,
+        commit: bool = True,
+    ) -> int:
+        """Update whitelisted fields of an operation.
+
+        Returns the number of affected rows (0 or 1). The ``external_id``
+        column is rewritten to ``manual:edited:{id}`` on every edit so a
+        future reimport of the original source file keeps inserting cleanly
+        without colliding with this now-divergent row.
+        """
+        unknown = set(fields) - set(self._UPDATABLE_FIELDS)
+        if unknown:
+            raise ValueError(f"Cannot update fields: {sorted(unknown)}")
+        if not fields:
+            return 0
+
+        assignments = ", ".join(f"{col} = :{col}" for col in fields)
+        params: dict[str, Any] = dict(fields)
+        params["id"] = operation_id
+        params["portfolio_id"] = portfolio_id
+        params["edited_external_id"] = f"manual:edited:{operation_id}"
+
+        cur = self._conn.execute(
+            f"""
+            UPDATE operations
+            SET {assignments},
+                external_id = :edited_external_id
+            WHERE id = :id AND portfolio_id = :portfolio_id
+            """,
+            params,
+        )
+        if commit:
+            self._conn.commit()
+        return cur.rowcount
+
+    def delete(
+        self,
+        operation_id: int,
+        portfolio_id: str,
+        *,
+        commit: bool = True,
+    ) -> int:
+        cur = self._conn.execute(
+            "DELETE FROM operations WHERE id = ? AND portfolio_id = ?",
+            (operation_id, portfolio_id),
+        )
+        if commit:
+            self._conn.commit()
+        return cur.rowcount
+
+    def delete_by_asset(
+        self,
+        portfolio_id: str,
+        asset_code: str,
+        *,
+        commit: bool = True,
+    ) -> int:
+        cur = self._conn.execute(
+            "DELETE FROM operations WHERE portfolio_id = ? AND asset_code = ?",
+            (portfolio_id, asset_code),
+        )
+        if commit:
+            self._conn.commit()
+        return cur.rowcount
+
+    def count_by_asset(self, portfolio_id: str, asset_code: str) -> int:
+        row = self._conn.execute(
+            "SELECT COUNT(*) AS n FROM operations WHERE portfolio_id = ? AND asset_code = ?",
+            (portfolio_id, asset_code),
+        ).fetchone()
+        return int(row["n"]) if row else 0
+
     def list_all_by_portfolio(
         self,
         portfolio_id: str,

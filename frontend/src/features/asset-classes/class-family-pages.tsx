@@ -35,13 +35,29 @@ import {
   type PositionWithPortfolio,
 } from "@/lib/portfolio-aggregation";
 import {
+  useClosePosition,
+  useCreateOperation,
+  useDeleteOperation,
+  useDeletePrevidenciaSnapshot,
   usePortfolioOperations,
   usePortfolioOperationsList,
   usePortfolioPositions,
   usePortfolioPositionsList,
   usePortfolios,
+  useUpdateOperation,
 } from "@/lib/queries";
 import type { ClassFamily } from "@/lib/asset-class-config";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { CreateOperationDialog } from "@/components/operations/create-operation-dialog";
+import {
+  EditOperationDialog,
+  type EditableOperation,
+} from "@/components/operations/edit-operation-dialog";
+import { useToastContext } from "@/lib/toast-context";
+import type { OperationCreateInput, OperationUpdateInput } from "@/lib/api";
+import { Pencil, Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
 import {
   aggregateRendaVariavelExposure,
   buildRendaVariavelTypeSlices,
@@ -535,6 +551,31 @@ export function ClassFamilyPositionsPage({ classFamily }: { classFamily: ClassFa
     positions,
   } = useClassFamilyData(classFamily);
 
+  const toast = useToastContext();
+  const [closeTarget, setCloseTarget] = useState<PositionWithPortfolio | null>(null);
+  const closePositionMutation = useClosePosition(closeTarget?.portfolioId ?? "");
+  const deletePrevidenciaMutation = useDeletePrevidenciaSnapshot(closeTarget?.portfolioId ?? "");
+
+  function handleConfirmClose() {
+    if (!closeTarget) return;
+    const isPrevidencia = closeTarget.assetType === "PREVIDENCIA";
+    const mutation = isPrevidencia ? deletePrevidenciaMutation : closePositionMutation;
+    mutation.mutate(closeTarget.assetCode, {
+      onSuccess: () => {
+        toast.success(
+          isPrevidencia
+            ? "Snapshot de previdência removido."
+            : "Posição encerrada e operações removidas.",
+        );
+        setCloseTarget(null);
+      },
+      onError: (err) =>
+        toast.error(
+          err instanceof Error ? err.message : "Falha ao encerrar posição.",
+        ),
+    });
+  }
+
   if (isLoading) {
     return renderState(meta.title, "Carregando posições da classe...", "Posições");
   }
@@ -579,6 +620,7 @@ export function ClassFamilyPositionsPage({ classFamily }: { classFamily: ClassFa
                     <TableHead className="text-right">Cotação</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
                     <TableHead className="text-right">Resultado</TableHead>
+                    <TableHead className="w-12 text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -622,6 +664,21 @@ export function ClassFamilyPositionsPage({ classFamily }: { classFamily: ClassFa
                           <span className="text-xs text-muted-foreground">{formatPercent(position.unrealizedPnlPct)}</span>
                         </div>
                       </TableCell>
+                      <TableCell className="text-right">
+                        {position.assetType === "RENDA_FIXA" ? (
+                          <span className="text-xs text-muted-foreground">Ver Renda Fixa</span>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Encerrar posição ${position.assetCode}`}
+                            title="Encerrar posição"
+                            onClick={() => setCloseTarget(position)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -630,6 +687,22 @@ export function ClassFamilyPositionsPage({ classFamily }: { classFamily: ClassFa
           </CardContent>
         </Card>
       </main>
+      <ConfirmDialog
+        open={closeTarget !== null}
+        title="Encerrar posição"
+        description={
+          closeTarget
+            ? closeTarget.assetType === "PREVIDENCIA"
+              ? `Tem certeza que deseja remover o snapshot de previdência ${closeTarget.assetCode}?`
+              : `Tem certeza que deseja encerrar a posição ${closeTarget.assetCode}? Todas as operações associadas a este ativo nesta carteira serão excluídas.`
+            : ""
+        }
+        confirmLabel="Encerrar"
+        destructive
+        busy={closePositionMutation.isPending || deletePrevidenciaMutation.isPending}
+        onCancel={() => setCloseTarget(null)}
+        onConfirm={handleConfirmClose}
+      />
     </>
   );
 }
@@ -638,11 +711,116 @@ export function ClassFamilyOperationsPage({ classFamily }: { classFamily: ClassF
   const meta = FAMILY_META[classFamily];
   const {
     scope,
+    portfolios,
     activePortfolio,
     isLoading,
     error,
     operations,
   } = useClassFamilyData(classFamily);
+
+  const toast = useToastContext();
+  const [editTarget, setEditTarget] =
+    useState<(OperationWithPortfolio & { numericId: number }) | null>(null);
+  const [deleteTarget, setDeleteTarget] =
+    useState<(OperationWithPortfolio & { numericId: number }) | null>(null);
+  const [createPortfolioId, setCreatePortfolioId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const updateMutation = useUpdateOperation(
+    editTarget?.portfolioId ?? deleteTarget?.portfolioId ?? "",
+  );
+  const deleteMutation = useDeleteOperation(
+    editTarget?.portfolioId ?? deleteTarget?.portfolioId ?? "",
+  );
+  const createMutation = useCreateOperation();
+
+  // Carteiras compatíveis com a família atual da página.
+  const familyPortfolios = portfolios.filter(
+    (p) => p.specialization === classFamily,
+  );
+
+  function handleCreateClick() {
+    if (familyPortfolios.length === 0) {
+      toast.error(
+        "Nenhuma carteira disponível para esta classe de ativo.",
+      );
+      return;
+    }
+    if (activePortfolio && !scope.isGlobalScope) {
+      setCreatePortfolioId(activePortfolio.id);
+    } else if (familyPortfolios.length === 1) {
+      setCreatePortfolioId(familyPortfolios[0].id);
+    } else {
+      setCreatePortfolioId(null);
+    }
+    setCreateOpen(true);
+  }
+
+  function handleSaveCreate(portfolioId: string, input: OperationCreateInput) {
+    createMutation.mutate(
+      { portfolioId, input },
+      {
+        onSuccess: () => {
+          toast.success("Operação criada.");
+          setCreateOpen(false);
+          setCreatePortfolioId(null);
+        },
+        onError: (err) =>
+          toast.error(
+            err instanceof Error ? err.message : "Falha ao criar operação.",
+          ),
+      },
+    );
+  }
+
+  function asEditable(op: OperationWithPortfolio): EditableOperation | null {
+    const numericId = Number(op.id);
+    if (!Number.isFinite(numericId)) return null;
+    return {
+      id: numericId,
+      portfolioId: op.portfolioId,
+      date: op.date.slice(0, 10),
+      assetCode: op.assetCode,
+      quantity: op.quantity,
+      unitPriceBrl: op.unitPrice / 100,
+      totalBrl: op.total / 100,
+    };
+  }
+
+  function handleSaveEdit(patch: OperationUpdateInput) {
+    if (!editTarget) return;
+    if (Object.keys(patch).length === 0) {
+      toast.info("Nenhuma alteração para salvar.");
+      setEditTarget(null);
+      return;
+    }
+    updateMutation.mutate(
+      { operationId: editTarget.numericId, input: patch },
+      {
+        onSuccess: () => {
+          toast.success("Operação atualizada.");
+          setEditTarget(null);
+        },
+        onError: (err) =>
+          toast.error(
+            err instanceof Error ? err.message : "Falha ao atualizar operação.",
+          ),
+      },
+    );
+  }
+
+  function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    deleteMutation.mutate(deleteTarget.numericId, {
+      onSuccess: () => {
+        toast.success("Operação excluída.");
+        setDeleteTarget(null);
+      },
+      onError: (err) =>
+        toast.error(
+          err instanceof Error ? err.message : "Falha ao excluir operação.",
+        ),
+    });
+  }
 
   if (isLoading) {
     return renderState(meta.title, "Carregando operações da classe...", "Operações");
@@ -667,7 +845,26 @@ export function ClassFamilyOperationsPage({ classFamily }: { classFamily: ClassF
     <>
       <TopBar title="Operações" />
       <main className="flex-1 space-y-6 p-4 md:p-6">
-        <PageHeader title={title} description={description} />
+        <PageHeader
+          title={title}
+          description={description}
+          actions={
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleCreateClick}
+              disabled={familyPortfolios.length === 0}
+              title={
+                familyPortfolios.length === 0
+                  ? "Nenhuma carteira disponível para esta classe"
+                  : "Criar nova operação manual"
+              }
+            >
+              <Plus className="h-4 w-4" />
+              Nova operação
+            </Button>
+          }
+        />
 
         <Card>
           <CardHeader>
@@ -688,6 +885,7 @@ export function ClassFamilyOperationsPage({ classFamily }: { classFamily: ClassF
                     <TableHead className="text-right">Qtd.</TableHead>
                     <TableHead className="text-right">Preço unit.</TableHead>
                     <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="w-24 text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -706,6 +904,36 @@ export function ClassFamilyOperationsPage({ classFamily }: { classFamily: ClassF
                       <TableCell className="text-right">{formatQuantity(operation.quantity)}</TableCell>
                       <TableCell className="text-right">{formatBRL(operation.unitPrice)}</TableCell>
                       <TableCell className="text-right font-medium">{formatBRL(operation.total)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Editar operação ${operation.id}`}
+                            title="Editar operação"
+                            onClick={() => {
+                              const numericId = Number(operation.id);
+                              if (!Number.isFinite(numericId)) return;
+                              setEditTarget({ ...operation, numericId });
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Excluir operação ${operation.id}`}
+                            title="Excluir operação"
+                            onClick={() => {
+                              const numericId = Number(operation.id);
+                              if (!Number.isFinite(numericId)) return;
+                              setDeleteTarget({ ...operation, numericId });
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -714,6 +942,38 @@ export function ClassFamilyOperationsPage({ classFamily }: { classFamily: ClassF
           </CardContent>
         </Card>
       </main>
+      <CreateOperationDialog
+        open={createOpen}
+        portfolios={familyPortfolios}
+        defaultPortfolioId={createPortfolioId}
+        busy={createMutation.isPending}
+        onCancel={() => {
+          setCreateOpen(false);
+          setCreatePortfolioId(null);
+        }}
+        onSave={handleSaveCreate}
+      />
+      <EditOperationDialog
+        open={editTarget !== null}
+        operation={editTarget ? asEditable(editTarget) : null}
+        busy={updateMutation.isPending}
+        onCancel={() => setEditTarget(null)}
+        onSave={handleSaveEdit}
+      />
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Excluir operação"
+        description={
+          deleteTarget
+            ? `Tem certeza que deseja excluir a operação de ${deleteTarget.assetCode} de ${deleteTarget.date.slice(0, 10)}? A posição do ativo será recalculada automaticamente.`
+            : ""
+        }
+        confirmLabel="Excluir"
+        destructive
+        busy={deleteMutation.isPending}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useDeferredValue, useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, Upload } from "lucide-react";
+import { Pencil, Plus, Search, Trash2, Upload } from "lucide-react";
 
 import {
   Card,
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -32,10 +33,22 @@ import {
   type OperationWithPortfolio,
 } from "@/lib/portfolio-aggregation";
 import {
+  useCreateOperation,
+  useDeleteOperation,
   usePortfolioOperations,
   usePortfolioOperationsList,
   usePortfolios,
+  useUpdateOperation,
 } from "@/lib/queries";
+import { useToastContext } from "@/lib/toast-context";
+import type { OperationCreateInput, OperationUpdateInput } from "@/lib/api";
+import {
+  CreateOperationDialog,
+} from "@/components/operations/create-operation-dialog";
+import {
+  EditOperationDialog,
+  type EditableOperation,
+} from "@/components/operations/edit-operation-dialog";
 
 const OP_TYPES = ["COMPRA", "VENDA", "DIVIDENDO", "JCP", "DESDOBRAMENTO"] as const;
 type OpType = (typeof OP_TYPES)[number];
@@ -75,6 +88,97 @@ export default function OperationsPage() {
   const portfolios = portfoliosQuery.data ?? [];
   const portfolioIds = portfolios.map((p) => p.id);
   const activePortfolio = portfolios.find((p) => p.id === scope.portfolioId);
+
+  const toast = useToastContext();
+  const [editTarget, setEditTarget] =
+    useState<(OperationWithPortfolio & { numericId: number }) | null>(null);
+  const [deleteTarget, setDeleteTarget] =
+    useState<(OperationWithPortfolio & { numericId: number }) | null>(null);
+  const [createPortfolioId, setCreatePortfolioId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const updateMutation = useUpdateOperation(
+    editTarget?.portfolioId ?? deleteTarget?.portfolioId ?? "",
+  );
+  const deleteMutation = useDeleteOperation(
+    editTarget?.portfolioId ?? deleteTarget?.portfolioId ?? "",
+  );
+  const createMutation = useCreateOperation();
+
+  function handleCreateClick() {
+    if (portfolios.length === 0) {
+      toast.error("Nenhuma carteira disponível.");
+      return;
+    }
+    setCreatePortfolioId(scope.isGlobalScope ? null : (scope.portfolioId ?? null));
+    setCreateOpen(true);
+  }
+
+  function handleSaveCreate(portfolioId: string, input: OperationCreateInput) {
+    createMutation.mutate(
+      { portfolioId, input },
+      {
+        onSuccess: () => {
+          toast.success("Operação criada.");
+          setCreateOpen(false);
+          setCreatePortfolioId(null);
+        },
+        onError: (err) =>
+          toast.error(
+            err instanceof Error ? err.message : "Falha ao criar operação.",
+          ),
+      },
+    );
+  }
+
+  function asEditable(op: OperationWithPortfolio): EditableOperation | null {
+    const numericId = Number(op.id);
+    if (!Number.isFinite(numericId)) return null;
+    return {
+      id: numericId,
+      portfolioId: op.portfolioId,
+      date: op.date.slice(0, 10),
+      assetCode: op.assetCode,
+      quantity: op.quantity,
+      unitPriceBrl: op.unitPrice / 100,
+      totalBrl: op.total / 100,
+    };
+  }
+
+  function handleSaveEdit(patch: OperationUpdateInput) {
+    if (!editTarget) return;
+    if (Object.keys(patch).length === 0) {
+      toast.info("Nenhuma alteração para salvar.");
+      setEditTarget(null);
+      return;
+    }
+    updateMutation.mutate(
+      { operationId: editTarget.numericId, input: patch },
+      {
+        onSuccess: () => {
+          toast.success("Operação atualizada.");
+          setEditTarget(null);
+        },
+        onError: (err) =>
+          toast.error(
+            err instanceof Error ? err.message : "Falha ao atualizar operação.",
+          ),
+      },
+    );
+  }
+
+  function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    deleteMutation.mutate(deleteTarget.numericId, {
+      onSuccess: () => {
+        toast.success("Operação excluída.");
+        setDeleteTarget(null);
+      },
+      onError: (err) =>
+        toast.error(
+          err instanceof Error ? err.message : "Falha ao excluir operação.",
+        ),
+    });
+  }
 
   const scopedOperationsQuery = usePortfolioOperations(
     scope.isGlobalScope ? undefined : scope.portfolioId,
@@ -210,13 +314,24 @@ export default function OperationsPage() {
           title={title}
           description={description}
           actions={
-            <Link
-              href="/import"
-              className="inline-flex h-8 items-center gap-2 rounded-md border border-border bg-transparent px-3 text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-            >
-              <Upload className="h-4 w-4" />
-              Importar
-            </Link>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleCreateClick}
+                title="Criar nova operação manual"
+              >
+                <Plus className="h-4 w-4" />
+                Nova operação
+              </Button>
+              <Link
+                href="/import"
+                className="inline-flex h-8 items-center gap-2 rounded-md border border-border bg-transparent px-3 text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                <Upload className="h-4 w-4" />
+                Importar
+              </Link>
+            </div>
           }
         />
 
@@ -282,13 +397,14 @@ export default function OperationsPage() {
                     Total
                   </SortableHead>
                   <TableHead>Origem</TableHead>
+                  <TableHead className="w-24 text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedOperations.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={scope.isGlobalScope ? 8 : 7}
+                      colSpan={scope.isGlobalScope ? 9 : 8}
                       className="py-8 text-center text-sm text-muted-foreground"
                     >
                       Nenhuma operação encontrada para o filtro atual.
@@ -323,6 +439,36 @@ export default function OperationsPage() {
                         {formatBRL(op.total)}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{op.source}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Editar operação ${op.id}`}
+                            title="Editar operação"
+                            onClick={() => {
+                              const numericId = Number(op.id);
+                              if (!Number.isFinite(numericId)) return;
+                              setEditTarget({ ...op, numericId });
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Excluir operação ${op.id}`}
+                            title="Excluir operação"
+                            onClick={() => {
+                              const numericId = Number(op.id);
+                              if (!Number.isFinite(numericId)) return;
+                              setDeleteTarget({ ...op, numericId });
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -364,6 +510,38 @@ export default function OperationsPage() {
           </CardContent>
         </Card>
       </main>
+      <CreateOperationDialog
+        open={createOpen}
+        portfolios={portfolios}
+        defaultPortfolioId={createPortfolioId}
+        busy={createMutation.isPending}
+        onCancel={() => {
+          setCreateOpen(false);
+          setCreatePortfolioId(null);
+        }}
+        onSave={handleSaveCreate}
+      />
+      <EditOperationDialog
+        open={editTarget !== null}
+        operation={editTarget ? asEditable(editTarget) : null}
+        busy={updateMutation.isPending}
+        onCancel={() => setEditTarget(null)}
+        onSave={handleSaveEdit}
+      />
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Excluir operação"
+        description={
+          deleteTarget
+            ? `Tem certeza que deseja excluir a operação de ${deleteTarget.assetCode} de ${deleteTarget.date.slice(0, 10)}? A posição do ativo será recalculada automaticamente.`
+            : ""
+        }
+        confirmLabel="Excluir"
+        destructive
+        busy={deleteMutation.isPending}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </>
   );
 }

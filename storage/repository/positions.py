@@ -90,6 +90,21 @@ class PositionRepository:
         ).fetchall()
         return [dict(r) for r in rows]
 
+    def delete(
+        self,
+        portfolio_id: str,
+        asset_code: str,
+        *,
+        commit: bool = True,
+    ) -> int:
+        cur = self._conn.execute(
+            "DELETE FROM positions WHERE portfolio_id = ? AND asset_code = ?",
+            (portfolio_id, asset_code),
+        )
+        if commit:
+            self._conn.commit()
+        return cur.rowcount
+
     @staticmethod
     def _row_to_position(row: sqlite3.Row) -> Position:
         return Position(

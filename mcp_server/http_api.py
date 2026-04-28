@@ -21,6 +21,7 @@ from pydantic import BaseModel
 from domain.fixed_income import FixedIncomePosition
 from domain.fixed_income_rates import SQLiteDailyRateProvider
 from domain.fixed_income_valuation import FixedIncomeValuationService
+from domain.position_service import PositionService
 from mcp_server.services.benchmark_sync import (
     BACENBenchmarkSyncService,
     BenchmarkSyncError,
@@ -30,6 +31,7 @@ from mcp_server.services.fixed_income_lifecycle import FixedIncomeLifecycleServi
 from mcp_server.services.fx_rates import SUPPORTED_PAIRS as FX_SUPPORTED_PAIRS
 from mcp_server.services.fx_rates import FxRateService
 from mcp_server.services.fx_sync import FxSyncError, FxSyncResult, FxSyncService
+from mcp_server.services.position_lifecycle import PositionLifecycleService
 from mcp_server.services.quotes import MarketQuoteService
 from mcp_server.tools.app_settings import get_app_settings
 from mcp_server.tools.concentration import get_concentration_analysis
@@ -284,6 +286,111 @@ class FixedIncomeImportResponse(BaseModel):
     errors: list[FixedIncomeImportError]
 
 
+# --- Operations CRUD ---------------------------------------------------------
+
+
+class OperationUpdate(BaseModel):
+    """Whitelisted patch payload for editing a single operation.
+
+    All fields are optional. ``externalId`` is intentionally absent: it is
+    automatically neutralised on every edit to avoid future UNIQUE-constraint
+    conflicts when reimporting the original source file.
+    """
+
+    assetCode: str | None = None
+    assetName: str | None = None
+    assetType: str | None = None
+    operationType: str | None = None
+    operationDate: str | None = None
+    settlementDate: str | None = None
+    quantity: float | None = None
+    unitPrice: int | None = None
+    grossValue: int | None = None
+    fees: int | None = None
+    netValue: int | None = None
+    notes: str | None = None
+    broker: str | None = None
+    account: str | None = None
+
+
+_OPERATION_FIELD_MAP: dict[str, str] = {
+    "assetCode": "asset_code",
+    "assetName": "asset_name",
+    "assetType": "asset_type",
+    "operationType": "operation_type",
+    "operationDate": "operation_date",
+    "settlementDate": "settlement_date",
+    "quantity": "quantity",
+    "unitPrice": "unit_price",
+    "grossValue": "gross_value",
+    "fees": "fees",
+    "netValue": "net_value",
+    "notes": "notes",
+    "broker": "broker",
+    "account": "account",
+}
+
+
+class OperationCreate(BaseModel):
+    """Payload for creating a manual operation entry.
+
+    Required: assetCode, assetType, operationType, operationDate, quantity,
+    unitPrice (cents), grossValue (cents). Optional: assetName, fees,
+    netValue, settlementDate, broker, account, notes.
+    """
+
+    assetCode: str
+    assetType: str
+    operationType: str
+    operationDate: str
+    quantity: float
+    unitPrice: int
+    grossValue: int
+    assetName: str | None = None
+    settlementDate: str | None = None
+    fees: int | None = None
+    netValue: int | None = None
+    notes: str | None = None
+    broker: str | None = None
+    account: str | None = None
+
+
+_OPERATION_CREATE_FIELD_MAP: dict[str, str] = {
+    **_OPERATION_FIELD_MAP,
+}
+
+
+# --- Previdencia CRUD --------------------------------------------------------
+
+
+class PrevidenciaSnapshotUpdate(BaseModel):
+    productName: str | None = None
+    quantity: float | None = None
+    unitPriceCents: int | None = None
+    marketValueCents: int | None = None
+    periodMonth: str | None = None
+    periodStartDate: str | None = None
+    periodEndDate: str | None = None
+
+
+_PREVIDENCIA_FIELD_MAP: dict[str, str] = {
+    "productName": "product_name",
+    "quantity": "quantity",
+    "unitPriceCents": "unit_price_cents",
+    "marketValueCents": "market_value_cents",
+    "periodMonth": "period_month",
+    "periodStartDate": "period_start_date",
+    "periodEndDate": "period_end_date",
+}
+
+
+def _to_snake_payload(
+    payload: BaseModel, field_map: dict[str, str]
+) -> dict[str, Any]:
+    raw = payload.model_dump(exclude_unset=True)
+    return {field_map[k]: v for k, v in raw.items() if k in field_map}
+
+
 def _to_ui_operation_type(operation_type: str) -> str:
     mapping = {
         "buy": "COMPRA",
@@ -472,6 +579,17 @@ def _build_fixed_income_lifecycle_service(db: Database) -> FixedIncomeLifecycleS
     repo = FixedIncomePositionRepository(db.connection)
     valuation = _build_fixed_income_valuation_service(db)
     return FixedIncomeLifecycleService(repo=repo, valuation_service=valuation)
+
+
+def _build_position_lifecycle_service(db: Database) -> PositionLifecycleService:
+    op_repo = OperationRepository(db.connection)
+    pos_repo = PositionRepository(db.connection)
+    return PositionLifecycleService(
+        conn=db.connection,
+        operation_repo=op_repo,
+        position_repo=pos_repo,
+        position_service=PositionService(),
+    )
 
 
 def _is_matured(maturity_date: str, valuation_date: str) -> bool:
@@ -1490,6 +1608,134 @@ def create_http_app(
         if "error" in result:
             raise HTTPException(status_code=400, detail=result["error"])
         return result
+
+    # ------------------------------------------------------------------
+    # Position lifecycle (close) and operation CRUD — event-sourced
+    # portfolios (renda variavel, cripto, internacional). Renda fixa has
+    # its own dedicated endpoints above.
+    # ------------------------------------------------------------------
+
+    @app.delete(
+        "/api/portfolios/{portfolio_id}/positions/{asset_code}",
+        status_code=204,
+    )
+    def close_position(
+        portfolio_id: str,
+        asset_code: str,
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> None:
+        """Delete every operation of ``asset_code`` plus the positions row."""
+        require_portfolio(portfolio_id, db)
+        lifecycle = _build_position_lifecycle_service(db)
+        lifecycle.close_position(portfolio_id, asset_code)
+
+    @app.post(
+        "/api/portfolios/{portfolio_id}/operations",
+        response_model=None,
+        status_code=201,
+    )
+    def create_operation(
+        portfolio_id: str,
+        payload: OperationCreate,
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> dict[str, Any]:
+        require_portfolio(portfolio_id, db)
+        fields = _to_snake_payload(payload, _OPERATION_CREATE_FIELD_MAP)
+        lifecycle = _build_position_lifecycle_service(db)
+        try:
+            return lifecycle.create_operation(portfolio_id, fields)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.patch(
+        "/api/portfolios/{portfolio_id}/operations/{operation_id}",
+        response_model=None,
+    )
+    def update_operation(
+        portfolio_id: str,
+        operation_id: int,
+        payload: OperationUpdate,
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> dict[str, Any]:
+        require_portfolio(portfolio_id, db)
+        fields = _to_snake_payload(payload, _OPERATION_FIELD_MAP)
+        if not fields:
+            raise HTTPException(status_code=422, detail="No fields to update")
+        lifecycle = _build_position_lifecycle_service(db)
+        try:
+            return lifecycle.update_operation(portfolio_id, operation_id, fields)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.delete(
+        "/api/portfolios/{portfolio_id}/operations/{operation_id}",
+        status_code=204,
+    )
+    def delete_operation(
+        portfolio_id: str,
+        operation_id: int,
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> None:
+        require_portfolio(portfolio_id, db)
+        lifecycle = _build_position_lifecycle_service(db)
+        try:
+            lifecycle.delete_operation(portfolio_id, operation_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    # ------------------------------------------------------------------
+    # Previdencia snapshot CRUD
+    # ------------------------------------------------------------------
+
+    @app.patch(
+        "/api/portfolios/{portfolio_id}/previdencia/{asset_code}",
+        response_model=None,
+    )
+    def update_previdencia_snapshot(
+        portfolio_id: str,
+        asset_code: str,
+        payload: PrevidenciaSnapshotUpdate,
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> dict[str, Any]:
+        require_portfolio(portfolio_id, db)
+        repo = PrevidenciaSnapshotRepository(db.connection)
+        current = repo.get_by_asset(portfolio_id, asset_code)
+        if current is None:
+            raise HTTPException(status_code=404, detail="Snapshot not found")
+        fields = _to_snake_payload(payload, _PREVIDENCIA_FIELD_MAP)
+        if not fields:
+            raise HTTPException(status_code=422, detail="No fields to update")
+        repo.update(portfolio_id, asset_code, fields)
+        updated = repo.get_by_asset(portfolio_id, asset_code)
+        if updated is None:  # pragma: no cover - defensive
+            raise HTTPException(status_code=404, detail="Snapshot not found")
+        return {
+            "id": updated.id,
+            "portfolioId": updated.portfolio_id,
+            "assetCode": updated.asset_code,
+            "productName": updated.product_name,
+            "quantity": updated.quantity,
+            "unitPriceCents": updated.unit_price_cents,
+            "marketValueCents": updated.market_value_cents,
+            "periodMonth": updated.period_month,
+            "periodStartDate": updated.period_start_date,
+            "periodEndDate": updated.period_end_date,
+        }
+
+    @app.delete(
+        "/api/portfolios/{portfolio_id}/previdencia/{asset_code}",
+        status_code=204,
+    )
+    def delete_previdencia_snapshot(
+        portfolio_id: str,
+        asset_code: str,
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> None:
+        require_portfolio(portfolio_id, db)
+        repo = PrevidenciaSnapshotRepository(db.connection)
+        if repo.get_by_asset(portfolio_id, asset_code) is None:
+            raise HTTPException(status_code=404, detail="Snapshot not found")
+        repo.delete(portfolio_id, asset_code)
 
     return app
 

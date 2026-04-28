@@ -105,6 +105,52 @@ class PrevidenciaSnapshotRepository:
         snapshot.id = int(cur.lastrowid or 0)
         return int(cur.lastrowid or 0)
 
+    # Whitelist of editable snapshot fields.
+    _UPDATABLE_FIELDS: tuple[str, ...] = (
+        "product_name",
+        "quantity",
+        "unit_price_cents",
+        "market_value_cents",
+        "period_month",
+        "period_start_date",
+        "period_end_date",
+    )
+
+    def update(
+        self,
+        portfolio_id: str,
+        asset_code: str,
+        fields: dict[str, object],
+    ) -> int:
+        unknown = set(fields) - set(self._UPDATABLE_FIELDS)
+        if unknown:
+            raise ValueError(f"Cannot update fields: {sorted(unknown)}")
+        if not fields:
+            return 0
+        assignments = ", ".join(f"{col} = :{col}" for col in fields)
+        params: dict[str, object] = dict(fields)
+        params["portfolio_id"] = portfolio_id
+        params["asset_code"] = asset_code
+        cur = self._conn.execute(
+            f"""
+            UPDATE previdencia_snapshots
+            SET {assignments},
+                updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+            WHERE portfolio_id = :portfolio_id AND asset_code = :asset_code
+            """,
+            params,
+        )
+        self._conn.commit()
+        return cur.rowcount
+
+    def delete(self, portfolio_id: str, asset_code: str) -> int:
+        cur = self._conn.execute(
+            "DELETE FROM previdencia_snapshots WHERE portfolio_id = ? AND asset_code = ?",
+            (portfolio_id, asset_code),
+        )
+        self._conn.commit()
+        return cur.rowcount
+
     @staticmethod
     def _to_params(snapshot: PrevidenciaSnapshot) -> dict[str, object]:
         return {

@@ -407,3 +407,119 @@ export async function setFixedIncomeAutoReapply(
     { enabled },
   );
 }
+
+// ---------------------------------------------------------------------------
+// Position lifecycle (event-sourced portfolios) and operations CRUD
+// ---------------------------------------------------------------------------
+
+export interface OperationUpdateInput {
+  assetCode?: string;
+  assetName?: string | null;
+  assetType?: string;
+  operationType?: string;
+  operationDate?: string;
+  settlementDate?: string | null;
+  quantity?: number;
+  unitPrice?: number;
+  grossValue?: number;
+  fees?: number;
+  netValue?: number;
+  notes?: string | null;
+  broker?: string | null;
+  account?: string | null;
+}
+
+async function apiDelete(path: string): Promise<void> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "DELETE",
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`API ${response.status}: ${body || response.statusText}`);
+  }
+}
+
+export async function closePosition(
+  portfolioId: string,
+  assetCode: string,
+): Promise<void> {
+  return apiDelete(
+    `/api/portfolios/${portfolioId}/positions/${encodeURIComponent(assetCode)}`,
+  );
+}
+
+export async function updateOperation(
+  portfolioId: string,
+  operationId: number,
+  input: OperationUpdateInput,
+): Promise<Record<string, unknown>> {
+  return apiPatch<Record<string, unknown>>(
+    `/api/portfolios/${portfolioId}/operations/${operationId}`,
+    input,
+  );
+}
+
+export interface OperationCreateInput {
+  assetCode: string;
+  assetType: string;
+  operationType: string;
+  operationDate: string;
+  quantity: number;
+  unitPrice: number;
+  grossValue: number;
+  assetName?: string | null;
+  settlementDate?: string | null;
+  fees?: number;
+  netValue?: number;
+  notes?: string | null;
+  broker?: string | null;
+  account?: string | null;
+}
+
+export async function createOperation(
+  portfolioId: string,
+  input: OperationCreateInput,
+): Promise<Record<string, unknown>> {
+  return apiPostJson<Record<string, unknown>>(
+    `/api/portfolios/${portfolioId}/operations`,
+    input,
+  );
+}
+
+export async function deleteOperation(
+  portfolioId: string,
+  operationId: number,
+): Promise<void> {
+  return apiDelete(`/api/portfolios/${portfolioId}/operations/${operationId}`);
+}
+
+export interface PrevidenciaSnapshotUpdateInput {
+  productName?: string;
+  quantity?: number;
+  unitPriceCents?: number;
+  marketValueCents?: number;
+  periodMonth?: string;
+  periodStartDate?: string;
+  periodEndDate?: string;
+}
+
+export async function updatePrevidenciaSnapshot(
+  portfolioId: string,
+  assetCode: string,
+  input: PrevidenciaSnapshotUpdateInput,
+): Promise<Record<string, unknown>> {
+  return apiPatch<Record<string, unknown>>(
+    `/api/portfolios/${portfolioId}/previdencia/${encodeURIComponent(assetCode)}`,
+    input,
+  );
+}
+
+export async function deletePrevidenciaSnapshot(
+  portfolioId: string,
+  assetCode: string,
+): Promise<void> {
+  return apiDelete(
+    `/api/portfolios/${portfolioId}/previdencia/${encodeURIComponent(assetCode)}`,
+  );
+}

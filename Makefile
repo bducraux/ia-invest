@@ -1,4 +1,4 @@
-.PHONY: help install init migrate reset-db clear-cache create-portfolio adjust-balance check-balance import-all portfolio-overview lint type-check test clean server api-server frontend-install frontend-dev frontend-build frontend-test frontend-lint
+.PHONY: help install init migrate reset-db clear-cache create-portfolio adjust-balance check-balance import-all portfolio-overview lint type-check test clean server api-server start stop logs frontend-install frontend-dev frontend-build frontend-test frontend-lint
 
 API_PORT ?= 8010
 
@@ -28,6 +28,10 @@ help:
 	@echo "  make server               Start MCP server"
 	@echo "  make api-server           Start FastAPI backend (http://localhost:8010)"
 	@echo "                            Example: make api-server API_PORT=8010"
+	@echo "  make start                Sobe API + frontend juntos (Ctrl+C derruba todos)"
+	@echo "                            Vars opcionais: API_PORT, RUN_MCP=1, RUN_FRONTEND=0, RUN_API=0"
+	@echo "  make stop                 Para todos os serviços iniciados pelo make start"
+	@echo "  make logs                 Acompanha em tempo real os logs em .dev-logs/"
 	@echo ""
 	@echo "Frontend:"
 	@echo "  make frontend-install     Install frontend dependencies (npm ci)"
@@ -100,6 +104,20 @@ server:
 
 api-server:
 	uv run uvicorn mcp_server.http_api:app --host 0.0.0.0 --port $(API_PORT) --reload
+
+start:
+	@API_PORT=$(API_PORT) bash scripts/start.sh -d
+
+stop:
+	@API_PORT=$(API_PORT) bash scripts/stop.sh
+
+logs:
+	@mkdir -p .dev-logs
+	@if ls .dev-logs/*.log >/dev/null 2>&1; then \
+		tail -n 50 -F .dev-logs/*.log; \
+	else \
+		echo "Nenhum log em .dev-logs/. Rode 'make start' primeiro."; \
+	fi
 
 sync-cdi:
 	uv run python scripts/sync_benchmark_rates.py --benchmark CDI $(ARGS)

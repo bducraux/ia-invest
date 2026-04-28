@@ -9,21 +9,7 @@ import {
   Tooltip,
 } from "recharts";
 import { formatBRL, formatPercent } from "@/lib/money";
-
-const OTHERS_COLOR = "hsl(220 8% 52%)";
-
-function getSliceColor(slice: ValueAllocationSlice, index: number): string {
-  if (slice.label.trim().toLowerCase() === "outros") {
-    return OTHERS_COLOR;
-  }
-
-  // Golden-angle hue distribution reduces visual collisions when there are many slices.
-  const hue = Math.round((index * 137.508) % 360);
-  const saturation = 62 + (index % 3) * 8;
-  const lightness = 44 + (index % 2) * 10;
-
-  return `hsl(${hue} ${saturation}% ${lightness}%)`;
-}
+import { getSliceColor } from "@/lib/chart-colors";
 
 export interface ValueAllocationSlice {
   label: string;
@@ -53,7 +39,7 @@ export function ValueAllocationDonut({ data }: { data: ValueAllocationSlice[] })
           stroke="none"
         >
           {data.map((slice, index) => (
-            <Cell key={index} fill={getSliceColor(slice, index)} />
+            <Cell key={index} fill={getSliceColor(slice.label, index)} />
           ))}
         </Pie>
         <Tooltip

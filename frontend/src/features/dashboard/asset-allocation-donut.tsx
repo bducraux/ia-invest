@@ -10,31 +10,10 @@ import {
 } from "recharts";
 import type { Position } from "@/types/domain";
 import { formatBRL, formatPercent } from "@/lib/money";
+import { getSliceColor } from "@/lib/chart-colors";
 
-const COLORS = [
-  "hsl(158 64% 52%)",
-  "hsl(199 89% 60%)",
-  "hsl(38 92% 60%)",
-  "hsl(280 70% 65%)",
-  "hsl(220 14% 60%)",
-  "hsl(0 72% 60%)",
-  "hsl(30 90% 60%)",
-  "hsl(160 50% 45%)",
-  "hsl(250 70% 65%)",
-  "hsl(340 70% 60%)",
-  "hsl(173 58% 45%)",
-  "hsl(96 55% 55%)",
-  "hsl(15 85% 62%)",
-  "hsl(48 95% 55%)",
-  "hsl(210 70% 55%)",
-  "hsl(290 50% 55%)",
-  "hsl(120 40% 50%)",
-  "hsl(50 70% 50%)",
-  "hsl(190 60% 50%)",
-  "hsl(355 65% 55%)",
-];
-
-const MIN_WEIGHT_FOR_OWN_SLICE = 0.02;
+const MIN_WEIGHT_FOR_OWN_SLICE = 0.005;
+const MAX_INDIVIDUAL_SLICES = 15;
 
 interface AssetSlice {
   label: string;
@@ -61,18 +40,30 @@ export function AssetAllocationDonut({ positions }: { positions: Position[] }) {
     weight: p.marketValue / total,
   }));
 
-  const major = allSlices.filter((s) => s.weight >= MIN_WEIGHT_FOR_OWN_SLICE);
-  const minor = allSlices.filter((s) => s.weight < MIN_WEIGHT_FOR_OWN_SLICE);
+  const major: AssetSlice[] = [];
+  const minor: AssetSlice[] = [];
+  for (const slice of allSlices) {
+    if (
+      major.length < MAX_INDIVIDUAL_SLICES &&
+      slice.weight >= MIN_WEIGHT_FOR_OWN_SLICE
+    ) {
+      major.push(slice);
+    } else {
+      minor.push(slice);
+    }
+  }
 
   let slices: AssetSlice[];
   if (minor.length === 0) {
-    slices = allSlices;
+    slices = major;
+  } else if (minor.length === 1) {
+    slices = [...major, minor[0]];
   } else {
     const othersValue = minor.reduce((sum, s) => sum + s.value, 0);
     const othersWeight = minor.reduce((sum, s) => sum + s.weight, 0);
     slices = [
       ...major,
-      { label: "Outros", value: othersValue, weight: othersWeight },
+      { label: `Outros (${minor.length})`, value: othersValue, weight: othersWeight },
     ];
   }
 
@@ -88,8 +79,8 @@ export function AssetAllocationDonut({ positions }: { positions: Position[] }) {
           paddingAngle={2}
           stroke="none"
         >
-          {slices.map((_, i) => (
-            <Cell key={i} fill={COLORS[i % COLORS.length]} />
+          {slices.map((slice, i) => (
+            <Cell key={i} fill={getSliceColor(slice.label, i)} />
           ))}
         </Pie>
         <Tooltip

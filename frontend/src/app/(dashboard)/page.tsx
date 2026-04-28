@@ -259,30 +259,6 @@ export default function OverviewPage() {
             scope.isGlobalScope ? "lg:grid-cols-3" : "lg:grid-cols-2",
           )}
         >
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base text-foreground">
-                Alocação por ativo
-              </CardTitle>
-              <CardDescription>Top ativos por valor de mercado</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AssetAllocationDonut positions={quotePositions} />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base text-foreground">
-                Alocação por classe
-              </CardTitle>
-              <CardDescription>Distribuição atual</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AllocationDonut data={summary.allocation} />
-            </CardContent>
-          </Card>
-
           {scope.isGlobalScope ? (
             <Card>
               <CardHeader>
@@ -296,6 +272,30 @@ export default function OverviewPage() {
               </CardContent>
             </Card>
           ) : null}
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base text-foreground">
+                Alocação por classe
+              </CardTitle>
+              <CardDescription>Distribuição atual</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AllocationDonut data={summary.allocation} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base text-foreground">
+                Alocação por ativo
+              </CardTitle>
+              <CardDescription>Top ativos por valor de mercado</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AssetAllocationDonut positions={quotePositions} />
+            </CardContent>
+          </Card>
         </div>
 
         <Card>

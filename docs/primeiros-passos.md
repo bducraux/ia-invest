@@ -239,7 +239,7 @@ sqlite3 ia_invest.db \
 **Cota negativa em `positions`** — *isso é intencional* quando há
 buracos no histórico (compras antigas que você ainda não importou). O
 sistema preserva o saldo intermediário para sinalizar a inconsistência.
-Veja `WALLET_MODEL.md` para detalhes.
+Veja `ARCHITECTURE.md` para detalhes do modelo `operations` → `positions`.
 
 **CDI ou USDBRL não atualizam** — verifique a conectividade com o BACEN.
 O endpoint usado é `https://api.bcb.gov.br/dados/serie/...`. Se estiver
@@ -260,7 +260,6 @@ reimport.
 
 ## Próximos passos
 
-- [Arquitetura](../ARCHITECTURE.md) — visão geral das camadas
-- [Modelo de carteira](../WALLET_MODEL.md) — como `operations` vira `positions`
+- [Arquitetura](../ARCHITECTURE.md) — visão geral das camadas, incluindo o modelo `operations` → `positions`
 - [Renda fixa em detalhe](renda-fixa.md) — IR, CDI, lifecycle
 - [Documentação de cada fonte](fontes-de-dados/README.md)

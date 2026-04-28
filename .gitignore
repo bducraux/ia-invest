@@ -210,6 +210,13 @@ cython_debug/
 portfolios/*
 !portfolios/.gitkeep
 
+# IA-Invest skill memory and reports — local-only, contains personal financial data
+# Never commit contents; only the .gitkeep placeholder is tracked
+relatorios/*
+!relatorios/.gitkeep
+.ia-invest-memory/*
+!.ia-invest-memory/.gitkeep
+
 # Marimo
 marimo/_static/
 marimo/_lsp/

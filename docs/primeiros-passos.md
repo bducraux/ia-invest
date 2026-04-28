@@ -188,6 +188,26 @@ A partir daí, você pode fazer perguntas como:
 > Como está a alocação da minha carteira de renda variável? Algum
 > alerta de concentração?
 
+### Memória entre conversas (skill `ia-invest`)
+
+Se você usa a skill **`ia-invest`** do Claude Code (em
+`.claude/skills/ia-invest/`), o agente mantém memória local entre
+conversas em dois diretórios:
+
+| Diretório              | O que guarda                                                  |
+|------------------------|---------------------------------------------------------------|
+| `.ia-invest-memory/`   | Notas vivas curtas: perfil de investidor, tese por ativo, eventos pendentes, visão consolidada |
+| `relatorios/`          | Snapshots datados de análises completas (`relatorio-<id>-YYYY-MM-DD.md`) |
+
+**Ambos são gitignorados por design** — contêm dados financeiros pessoais e
+**nunca** devem ser comitados em forks públicos. Apenas o placeholder
+`.gitkeep` é versionado para preservar a estrutura.
+
+Se for o seu primeiro uso da skill, ela fará uma mini-entrevista (4–6
+perguntas) para registrar seu perfil de investidor antes da primeira
+análise de carteira. Esse perfil é atualizado automaticamente conforme
+você expressa novas preferências em conversas posteriores.
+
 ---
 
 ## 9. Comandos do dia-a-dia

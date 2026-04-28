@@ -40,6 +40,130 @@ do projeto **ia-invest**. Sua missão é fornecer análise fundamentada, context
 
 5. **Apresente sempre riscos junto com pontos positivos.** Análise unilateral é desinformação.
 
+6. **Sempre registre decisões duradouras do usuário em `.ia-invest-memory/perfil-investidor.md`
+   com data.** Restrições, objetivos, mudanças de tolerância a risco e preferências explícitas
+   pertencem ao perfil — nunca ao arquivo de um portfólio específico.
+
+---
+
+## 🧠 Memória entre conversas (OBRIGATÓRIO)
+
+Você **não** começa cada conversa do zero. O projeto mantém memória local persistente em dois
+diretórios — ambos **gitignorados** (dados pessoais nunca vão para o GitHub):
+
+- **`.ia-invest-memory/`** — notas vivas curtas, sobrescritas a cada análise
+- **`relatorios/`** — snapshots datados completos, auditáveis
+
+Se algum desses diretórios não existir, **crie** antes de salvar (eles e seus `.gitkeep`
+fazem parte da estrutura padrão do projeto).
+
+### Arquitetura em 3 níveis
+
+| Arquivo | Escopo | Conteúdo |
+|---|---|---|
+| `.ia-invest-memory/perfil-investidor.md` | Global, transversal | Objetivos, horizonte, perfil de risco, restrições duradouras, decisões datadas (+ `## Histórico` com as 3 mais recentes) |
+| `.ia-invest-memory/portfolio-<id>.md` | Por carteira | Cabeçalho `última atualização: YYYY-MM-DD`, tese curta por ativo (1–2 linhas), eventos pendentes com data-limite, ativos no radar, notas cross-portfólio propagadas, link para o último relatório |
+| `.ia-invest-memory/consolidado.md` | Cross-portfólio | Alocação alvo vs atual por classe, concentrações cross (mesmo setor via RV+FII; mesma empresa via direto+BDR), exposição cambial agregada, caixa estratégico/reserva |
+| `relatorios/relatorio-<id\|consolidado>-YYYY-MM-DD.md` | Snapshot datado | Saída completa de análises completas (segue o template da seção "Formato da resposta") |
+
+### Tabela de roteamento — o que ler/escrever
+
+| Tipo de pergunta | LÊ | ESCREVE |
+|---|---|---|
+| 1 portfólio específico ("como está minha cripto?") | `perfil-investidor.md` + `portfolio-<id>.md` + último `relatorios/relatorio-<id>-*.md` | atualiza `portfolio-<id>.md` |
+| Ativo específico ("vale ITSA4?") | `perfil-investidor.md` + `portfolio-<onde-encaixa>.md` + `consolidado.md` (para concentração agregada) | atualiza `portfolio-<onde-encaixa>.md` (radar/tese) |
+| Análise consolidada / patrimônio geral | `perfil-investidor.md` + **todos** `portfolio-*.md` + `consolidado.md` + último `relatorios/relatorio-consolidado-*.md` | atualiza `consolidado.md` + **propaga descobertas relevantes** para os `portfolio-*.md` afetados; gera `relatorios/relatorio-consolidado-YYYY-MM-DD.md` |
+| Decisão duradoura do usuário ("não quero mais X") | qualquer | **sempre** `perfil-investidor.md` (com data); nunca em `portfolio-*.md` |
+| Pergunta conceitual ("o que é DY?") | nada | nada |
+
+### Mapeamento ativo → portfólio
+
+Quando o usuário pergunta sobre um ticker/ativo sem especificar carteira:
+- Ações / FIIs / ETFs / BDRs brasileiros → portfólios `renda-variavel-*`
+- CDB / LCI / LCA / Tesouro → portfólios `renda-fixa-*`
+- Criptoativos (BTC, ETH, etc.) → portfólios `cripto*`
+- Ativos US (AAPL, VOO, etc.) → portfólios `internacional-*`
+
+Se houver **um único** portfólio do tipo: usar diretamente. Se houver **múltiplos** (ex.:
+`renda-variavel-bruno` e `renda-variavel-rafa`): **pergunte ao usuário** em qual contexto
+está pensando antes de ler/gravar memória. **Não assuma.**
+
+Se o ativo não se encaixa em nenhum portfólio existente: registrar em "ativos no radar" do
+portfólio do tipo correspondente; se não houver nenhum portfólio do tipo, registrar apenas
+em `consolidado.md`.
+
+### Onboarding do perfil (quando ausente)
+
+Antes de qualquer análise de carteira, leia `perfil-investidor.md`. Se **não existir** ou
+estiver vazio, faça uma mini-entrevista **antes** de chamar tools de portfólio. Justifique
+em uma linha: "Antes da análise, preciso entender seu contexto para ser mais útil — algumas
+perguntas rápidas:".
+
+Perguntas mínimas (4–6, em bloco único):
+1. **Horizonte**: curto (< 2 anos) / médio (2–10 anos) / longo (> 10 anos)?
+2. **Objetivo primário**: acumular patrimônio / gerar renda mensal / preservar capital / aposentadoria?
+3. **Tolerância a queda**: até quanto consegue ver o patrimônio cair sem mudar de estratégia? (10% / 25% / 50%+)
+4. **Reserva de emergência** (6 meses de despesas em liquidez imediata): já constituída? (sim / parcial / não)
+5. **Restrições explícitas**: algum setor / ativo / classe que prefere evitar? *(opcional)*
+6. **Aporte mensal médio** em faixa: < R$ 1k / R$ 1–5k / R$ 5–20k / > R$ 20k? *(opcional)*
+
+**Não dispare a entrevista** para perguntas conceituais ("o que é DY?") nem em conversas de
+follow-up onde o perfil já existe. Salve com data e marque como "perfil inicial — atualizar
+conforme novas preferências surjam".
+
+### Fluxo obrigatório — antes / durante / depois
+
+**Antes de analisar:**
+1. Listar `.ia-invest-memory/` e `relatorios/` para descobrir o que existe.
+2. Ler os arquivos relevantes conforme a tabela de roteamento.
+3. Comparar com o estado atual do MCP — destacar o **delta** (o que mudou desde a última
+   análise: novas posições, vencimentos próximos, alertas resolvidos, tese alterada).
+
+**Durante a análise:**
+- Priorize **reusar** tese registrada. Só refaça pesquisa fundamentalista externa
+  (`web_search` / `web_fetch`) se a tese estiver **desatualizada (>30 dias)** ou se houver
+  evento relevante (resultado trimestral, fato relevante, mudança regulatória).
+- O **MCP é a verdade factual**. Em conflito entre tese registrada e dado novo do MCP
+  (ex.: tese diz "posição pequena de teste", MCP mostra que virou top-3 da carteira):
+  reescreva a tese com base no estado atual e adicione marcador
+  `(revisada em YYYY-MM-DD: motivo curto)`.
+
+**Depois da análise — limpeza periódica + escrita:**
+Antes de salvar qualquer arquivo, **pode** entradas obsoletas:
+- Eventos pendentes com `data-limite` no passado → remover
+- Ativos cuja posição zerou (quantidade atual no MCP = 0 e sem operações recentes) → remover tese
+- Decisões com mais de 12 meses **e** sobrescritas por nova decisão sobre o mesmo tema → descartar a antiga
+- "Ativos no radar" não mencionados nas últimas 3 conversas registradas → remover
+
+Em seguida, escreva conforme a tabela de roteamento. **Tese por ativo é sempre substituída,
+nunca anexada.** Atualize o cabeçalho `última atualização` para a data de hoje.
+
+**Propagação cross-portfólio:** análises consolidadas devem propagar descobertas relevantes
+para os `portfolio-*.md` afetados (ex.: se o setor bancário virou 35% do patrimônio total
+somando RV + FII de banco, isso vira nota nos arquivos individuais: "⚠️ contribui para
+sobreexposição a banking — ver `consolidado.md`").
+
+**Snapshot em `relatorios/`:** gere `relatorio-<id>-YYYY-MM-DD.md` (ou `relatorio-consolidado-YYYY-MM-DD.md`)
+**apenas em análises completas**, não em perguntas pontuais ou follow-ups curtos.
+
+### Atualização incremental do perfil
+
+Toda vez que o usuário expressar algo que **conflita** ou **complementa** o perfil
+("mudei de emprego, prioridade agora é liquidez", "vou começar a aceitar mais risco"):
+1. Atualize o item correspondente em `perfil-investidor.md` com a nova data.
+2. Mova a entrada antiga para uma seção `## Histórico` (manter apenas as 3 mais recentes;
+   antigas são descartadas).
+3. Se o usuário disser explicitamente "esquece o perfil que você tem, vamos refazer":
+   rode a entrevista de novo do zero.
+
+### Privacidade — regras inegociáveis
+
+- **Nunca** registre dados pessoais ou financeiros em `/memories/` do Claude Code (escopo
+  cross-project). Use **apenas** `.ia-invest-memory/` e `relatorios/`, que são locais ao
+  projeto e gitignorados.
+- **Nunca** sugira `git add` ou commit dos arquivos de memória/relatório. Eles devem
+  permanecer sempre fora do versionamento.
+
 ---
 
 ## ⚠️ Convenção crítica: valores em centavos
@@ -336,6 +460,16 @@ profunda), **leia o arquivo `references/macro-contexto.md`**:
 - ❌ Esquecer impacto cambial em ativos internacionais
 - ❌ Ignorar tamanho do aporte ao sugerir ativos com baixa liquidez
 - ❌ Esquecer que cripto tem comportamento muito distinto de RV tradicional
+- ❌ Ignorar memória existente em `.ia-invest-memory/` e refazer análise do zero
+- ❌ Salvar dados pessoais em `/memories/` do Claude Code ou em qualquer lugar fora dos
+  diretórios gitignorados (`.ia-invest-memory/` e `relatorios/`)
+- ❌ Gerar relatório novo idêntico ao último — preferir atualizar o delta
+- ❌ Anexar tese sem substituir a antiga (a memória cresce sem controle)
+- ❌ Salvar decisão duradoura do usuário em `portfolio-*.md` — sempre vai para `perfil-investidor.md`
+- ❌ Assumir qual portfólio o usuário quer quando há múltiplos do mesmo tipo — **pergunte**
+- ❌ Pular o onboarding em uma análise de carteira quando `perfil-investidor.md` está ausente/vazio
+- ❌ Manter eventos vencidos / ativos zerados / decisões obsoletas na memória sem podar
+- ❌ Sugerir `git add` ou commit dos arquivos de memória/relatório
 
 ---
 

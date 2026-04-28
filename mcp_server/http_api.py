@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -55,6 +55,11 @@ _DEFAULT_QUOTES_ENABLED = os.environ.get("IA_INVEST_QUOTES_ENABLED", "1")
 _DEFAULT_QUOTES_TTL_SECONDS = int(os.environ.get("IA_INVEST_QUOTES_TTL_SECONDS", "300"))
 _DEFAULT_QUOTES_TIMEOUT_SECONDS = float(os.environ.get("IA_INVEST_QUOTES_TIMEOUT_SECONDS", "2.0"))
 _DEFAULT_BENCHMARK_AUTO_SYNC = os.environ.get("IA_INVEST_BENCHMARK_AUTO_SYNC", "1")
+
+# Per-process throttle for the best-effort CDI auto-sync triggered by HTTP
+# requests. Without it the server would hit BACEN on every single request.
+_CDI_AUTO_SYNC_MIN_INTERVAL = timedelta(hours=1)
+_CDI_AUTO_SYNC_STATE: dict[str, datetime] = {}
 
 
 class PortfolioOut(BaseModel):
@@ -436,12 +441,24 @@ def _build_fixed_income_valuation_service(db: Database) -> FixedIncomeValuationS
 
 
 def _maybe_auto_sync_cdi(repo: BenchmarkRatesRepository) -> None:
-    """Best-effort incremental BACEN sync. Never raises."""
+    """Best-effort incremental BACEN sync. Never raises.
+
+    Throttled per-process: at most one sync attempt per hour, and skipped
+    entirely when the cache already covers today. This avoids hammering
+    BACEN on every HTTP request.
+    """
     try:
         _, coverage_end, _ = repo.get_coverage("CDI")
         today = date.today()
         if coverage_end is not None and coverage_end >= today:
             return
+
+        now = datetime.now()
+        last_attempt = _CDI_AUTO_SYNC_STATE.get("last_attempt")
+        if last_attempt is not None and (now - last_attempt) < _CDI_AUTO_SYNC_MIN_INTERVAL:
+            return
+        _CDI_AUTO_SYNC_STATE["last_attempt"] = now
+
         sync = BACENBenchmarkSyncService(repo)
         sync.sync("CDI")
     except Exception as exc:  # noqa: BLE001

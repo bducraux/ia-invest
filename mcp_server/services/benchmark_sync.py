@@ -163,6 +163,13 @@ class BACENBenchmarkSyncService:
         url = f"{_BASE_URL.format(code=code)}?{urlencode(params)}"
         payload = self._fetch_json(url)
 
+        # BACEN responds 404 when the requested range has no business-day
+        # data (e.g. today before publication, weekends, holidays). The
+        # ``_fetch_json`` helper translates that into an empty list so we
+        # treat it the same as "no new rows" instead of an error.
+        if payload is None:
+            return []
+
         if not isinstance(payload, list):
             raise BenchmarkSyncError(
                 f"Unexpected BACEN response shape for {benchmark}: not a list"
@@ -189,7 +196,21 @@ class BACENBenchmarkSyncService:
                 with urlopen(req, timeout=self._timeout_seconds) as resp:
                     body = resp.read().decode("utf-8")
                 return json.loads(body)
-            except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as exc:
+            except HTTPError as exc:
+                # 404 is BACEN's way of saying "no data in this range".
+                # Common when the requested window only covers today (before
+                # publication), weekends or holidays. Don't warn, don't retry.
+                if exc.code == 404:
+                    _logger.debug("bacen_no_data url=%s", url)
+                    return None
+                last_exc = exc
+                _logger.warning(
+                    "bacen_fetch_failed attempt=%d url=%s err=%s",
+                    attempt + 1,
+                    url,
+                    exc,
+                )
+            except (URLError, TimeoutError, json.JSONDecodeError) as exc:
                 last_exc = exc
                 _logger.warning(
                     "bacen_fetch_failed attempt=%d url=%s err=%s",

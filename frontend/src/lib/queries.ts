@@ -21,7 +21,7 @@ import {
 export function usePortfolios() {
   return useQuery({
     queryKey: ["portfolios"],
-    queryFn: getPortfolios,
+    queryFn: () => getPortfolios(),
   });
 }
 
@@ -170,5 +170,101 @@ export function useDeletePrevidenciaSnapshot(portfolioId: string) {
     mutationFn: (assetCode: string) =>
       deletePrevidenciaSnapshot(portfolioId, assetCode),
     onSuccess: () => invalidatePortfolioCaches(queryClient, portfolioId),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Members
+// ---------------------------------------------------------------------------
+
+import {
+  createMember,
+  deleteMember,
+  getMember,
+  getMemberPortfolios,
+  getMemberSummary,
+  getMembers,
+  transferPortfolioOwner,
+  updateMember,
+  type MemberCreateInput,
+  type MemberUpdateInput,
+} from "@/lib/api";
+
+export function useMembers(status?: "active" | "inactive") {
+  return useQuery({
+    queryKey: ["members", status ?? "all"],
+    queryFn: () => getMembers(status),
+  });
+}
+
+export function useMember(memberId: string | undefined) {
+  return useQuery({
+    queryKey: ["member", memberId],
+    queryFn: () => getMember(memberId as string),
+    enabled: Boolean(memberId),
+  });
+}
+
+export function useMemberPortfolios(memberId: string | undefined) {
+  return useQuery({
+    queryKey: ["member", memberId, "portfolios"],
+    queryFn: () => getMemberPortfolios(memberId as string),
+    enabled: Boolean(memberId),
+  });
+}
+
+export function useMemberSummary(memberId: string | undefined) {
+  return useQuery({
+    queryKey: ["member", memberId, "summary"],
+    queryFn: () => getMemberSummary(memberId as string),
+    enabled: Boolean(memberId),
+  });
+}
+
+export function useCreateMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: MemberCreateInput) => createMember(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["members"] });
+    },
+  });
+}
+
+export function useUpdateMember(memberId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: MemberUpdateInput) => updateMember(memberId, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["members"] });
+      queryClient.invalidateQueries({ queryKey: ["member", memberId] });
+    },
+  });
+}
+
+export function useDeleteMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (memberId: string) => deleteMember(memberId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["members"] });
+    },
+  });
+}
+
+export function useTransferPortfolioOwner() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      portfolioId,
+      newOwnerId,
+    }: {
+      portfolioId: string;
+      newOwnerId: string;
+    }) => transferPortfolioOwner(portfolioId, newOwnerId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["portfolios"] });
+      queryClient.invalidateQueries({ queryKey: ["members"] });
+    },
   });
 }

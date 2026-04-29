@@ -1,10 +1,18 @@
 """Create a new portfolio folder from templates.
 
+Layout (since the Members feature):
+
+    portfolios/
+      <owner-id>/
+        <portfolio-id>/
+          portfolio.yml
+          inbox/  staging/  processed/  rejected/  exports/
+
 Usage::
 
     python scripts/create_portfolio.py
-    python scripts/create_portfolio.py --name "Minha Carteira"
-    python scripts/create_portfolio.py --type renda-variavel --name "Acoes"
+    python scripts/create_portfolio.py --owner bruno --type renda-fixa --name "Renda Fixa"
+    python scripts/create_portfolio.py --owner bruno --type renda-variavel --name "Acoes"
     python scripts/create_portfolio.py --templates-root /path/to/templates
 """
 
@@ -12,16 +20,23 @@ from __future__ import annotations
 
 import argparse
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
 import yaml
 
+from storage.repository.db import Database
+from storage.repository.members import MemberRepository
+
 _DEFAULT_TEMPLATES_ROOT = Path(__file__).parent.parent / "templates"
 _PORTFOLIOS_DIR = Path("portfolios")
+_DEFAULT_DB_PATH = Path("ia_invest.db")
 _GENERIC_TYPE = "generic"
 _REQUIRED_SUBDIRS = ("inbox", "staging", "processed", "rejected", "exports")
 
+
+# ---------------------------------------------------------------------- helpers
 
 def _discover_template_dirs(templates_root: Path) -> dict[str, Path]:
     if not templates_root.exists() or not templates_root.is_dir():
@@ -36,25 +51,24 @@ def _discover_template_dirs(templates_root: Path) -> dict[str, Path]:
     return templates
 
 
-def _slugify_portfolio_id(name: str) -> str:
-    portfolio_id = re.sub(r"[^a-zA-Z0-9_-]+", "-", name.strip().lower())
-    portfolio_id = re.sub(r"-+", "-", portfolio_id).strip("-")
-    if not portfolio_id:
-        raise ValueError("Portfolio name must contain at least one valid character.")
-    return portfolio_id
+def _slugify(value: str) -> str:
+    slug = re.sub(r"[^a-zA-Z0-9_-]+", "-", value.strip().lower())
+    slug = re.sub(r"-+", "-", slug).strip("-")
+    if not slug:
+        raise ValueError("Value must contain at least one valid character.")
+    return slug
 
 
-def _prompt_portfolio_name() -> str:
+def _prompt(label: str) -> str:
     while True:
-        raw = input("Portfolio name: ").strip()
+        raw = input(f"{label}: ").strip()
         if raw:
             return raw
-        print("Please provide a non-empty portfolio name.")
+        print("Please provide a non-empty value.")
 
 
-def _prompt_portfolio_type(template_names: list[str]) -> str:
-    options = [_GENERIC_TYPE, *template_names]
-    print("Choose portfolio type:")
+def _prompt_choice(prompt_text: str, options: list[str]) -> str:
+    print(prompt_text)
     for idx, option in enumerate(options, start=1):
         print(f"  {idx}. {option}")
 
@@ -63,7 +77,6 @@ def _prompt_portfolio_type(template_names: list[str]) -> str:
         if not choice.isdigit():
             print("Please enter a valid number.")
             continue
-
         index = int(choice)
         if 1 <= index <= len(options):
             return options[index - 1]
@@ -80,25 +93,17 @@ def _create_runtime_dirs(portfolio_dir: Path) -> None:
         (portfolio_dir / subdir).mkdir(parents=True, exist_ok=True)
 
 
-def _create_from_generic_template(
-    target_dir: Path,
-    *,
-    portfolio_id: str,
-    portfolio_name: str,
-    description: str | None,
-) -> None:
-    target_dir.mkdir(parents=True, exist_ok=False)
-    _create_runtime_dirs(target_dir)
-
-    manifest: dict[str, Any] = {
+def _build_generic_manifest(
+    *, portfolio_id: str, portfolio_name: str, owner_id: str, description: str | None
+) -> dict[str, Any]:
+    return {
         "id": portfolio_id,
         "name": portfolio_name,
         "description": description or "Portfolio de investimentos",
         "base_currency": "BRL",
         "status": "active",
-        "rules": {
-            "allowed_asset_types": [],
-        },
+        "owner_id": owner_id,
+        "rules": {"allowed_asset_types": []},
         "sources": [],
         "import": {
             "move_processed_files": True,
@@ -111,139 +116,157 @@ def _create_from_generic_template(
             ],
         },
     }
-    _write_manifest(target_dir / "portfolio.yml", manifest)
 
 
-def _create_from_template_dir(
-    template_dir: Path,
-    target_dir: Path,
-    *,
-    portfolio_id: str,
-    portfolio_name: str,
-    description: str | None,
-) -> None:
+def _load_template_manifest(template_dir: Path) -> dict[str, Any]:
     manifest_template = template_dir / "portfolio.yml"
     if not manifest_template.exists():
         raise FileNotFoundError(f"Template manifest not found: {manifest_template}")
-
-    target_dir.mkdir(parents=True, exist_ok=False)
-
     with manifest_template.open(encoding="utf-8") as fh:
-        manifest = yaml.safe_load(fh) or {}
+        return dict(yaml.safe_load(fh) or {})
 
-    manifest["id"] = portfolio_id
-    manifest["name"] = portfolio_name
-    if description is not None:
-        manifest["description"] = description
 
-    _write_manifest(target_dir / "portfolio.yml", manifest)
-    _create_runtime_dirs(target_dir)
-
+# ---------------------------------------------------------------- main API
 
 def create_portfolio(
     portfolio_name: str,
     *,
     portfolio_type: str,
+    owner_id: str,
     templates_root: Path = _DEFAULT_TEMPLATES_ROOT,
     portfolios_dir: Path = _PORTFOLIOS_DIR,
     description: str | None = None,
 ) -> Path:
+    """Create the on-disk portfolio folder and manifest. Returns the new dir."""
     templates = _discover_template_dirs(templates_root)
     known_types = [_GENERIC_TYPE, *templates.keys()]
     if portfolio_type not in known_types:
         raise ValueError(
-            f"Unknown portfolio type '{portfolio_type}'. Available: {', '.join(known_types)}"
+            f"Unknown portfolio type '{portfolio_type}'. "
+            f"Available: {', '.join(known_types)}"
         )
 
-    portfolio_id = _slugify_portfolio_id(portfolio_name)
-    target_dir = portfolios_dir / portfolio_id
+    if not owner_id:
+        raise ValueError("owner_id is required to create a portfolio.")
+
+    portfolio_id = _slugify(portfolio_name)
+    owner_dir = portfolios_dir / owner_id
+    target_dir = owner_dir / portfolio_id
 
     if target_dir.exists():
         raise FileExistsError(f"Target portfolio already exists: {target_dir}")
 
-    portfolios_dir.mkdir(parents=True, exist_ok=True)
+    owner_dir.mkdir(parents=True, exist_ok=True)
+    target_dir.mkdir(parents=True, exist_ok=False)
+
     if portfolio_type == _GENERIC_TYPE:
-        _create_from_generic_template(
-            target_dir,
+        manifest = _build_generic_manifest(
             portfolio_id=portfolio_id,
             portfolio_name=portfolio_name,
+            owner_id=owner_id,
             description=description,
         )
     else:
-        _create_from_template_dir(
-            templates[portfolio_type],
-            target_dir,
-            portfolio_id=portfolio_id,
-            portfolio_name=portfolio_name,
-            description=description,
-        )
+        manifest = _load_template_manifest(templates[portfolio_type])
+        manifest["id"] = portfolio_id
+        manifest["name"] = portfolio_name
+        manifest["owner_id"] = owner_id
+        if description is not None:
+            manifest["description"] = description
 
+    _write_manifest(target_dir / "portfolio.yml", manifest)
+    _create_runtime_dirs(target_dir)
     return target_dir
+
+
+# ------------------------------------------------------------------- CLI
+
+def _resolve_owner(member_repo: MemberRepository, value: str | None) -> str:
+    """Resolve the owner the user wants from the active members in the DB."""
+    active = member_repo.list_active()
+    if not active:
+        print(
+            "ERROR: no active members found in the database.\n"
+            "       Create one first with: python scripts/create_member.py "
+            "--name 'Bruno'",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    if value:
+        member = member_repo.get_by_id_or_name(value)
+        if member is None:
+            print(
+                f"ERROR: member '{value}' not found. Active members: "
+                f"{', '.join(m.id for m in active)}",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        return member.id
+
+    options = [f"{m.id}  ({m.name})" for m in active]
+    chosen = _prompt_choice("Choose owner:", options)
+    return active[options.index(chosen)].id
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Create a portfolio directory from templates."
     )
-    parser.add_argument(
-        "--name",
-        help="Portfolio display name. If omitted, asks interactively.",
-    )
+    parser.add_argument("--owner", help="Member id or name that owns the portfolio.")
+    parser.add_argument("--name", help="Portfolio display name.")
     parser.add_argument(
         "--type",
         dest="portfolio_type",
-        help="Portfolio type/template to use (e.g. renda-variavel, renda-fixa, cripto, generic).",
+        help="Portfolio type/template (renda-variavel, renda-fixa, cripto, generic, ...).",
     )
-    parser.add_argument(
-        "--description",
-        help="Optional portfolio description override.",
-    )
+    parser.add_argument("--description", help="Optional portfolio description override.")
     parser.add_argument(
         "--templates-root",
         default=str(_DEFAULT_TEMPLATES_ROOT),
-        help=(
-            "Root directory with portfolio templates. "
-            "Each subfolder containing portfolio.yml is a type. "
-            f"(default: {_DEFAULT_TEMPLATES_ROOT})"
-        ),
+        help=f"Root directory with portfolio templates (default: {_DEFAULT_TEMPLATES_ROOT}).",
     )
     parser.add_argument(
-        "--sample-dir",
-        help=(
-            "Deprecated. Use --type and --templates-root. "
-            "If provided, this directory is used as a one-off custom template."
-        ),
+        "--portfolios-dir",
+        default=str(_PORTFOLIOS_DIR),
+        help=f"Root directory for created portfolios (default: {_PORTFOLIOS_DIR}).",
+    )
+    parser.add_argument(
+        "--db",
+        default=str(_DEFAULT_DB_PATH),
+        help=f"Path to the SQLite database (default: {_DEFAULT_DB_PATH}).",
     )
     args = parser.parse_args()
 
-    portfolio_name = args.name.strip() if args.name else _prompt_portfolio_name()
+    portfolio_name = args.name.strip() if args.name else _prompt("Portfolio name")
+
+    templates_root = Path(args.templates_root)
+    portfolios_dir = Path(args.portfolios_dir)
+
+    with Database(Path(args.db)) as db:
+        db.initialize()
+        owner_id = _resolve_owner(MemberRepository(db.connection), args.owner)
 
     portfolio_type = args.portfolio_type
-    templates_root = Path(args.templates_root)
-
-    if args.sample_dir:
-        sample_dir = Path(args.sample_dir)
-        if not sample_dir.exists() or not sample_dir.is_dir():
-            raise FileNotFoundError(f"Sample directory not found: {sample_dir}")
-
-        temp_type = sample_dir.name
-        if not (sample_dir / "portfolio.yml").exists():
-            raise FileNotFoundError(f"Template manifest not found: {sample_dir / 'portfolio.yml'}")
-
-        portfolio_type = temp_type
-        templates_root = sample_dir.parent
-
     if not portfolio_type:
         templates = _discover_template_dirs(templates_root)
-        portfolio_type = _prompt_portfolio_type(sorted(templates.keys()))
+        portfolio_type = _prompt_choice(
+            "Choose portfolio type:",
+            [_GENERIC_TYPE, *sorted(templates.keys())],
+        )
 
     created_dir = create_portfolio(
         portfolio_name,
         portfolio_type=portfolio_type,
+        owner_id=owner_id,
         templates_root=templates_root,
+        portfolios_dir=portfolios_dir,
         description=args.description,
     )
-    print(f"Portfolio created: {created_dir} (type: {portfolio_type})")
+    print(
+        f"Portfolio created: {created_dir}  "
+        f"(type: {portfolio_type}, owner: {owner_id})"
+    )
 
 
 if __name__ == "__main__":

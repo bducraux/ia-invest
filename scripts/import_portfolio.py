@@ -271,22 +271,61 @@ def _import_previdencia_ibm_file(
     }
 
 
+def _find_portfolio_dir(portfolio_id: str, *, owner_id: str | None = None) -> Path | None:
+    """Locate a portfolio directory under either the new
+    ``portfolios/<owner>/<portfolio>/`` layout or the legacy
+    ``portfolios/<portfolio>/`` layout.  When ``owner_id`` is provided, only
+    that owner's subtree is considered.
+    """
+    if owner_id:
+        candidate = _PORTFOLIOS_DIR / owner_id / portfolio_id
+        return candidate if candidate.exists() else None
+
+    # 1) New layout — search every owner directory for a matching portfolio
+    if _PORTFOLIOS_DIR.exists():
+        for owner_dir in _PORTFOLIOS_DIR.iterdir():
+            if not owner_dir.is_dir():
+                continue
+            candidate = owner_dir / portfolio_id
+            if (candidate / "portfolio.yml").exists():
+                return candidate
+
+    # 2) Legacy single-level layout — kept for backward compatibility with
+    #    older fixtures and tests.
+    legacy = _PORTFOLIOS_DIR / portfolio_id
+    if (legacy / "portfolio.yml").exists():
+        return legacy
+    return None
+
+
 def import_portfolio(
     portfolio_id: str,
     *,
     db_path: Path = Path("ia_invest.db"),
     dry_run: bool = False,
+    owner_id: str | None = None,
 ) -> dict[str, Any]:
     """Import all inbox files for the given portfolio.
 
     Returns a summary dict with counts and status.
-    """
-    portfolio_dir = _PORTFOLIOS_DIR / portfolio_id
-    manifest_path = portfolio_dir / "portfolio.yml"
 
-    if not portfolio_dir.exists():
-        log.error("portfolio_dir_not_found", path=str(portfolio_dir))
-        return {"error": f"Portfolio directory not found: {portfolio_dir}"}
+    The portfolio is located under either the new
+    ``portfolios/<owner>/<portfolio>/`` layout (preferred) or the legacy
+    ``portfolios/<portfolio>/`` layout.  When the new layout is used and the
+    ``portfolio.yml`` ``owner_id`` does not match the parent folder name,
+    the import is aborted with an explicit error.
+    """
+    portfolio_dir = _find_portfolio_dir(portfolio_id, owner_id=owner_id)
+    if portfolio_dir is None:
+        searched = (
+            f"portfolios/{owner_id}/{portfolio_id}"
+            if owner_id
+            else f"portfolios/<owner>/{portfolio_id} or portfolios/{portfolio_id}"
+        )
+        log.error("portfolio_dir_not_found", portfolio=portfolio_id, searched=searched)
+        return {"error": f"Portfolio directory not found: {searched}"}
+
+    manifest_path = portfolio_dir / "portfolio.yml"
 
     # Load and validate portfolio manifest
     portfolio_svc = PortfolioService()
@@ -295,6 +334,26 @@ def import_portfolio(
     except (FileNotFoundError, ValueError) as exc:
         log.error("manifest_error", error=str(exc))
         return {"error": str(exc)}
+
+    # New layout: validate that portfolio.yml::owner_id matches the parent
+    # folder name.  When the portfolio lives directly under portfolios/ (legacy
+    # single-level layout) the parent folder is `portfolios` and we skip the
+    # check for backward compatibility.
+    parent_dir_name = portfolio_dir.parent.name
+    if parent_dir_name != _PORTFOLIOS_DIR.name and parent_dir_name != portfolio.owner_id:
+        message = (
+            f"Owner mismatch for portfolio '{portfolio_id}': "
+            f"folder is owned by '{parent_dir_name}' but portfolio.yml "
+            f"declares owner_id='{portfolio.owner_id}'. "
+            "Either rename the parent folder or update the manifest."
+        )
+        log.error(
+            "owner_id_mismatch",
+            portfolio=portfolio_id,
+            folder_owner=parent_dir_name,
+            manifest_owner=portfolio.owner_id,
+        )
+        return {"error": message}
 
     inbox = portfolio_dir / "inbox"
     staging = portfolio_dir / "staging"
@@ -321,6 +380,23 @@ def import_portfolio(
 
     with Database(db_path) as db:
         db.initialize()
+
+        # Ensure the owner member exists (auto-upsert from manifest data).
+        # This keeps the import lenient: users who provision portfolio
+        # folders manually don't need to also run `create_member.py` first.
+        from domain.members import Member  # local import to avoid cycles
+        from storage.repository.members import MemberRepository
+
+        member_repo = MemberRepository(db.connection)
+        if member_repo.get(portfolio.owner_id) is None:
+            log.info(
+                "auto_creating_owner_member",
+                owner_id=portfolio.owner_id,
+                portfolio=portfolio_id,
+            )
+            member_repo.upsert(
+                Member(id=portfolio.owner_id, name=portfolio.owner_id)
+            )
 
         # Ensure portfolio is registered in DB
         portfolio_repo = PortfolioRepository(db.connection)
@@ -622,7 +698,16 @@ def main() -> None:
     parser.add_argument(
         "--portfolio",
         required=True,
-        help="Portfolio ID (must match a subfolder under portfolios/)",
+        help="Portfolio ID (folder name under portfolios/<owner>/).",
+    )
+    parser.add_argument(
+        "--owner",
+        default=None,
+        help=(
+            "Owner ID (folder name under portfolios/). When omitted the "
+            "portfolio is searched across all owner subfolders, then the "
+            "legacy single-level layout."
+        ),
     )
     parser.add_argument(
         "--db",
@@ -640,6 +725,7 @@ def main() -> None:
         args.portfolio,
         db_path=Path(args.db),
         dry_run=args.dry_run,
+        owner_id=args.owner,
     )
 
     if "error" in result:

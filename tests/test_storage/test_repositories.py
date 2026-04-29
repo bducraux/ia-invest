@@ -159,3 +159,64 @@ def test_position_list_open(db: Database) -> None:
     open_positions = pos_repo.list_open_by_portfolio("rv")
     assert len(open_positions) == 1
     assert open_positions[0]["asset_code"] == "PETR4"
+
+
+# ---------------------------------------------------------------------------
+# Owner-related extensions to PortfolioRepository
+# ---------------------------------------------------------------------------
+
+def test_portfolio_list_by_owner(db: Database) -> None:
+    from domain.members import Member
+    from storage.repository.members import MemberRepository
+
+    MemberRepository(db.connection).upsert(Member(id="bruno", name="Bruno"))
+    MemberRepository(db.connection).upsert(Member(id="rafa", name="Rafa"))
+    repo = PortfolioRepository(db.connection)
+    repo.upsert(Portfolio(id="rv-bruno", name="RV", owner_id="bruno"))
+    repo.upsert(Portfolio(id="rf-bruno", name="RF", owner_id="bruno"))
+    repo.upsert(Portfolio(id="rv-rafa", name="RV", owner_id="rafa"))
+
+    bruno_pids = [p.id for p in repo.list_by_owner("bruno")]
+    assert bruno_pids == ["rf-bruno", "rv-bruno"]
+    assert [p.id for p in repo.list_by_owner("rafa")] == ["rv-rafa"]
+    assert repo.list_by_owner("missing") == []
+
+
+def test_portfolio_transfer_ownership(db: Database) -> None:
+    from domain.members import Member
+    from storage.repository.members import MemberRepository
+
+    MemberRepository(db.connection).upsert(Member(id="bruno", name="Bruno"))
+    MemberRepository(db.connection).upsert(Member(id="rafa", name="Rafa"))
+    repo = PortfolioRepository(db.connection)
+    repo.upsert(Portfolio(id="rv", name="RV", owner_id="bruno"))
+
+    repo.transfer_ownership("rv", "rafa")
+    got = repo.get("rv")
+    assert got is not None and got.owner_id == "rafa"
+
+
+def test_portfolio_transfer_ownership_unknown_member(db: Database) -> None:
+    from domain.members import Member
+    from storage.repository.members import MemberRepository
+
+    MemberRepository(db.connection).upsert(Member(id="bruno", name="Bruno"))
+    repo = PortfolioRepository(db.connection)
+    repo.upsert(Portfolio(id="rv", name="RV", owner_id="bruno"))
+
+    import pytest as _pytest
+
+    with _pytest.raises(ValueError, match="Member 'ghost' not found"):
+        repo.transfer_ownership("rv", "ghost")
+
+
+def test_portfolio_owner_id_required_at_db_level(db: Database) -> None:
+    """Schema enforces NOT NULL on owner_id."""
+    import sqlite3
+    import pytest as _pytest
+
+    with _pytest.raises(sqlite3.IntegrityError):
+        db.connection.execute(
+            "INSERT INTO portfolios (id, name, base_currency, status) "
+            "VALUES ('x', 'X', 'BRL', 'active')"
+        )

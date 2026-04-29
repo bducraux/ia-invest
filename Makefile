@@ -59,7 +59,10 @@ migrate:
 reset-db:
 	rm -f ia_invest.db ia_invest.db-wal ia_invest.db-shm
 	uv run python scripts/init_db.py
-	@for dir in portfolios/*/processed; do \
+	@echo ""
+	@echo "Bootstrapping members from portfolios/ folder layout..."
+	uv run python scripts/bootstrap_members_from_fs.py
+	@for dir in portfolios/*/*/processed; do \
 		if ls "$$dir"/* 2>/dev/null | grep -qv '.gitkeep'; then \
 			cp "$$dir"/* "$$(dirname $$dir)/inbox/" 2>/dev/null || true; \
 		fi; \

@@ -25,10 +25,20 @@ class Portfolio:
     # tests and ad-hoc constructions ergonomic; production code paths
     # (manifest loading, create_portfolio script) explicitly require it.
     owner_id: str = "default"
+    # Owner-scoped human-readable identifier (e.g. "renda-fixa").
+    # The canonical `id` is namespaced as f"{owner_id}__{slug}" to allow
+    # different owners to have portfolios with the same slug without
+    # colliding on the portfolios.id PRIMARY KEY.
+    slug: str = ""
     config: dict[str, Any] | None = None
     # Optional hydrated owner object, populated when callers wish to surface
     # the full member alongside the portfolio (e.g. HTTP responses).
     owner: Any | None = None
+
+    def __post_init__(self) -> None:
+        if not self.slug:
+            # Derive slug from id when not explicitly provided.
+            self.slug = self.id.split("__", 1)[1] if "__" in self.id else self.id
 
     @property
     def allowed_asset_types(self) -> list[str]:

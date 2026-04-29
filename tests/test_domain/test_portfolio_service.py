@@ -32,7 +32,8 @@ def valid_manifest(tmp_path: Path) -> Path:
 
 def test_load_valid_manifest(svc: PortfolioService, valid_manifest: Path) -> None:
     portfolio = svc.load_from_yaml(valid_manifest)
-    assert portfolio.id == "renda-variavel"
+    assert portfolio.id == "default__renda-variavel"
+    assert portfolio.slug == "renda-variavel"
     assert portfolio.name == "Renda Variável"
     assert portfolio.base_currency == "BRL"
     assert portfolio.status == "active"

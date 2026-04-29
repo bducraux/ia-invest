@@ -30,8 +30,14 @@ CREATE INDEX IF NOT EXISTS idx_members_status ON members(status);
 -- Source of truth for portfolio configuration derived from portfolio.yml.
 -- Each portfolio has a mandatory owner_id pointing at members.id.
 -- ---------------------------------------------------------------------------
+-- The PRIMARY KEY `id` is owner-scoped: f"{owner_id}__{slug}".
+-- This allows different owners to have portfolios with the same slug
+-- (e.g. "renda-fixa") without colliding.  The `slug` column carries the
+-- raw, owner-local identifier; `UNIQUE(owner_id, slug)` guards against
+-- duplicate portfolios for the same member.
 CREATE TABLE IF NOT EXISTS portfolios (
-    id              TEXT PRIMARY KEY,           -- matches portfolio.yml id
+    id              TEXT PRIMARY KEY,           -- f"{owner_id}__{slug}"
+    slug            TEXT NOT NULL,              -- raw portfolio.yml id
     name            TEXT NOT NULL,
     description     TEXT,
     base_currency   TEXT NOT NULL DEFAULT 'BRL',
@@ -40,7 +46,8 @@ CREATE TABLE IF NOT EXISTS portfolios (
     owner_id        TEXT NOT NULL REFERENCES members(id),
     config_json     TEXT,                       -- full portfolio.yml as JSON
     created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+    updated_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    UNIQUE (owner_id, slug)
 );
 
 CREATE INDEX IF NOT EXISTS idx_portfolios_owner ON portfolios(owner_id);
@@ -344,3 +351,6 @@ VALUES ('0001', 'initial schema — all tables, indexes, and constraints');
 
 INSERT OR IGNORE INTO schema_migrations (version, description)
 VALUES ('0002', 'add members table and portfolios.owner_id');
+
+INSERT OR IGNORE INTO schema_migrations (version, description)
+VALUES ('0003', 'namespace portfolios.id as owner__slug; add slug column');

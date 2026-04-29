@@ -46,13 +46,33 @@ class PortfolioService:
 
         self._validate_config(config)
 
+        # Treat the manifest `id` as the owner-local SLUG.  The canonical
+        # database id is namespaced as f"{owner_id}__{slug}" so two members
+        # can own portfolios with the same slug (e.g. "renda-fixa") without
+        # colliding on the portfolios.id PRIMARY KEY.
+        owner_id = str(config["owner_id"]).strip().lower()
+        raw_id = str(config["id"]).strip()
+        if "__" in raw_id:
+            # Already namespaced — keep the slug part for storage.
+            namespace, slug = raw_id.split("__", 1)
+            if namespace != owner_id:
+                raise ValueError(
+                    f"Manifest id '{raw_id}' is namespaced for owner "
+                    f"'{namespace}' but owner_id is '{owner_id}'."
+                )
+            canonical_id = raw_id
+        else:
+            slug = raw_id
+            canonical_id = f"{owner_id}__{slug}"
+
         return Portfolio(
-            id=config["id"],
+            id=canonical_id,
+            slug=slug,
             name=config["name"],
             description=config.get("description"),
             base_currency=config.get("base_currency", "BRL"),
             status=config.get("status", "active"),
-            owner_id=str(config["owner_id"]).strip().lower(),
+            owner_id=owner_id,
             config=config,
         )
 

@@ -263,9 +263,17 @@ def main() -> None:
         portfolios_dir=portfolios_dir,
         description=args.description,
     )
+    # Read back the manifest to surface the canonical (owner-namespaced) id
+    # so users know exactly how to reference the portfolio in CLI/API calls.
+    manifest = yaml.safe_load((created_dir / "portfolio.yml").read_text(encoding="utf-8"))
+    slug = manifest.get("id", created_dir.name)
+    namespaced_id = f"{owner_id}__{slug}"
     print(
-        f"Portfolio created: {created_dir}  "
-        f"(type: {portfolio_type}, owner: {owner_id})"
+        f"Portfolio created: {created_dir}\n"
+        f"  type:           {portfolio_type}\n"
+        f"  owner:          {owner_id}\n"
+        f"  slug:           {slug}\n"
+        f"  canonical id:   {namespaced_id}"
     )
 
 

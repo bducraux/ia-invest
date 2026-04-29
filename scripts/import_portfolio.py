@@ -276,19 +276,45 @@ def _find_portfolio_dir(portfolio_id: str, *, owner_id: str | None = None) -> Pa
     ``portfolios/<owner>/<portfolio>/`` layout or the legacy
     ``portfolios/<portfolio>/`` layout.  When ``owner_id`` is provided, only
     that owner's subtree is considered.
+
+    ``portfolio_id`` may be either:
+      * a raw slug (e.g. ``renda-fixa``), or
+      * a namespaced id (e.g. ``bruno__renda-fixa``) which encodes the owner
+        directly and bypasses the cross-owner ambiguity check.
     """
+    # Namespaced id takes precedence over the optional owner_id arg.
+    if "__" in portfolio_id:
+        ns_owner, slug = portfolio_id.split("__", 1)
+        if owner_id and owner_id != ns_owner:
+            return None
+        candidate = _PORTFOLIOS_DIR / ns_owner / slug
+        return candidate if candidate.exists() else None
+
     if owner_id:
         candidate = _PORTFOLIOS_DIR / owner_id / portfolio_id
         return candidate if candidate.exists() else None
 
-    # 1) New layout — search every owner directory for a matching portfolio
+    # 1) New layout — search every owner directory for a matching portfolio.
+    #    If multiple owners have a portfolio with the same slug we refuse to
+    #    pick one silently; the caller must disambiguate via --owner or by
+    #    using the namespaced id.
+    matches: list[Path] = []
     if _PORTFOLIOS_DIR.exists():
         for owner_dir in _PORTFOLIOS_DIR.iterdir():
             if not owner_dir.is_dir():
                 continue
             candidate = owner_dir / portfolio_id
             if (candidate / "portfolio.yml").exists():
-                return candidate
+                matches.append(candidate)
+    if len(matches) == 1:
+        return matches[0]
+    if len(matches) > 1:
+        owners = sorted(m.parent.name for m in matches)
+        raise ValueError(
+            f"Portfolio slug '{portfolio_id}' is ambiguous across owners "
+            f"({', '.join(owners)}). Use --owner <id> or pass the namespaced "
+            f"id (e.g. '{owners[0]}__{portfolio_id}')."
+        )
 
     # 2) Legacy single-level layout — kept for backward compatibility with
     #    older fixtures and tests.
@@ -354,6 +380,13 @@ def import_portfolio(
             manifest_owner=portfolio.owner_id,
         )
         return {"error": message}
+
+    # The local CLI argument `portfolio_id` may be a slug (e.g. "renda-fixa")
+    # but the canonical database id is owner-scoped (e.g. "bruno__renda-fixa").
+    # Reassign so every downstream call (repositories, FKs, log entries) uses
+    # the namespaced id consistently.
+    portfolio_slug = portfolio.slug
+    portfolio_id = portfolio.id
 
     inbox = portfolio_dir / "inbox"
     staging = portfolio_dir / "staging"
@@ -425,7 +458,7 @@ def import_portfolio(
         }
 
         latest_previdencia_file: Path | None = None
-        if portfolio_id == "fundacao-ibm":
+        if portfolio_slug == "fundacao-ibm":
             latest_previdencia_file = _select_latest_previdencia_file(files, enabled_sources)
 
         # Pre-pass: harvest Avenue/Apex aliases (description → ticker) from
@@ -501,7 +534,7 @@ def import_portfolio(
                 summary["files_rejected"] += 1
                 continue
 
-            if is_previdencia_file and portfolio_id == "fundacao-ibm" and latest_previdencia_file is not None:
+            if is_previdencia_file and portfolio_slug == "fundacao-ibm" and latest_previdencia_file is not None:
                 if file_path != latest_previdencia_file:
                     log.info(
                         "previdencia_file_skipped_not_latest",

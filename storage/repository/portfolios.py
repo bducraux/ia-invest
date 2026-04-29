@@ -18,12 +18,13 @@ class PortfolioRepository:
         config_json = json.dumps(portfolio.config) if portfolio.config else None
         self._conn.execute(
             """
-            INSERT INTO portfolios (id, name, description, base_currency, status,
-                                    owner_id, config_json, updated_at)
-            VALUES (:id, :name, :description, :base_currency, :status,
+            INSERT INTO portfolios (id, slug, name, description, base_currency,
+                                    status, owner_id, config_json, updated_at)
+            VALUES (:id, :slug, :name, :description, :base_currency, :status,
                     :owner_id, :config_json,
                     strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
             ON CONFLICT(id) DO UPDATE SET
+                slug          = excluded.slug,
                 name          = excluded.name,
                 description   = excluded.description,
                 base_currency = excluded.base_currency,
@@ -34,6 +35,7 @@ class PortfolioRepository:
             """,
             {
                 "id": portfolio.id,
+                "slug": portfolio.slug or portfolio.id,
                 "name": portfolio.name,
                 "description": portfolio.description,
                 "base_currency": portfolio.base_currency,
@@ -114,8 +116,13 @@ class PortfolioRepository:
             owner_id = row["owner_id"] or "default"
         except IndexError:
             owner_id = "default"
+        try:
+            slug = row["slug"] or ""
+        except IndexError:
+            slug = ""
         return Portfolio(
             id=row["id"],
+            slug=slug,
             name=row["name"],
             description=row["description"],
             base_currency=row["base_currency"],

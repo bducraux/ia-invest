@@ -70,7 +70,7 @@ import:
         """
         SELECT asset_code, product_name, period_month, unit_price_cents
         FROM previdencia_snapshots
-        WHERE portfolio_id = 'fundacao-ibm'
+        WHERE portfolio_id = 'default__fundacao-ibm'
         """
     ).fetchone()
     db.close()

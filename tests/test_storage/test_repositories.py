@@ -204,9 +204,7 @@ def test_portfolio_transfer_ownership_unknown_member(db: Database) -> None:
     repo = PortfolioRepository(db.connection)
     repo.upsert(Portfolio(id="rv", name="RV", owner_id="bruno"))
 
-    import pytest as _pytest
-
-    with _pytest.raises(ValueError, match="Member 'ghost' not found"):
+    with pytest.raises(ValueError, match="Member 'ghost' not found"):
         repo.transfer_ownership("rv", "ghost")
 
 
@@ -214,9 +212,7 @@ def test_portfolio_owner_id_required_at_db_level(db: Database) -> None:
     """Schema enforces NOT NULL on owner_id."""
     import sqlite3
 
-    import pytest as _pytest
-
-    with _pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(sqlite3.IntegrityError):
         db.connection.execute(
             "INSERT INTO portfolios (id, name, base_currency, status) "
             "VALUES ('x', 'X', 'BRL', 'active')"

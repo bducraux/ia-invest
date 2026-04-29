@@ -38,7 +38,7 @@ def list_members(db: Database, *, only_active: bool = True) -> list[dict[str, An
     out = []
     for m in members:
         d = _member_to_dict(m)
-        d["portfolio_count"] = repo.count_portfolios(m.id)
+        d["portfolio_count"] = repo.count_portfolios(m.id, only_active=only_active)
         out.append(d)
     return out
 
@@ -50,7 +50,7 @@ def get_member(db: Database, member_id: str) -> dict[str, Any]:
     if member is None:
         return {"error": f"Member '{member_id}' not found."}
     out = _member_to_dict(member)
-    out["portfolio_count"] = repo.count_portfolios(member.id)
+    out["portfolio_count"] = repo.count_portfolios(member.id, only_active=True)
     return out
 
 

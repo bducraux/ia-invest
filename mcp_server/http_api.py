@@ -848,7 +848,7 @@ def create_http_app(
             displayName=member.display_name,
             email=member.email,
             status=member.status,
-            portfolioCount=repo.count_portfolios(member.id),
+            portfolioCount=repo.count_portfolios(member.id, only_active=True),
             createdAt=member.created_at,
             updatedAt=member.updated_at,
         )

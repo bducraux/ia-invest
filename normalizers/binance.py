@@ -17,7 +17,6 @@ from normalizers.validator import (
     normalise_asset_code,
     normalise_operation_type,
     parse_date,
-    parse_monetary_cents,
 )
 
 

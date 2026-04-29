@@ -5,13 +5,14 @@ They ensure these bugs never come back.
 """
 
 import pytest
+
+from domain.models import Portfolio
 from domain.position_service import PositionService
 from normalizers.operations import OperationNormalizer
 from storage.repository.db import Database
 from storage.repository.operations import OperationRepository
 from storage.repository.portfolios import PortfolioRepository
 from storage.repository.positions import PositionRepository
-from domain.models import Portfolio
 
 
 @pytest.fixture

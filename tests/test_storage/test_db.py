@@ -54,7 +54,12 @@ def test_context_manager_closes_connection(tmp_path: Path) -> None:
 def test_initialize_updates_existing_database_with_new_tables(tmp_path: Path) -> None:
     db_path = tmp_path / "test.db"
     db = Database(db_path)
-    db.connection.execute("CREATE TABLE portfolios (id TEXT PRIMARY KEY)")
+    # Pre-create a portfolios table that already has the owner_id column so
+    # the canonical schema's `CREATE INDEX ... ON portfolios(owner_id)` can be
+    # applied idempotently on top of an existing partial schema.
+    db.connection.execute(
+        "CREATE TABLE portfolios (id TEXT PRIMARY KEY, owner_id TEXT)"
+    )
     db.connection.commit()
     db.close()
 
@@ -68,4 +73,5 @@ def test_initialize_updates_existing_database_with_new_tables(tmp_path: Path) ->
     }
     assert "fixed_income_positions" in tables
     assert "schema_migrations" in tables
+    assert "members" in tables
     db.close()

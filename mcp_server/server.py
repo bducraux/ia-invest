@@ -41,6 +41,16 @@ from mcp_server.tools.app_settings import get_app_settings
 from mcp_server.tools.concentration import get_concentration_analysis
 from mcp_server.tools.dividends_summary import get_dividends_summary
 from mcp_server.tools.fixed_income_summary import get_fixed_income_summary
+from mcp_server.tools.members import (
+    compare_members,
+    get_consolidated_summary_filtered,
+    get_member,
+    get_member_operations,
+    get_member_positions,
+    get_member_summary,
+    list_members,
+    transfer_portfolio_owner_tool,
+)
 from mcp_server.tools.performance import get_portfolio_performance
 from mcp_server.tools.portfolio_alerts import get_portfolio_alerts
 from mcp_server.tools.portfolios import (
@@ -159,8 +169,21 @@ async def handle_list_tools() -> list[types.Tool]:
         ),
         types.Tool(
             name="get_consolidated_summary",
-            description="Get a consolidated view across all active portfolios.",
-            inputSchema={"type": "object", "properties": {}, "required": []},
+            description=(
+                "Get a consolidated view across all active portfolios. "
+                "Optionally filtered by owner_id to scope the result to a "
+                "specific member."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "owner_id": {
+                        "type": "string",
+                        "description": "Optional member id to filter results.",
+                    },
+                },
+                "required": [],
+            },
         ),
         types.Tool(
             name="get_app_settings",
@@ -281,6 +304,93 @@ async def handle_list_tools() -> list[types.Tool]:
                 "required": ["portfolio_id"],
             },
         ),
+        # ----------------------------------------------------------- members
+        types.Tool(
+            name="list_members",
+            description="List family members (owners of portfolios). Default: only active.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "only_active": {"type": "boolean", "default": True},
+                },
+                "required": [],
+            },
+        ),
+        types.Tool(
+            name="get_member",
+            description="Get a single member by id (or by name).",
+            inputSchema={
+                "type": "object",
+                "properties": {"member_id": {"type": "string"}},
+                "required": ["member_id"],
+            },
+        ),
+        types.Tool(
+            name="get_member_summary",
+            description="Consolidated summary across all portfolios of a member.",
+            inputSchema={
+                "type": "object",
+                "properties": {"member_id": {"type": "string"}},
+                "required": ["member_id"],
+            },
+        ),
+        types.Tool(
+            name="get_member_positions",
+            description="All open positions across every portfolio owned by a member.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "member_id": {"type": "string"},
+                    "open_only": {"type": "boolean", "default": True},
+                },
+                "required": ["member_id"],
+            },
+        ),
+        types.Tool(
+            name="get_member_operations",
+            description="Operations across every portfolio owned by a member.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "member_id": {"type": "string"},
+                    "asset_code": {"type": "string"},
+                    "operation_type": {"type": "string"},
+                    "start_date": {"type": "string"},
+                    "end_date": {"type": "string"},
+                    "limit": {"type": "integer", "default": 100},
+                },
+                "required": ["member_id"],
+            },
+        ),
+        types.Tool(
+            name="compare_members",
+            description="Side-by-side member-level summaries.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "member_ids": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                    }
+                },
+                "required": ["member_ids"],
+            },
+        ),
+        types.Tool(
+            name="transfer_portfolio_owner",
+            description=(
+                "Reassign a portfolio to a different member (DB only — does "
+                "not move on-disk folders; use the script for that)."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "portfolio_id": {"type": "string"},
+                    "new_owner_id": {"type": "string"},
+                },
+                "required": ["portfolio_id", "new_owner_id"],
+            },
+        ),
     ]
 
 
@@ -321,7 +431,11 @@ async def handle_call_tool(
         elif name == "compare_portfolios":
             result = compare_portfolios(db, args["portfolio_ids"])
         elif name == "get_consolidated_summary":
-            result = get_consolidated_summary(db)
+            owner_filter = args.get("owner_id")
+            if owner_filter:
+                result = get_consolidated_summary_filtered(db, owner_id=owner_filter)
+            else:
+                result = get_consolidated_summary(db)
         elif name == "get_app_settings":
             result = get_app_settings(db)
         elif name == "get_position_with_quote":
@@ -348,6 +462,34 @@ async def handle_call_tool(
             result = get_fixed_income_summary(db, args["portfolio_id"])
         elif name == "get_portfolio_alerts":
             result = get_portfolio_alerts(db, args["portfolio_id"])
+        elif name == "list_members":
+            result = list_members(db, only_active=args.get("only_active", True))
+        elif name == "get_member":
+            result = get_member(db, args["member_id"])
+        elif name == "get_member_summary":
+            result = get_member_summary(db, args["member_id"])
+        elif name == "get_member_positions":
+            result = get_member_positions(
+                db,
+                args["member_id"],
+                open_only=args.get("open_only", True),
+            )
+        elif name == "get_member_operations":
+            result = get_member_operations(
+                db,
+                args["member_id"],
+                asset_code=args.get("asset_code"),
+                operation_type=args.get("operation_type"),
+                start_date=args.get("start_date"),
+                end_date=args.get("end_date"),
+                limit=int(args.get("limit", 100)),
+            )
+        elif name == "compare_members":
+            result = compare_members(db, args["member_ids"])
+        elif name == "transfer_portfolio_owner":
+            result = transfer_portfolio_owner_tool(
+                db, args["portfolio_id"], args["new_owner_id"]
+            )
         else:
             result = {"error": f"Unknown tool: {name}"}
     except Exception as exc:  # noqa: BLE001

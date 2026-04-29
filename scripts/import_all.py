@@ -100,6 +100,30 @@ def _print_final_summary(
     )
 
 
+def _discover_portfolio_dirs(root: Path) -> list[Path]:
+    """Return all portfolio directories, scanning the new
+    ``portfolios/<owner>/<portfolio>/`` layout *and* the legacy
+    ``portfolios/<portfolio>/`` single-level layout for backward
+    compatibility.
+    """
+    if not root.exists():
+        return []
+
+    portfolios: list[Path] = []
+    for child in sorted(root.iterdir()):
+        if not child.is_dir():
+            continue
+        # Legacy single-level layout (no owner directory)
+        if (child / "portfolio.yml").exists():
+            portfolios.append(child)
+            continue
+        # New layout — child is an owner directory containing portfolios.
+        for grandchild in sorted(child.iterdir()):
+            if grandchild.is_dir() and (grandchild / "portfolio.yml").exists():
+                portfolios.append(grandchild)
+    return portfolios
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Import all portfolios.")
     parser.add_argument(
@@ -122,17 +146,19 @@ def main() -> None:
 
     db_path = Path(args.db)
 
-    portfolio_dirs = sorted(
-        d
-        for d in _PORTFOLIOS_DIR.iterdir()
-        if d.is_dir() and (d / "portfolio.yml").exists()
-    )
+    portfolio_dirs = _discover_portfolio_dirs(_PORTFOLIOS_DIR)
 
     if not portfolio_dirs:
         log.warning("no_portfolios_found", path=str(_PORTFOLIOS_DIR))
         sys.exit(0)
 
-    log.info("starting_import_all", portfolios=[d.name for d in portfolio_dirs])
+    log.info(
+        "starting_import_all",
+        portfolios=[
+            f"{d.parent.name}/{d.name}" if d.parent != _PORTFOLIOS_DIR else d.name
+            for d in portfolio_dirs
+        ],
+    )
 
     if args.verbose:
         total_inbox = sum(_count_inbox_files(d) for d in portfolio_dirs)
@@ -155,20 +181,29 @@ def main() -> None:
     started_all = time.monotonic()
 
     for index, portfolio_dir in enumerate(portfolio_dirs, start=1):
+        owner = portfolio_dir.parent.name if portfolio_dir.parent != _PORTFOLIOS_DIR else None
+        display_name = (
+            f"{owner}/{portfolio_dir.name}" if owner else portfolio_dir.name
+        )
         if args.verbose:
             _print_portfolio_header(
                 index,
                 len(portfolio_dirs),
-                portfolio_dir.name,
+                display_name,
                 _count_inbox_files(portfolio_dir),
             )
 
-        log.info("importing_portfolio", portfolio=portfolio_dir.name)
+        log.info(
+            "importing_portfolio",
+            portfolio=portfolio_dir.name,
+            owner=owner,
+        )
         started = time.monotonic()
         result = import_portfolio(
             portfolio_dir.name,
             db_path=db_path,
             dry_run=args.dry_run,
+            owner_id=owner,
         )
         elapsed = time.monotonic() - started
 
@@ -185,7 +220,7 @@ def main() -> None:
                 aggregate[key] += int(result.get(key, 0))
 
         if args.verbose:
-            _print_portfolio_result(portfolio_dir.name, result, elapsed)
+            _print_portfolio_result(display_name, result, elapsed)
 
     elapsed_all = time.monotonic() - started_all
 

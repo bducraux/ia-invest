@@ -27,18 +27,28 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 make install
 make init
 
-# 3. criar a primeira carteira (interativo)
+# 3. criar pelo menos um membro (dono dos portfólios)
+uv run python scripts/create_member.py --id bruno --name "Bruno"
+
+# 4. criar a primeira carteira (interativo) — pede o owner
 make create-portfolio
 
-# 4. dropar arquivos da corretora/exchange em portfolios/<id>/inbox/
+# 5. dropar arquivos da corretora/exchange em portfolios/<owner>/<portfolio>/inbox/
 #    e importar
 make import-all
 
-# 5. subir backend e frontend (em terminais separados)
+# 6. subir backend e frontend (em terminais separados)
 make api-server         # http://localhost:8010
 make frontend-install   # primeira vez apenas
 make frontend-dev       # http://localhost:3000
 ```
+
+> ⚠️ **Breaking change na versão Members.** O esquema agora exige
+> `portfolios.owner_id` (FK para `members.id`) e o layout em disco passou
+> de `portfolios/<portfolio>/` para `portfolios/<owner>/<portfolio>/`.
+> Em ambientes existentes, faça `make reset-db`, recrie os membros e mova
+> as pastas para a nova hierarquia (ou use
+> `python scripts/transfer_portfolio_owner.py`).
 
 **Guia completo, com troubleshooting e integração com o Claude Desktop:**
 [**`docs/primeiros-passos.md`**](docs/primeiros-passos.md).
@@ -53,14 +63,15 @@ manual, etc.), veja [`docs/fontes-de-dados/`](docs/fontes-de-dados/README.md).
 ```text
 ia-invest/
 ├── portfolios/              # Portfólios de investimento
-│   └── <portfolio-id>/
-│       ├── portfolio.yml    # Manifesto de configuração
-│       ├── inbox/           # Arquivos aguardando importação
-│       ├── staging/         # Em pré-processamento
-│       ├── processed/       # Importados com sucesso
-│       ├── rejected/        # Rejeitados com log de erro
-│       ├── exports/         # Relatórios gerados
-│       └── .cache/          # Cache opcional de extração (gitignored)
+│   └── <owner-id>/          # Membro/dono (criado com scripts/create_member.py)
+│       └── <portfolio-id>/
+│           ├── portfolio.yml    # Manifesto (deve declarar owner_id idêntico ao folder pai)
+│           ├── inbox/           # Arquivos aguardando importação
+│           ├── staging/         # Em pré-processamento
+│           ├── processed/       # Importados com sucesso
+│           ├── rejected/        # Rejeitados com log de erro
+│           ├── exports/         # Relatórios gerados
+│           └── .cache/          # Cache opcional de extração (gitignored)
 ├── templates/               # Templates de portfólio (renda-variavel, renda-fixa,
 │                            #   cripto, internacional, ...)
 ├── extractors/              # Parsers por fonte/layout (B3, Binance, Avenue, ...)

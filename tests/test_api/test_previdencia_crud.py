@@ -13,7 +13,6 @@ from storage.repository.db import Database
 from storage.repository.portfolios import PortfolioRepository
 from storage.repository.previdencia import PrevidenciaSnapshotRepository
 
-
 PORTFOLIO_ID = "fundacao-ibm"
 ASSET_CODE = "PREV_IBM_CD"
 

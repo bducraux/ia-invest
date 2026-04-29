@@ -20,7 +20,15 @@ class Portfolio:
     description: str | None = None
     base_currency: str = "BRL"
     status: str = "active"
+    # Member who owns this portfolio.  Required at the business / persistence
+    # layer (schema enforces NOT NULL FK).  A safe placeholder default keeps
+    # tests and ad-hoc constructions ergonomic; production code paths
+    # (manifest loading, create_portfolio script) explicitly require it.
+    owner_id: str = "default"
     config: dict[str, Any] | None = None
+    # Optional hydrated owner object, populated when callers wish to surface
+    # the full member alongside the portfolio (e.g. HTTP responses).
+    owner: Any | None = None
 
     @property
     def allowed_asset_types(self) -> list[str]:

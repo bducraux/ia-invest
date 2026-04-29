@@ -6,9 +6,24 @@ from typing import Any
 
 from storage.repository.db import Database
 from storage.repository.import_jobs import ImportJobRepository
+from storage.repository.members import MemberRepository
 from storage.repository.operations import OperationRepository
 from storage.repository.portfolios import PortfolioRepository
 from storage.repository.positions import PositionRepository
+
+
+def _owner_block(db: Database, owner_id: str) -> dict[str, Any] | None:
+    """Hydrate a minimal member dict for a portfolio owner."""
+    member = MemberRepository(db.connection).get(owner_id)
+    if member is None:
+        return {"id": owner_id, "name": owner_id, "status": "unknown"}
+    return {
+        "id": member.id,
+        "name": member.name,
+        "display_name": member.display_name,
+        "email": member.email,
+        "status": member.status,
+    }
 
 
 def list_portfolios(db: Database) -> list[dict[str, Any]]:
@@ -22,6 +37,8 @@ def list_portfolios(db: Database) -> list[dict[str, Any]]:
             "description": p.description,
             "base_currency": p.base_currency,
             "status": p.status,
+            "owner_id": p.owner_id,
+            "owner": _owner_block(db, p.owner_id),
         }
         for p in portfolios
     ]
@@ -49,6 +66,8 @@ def get_portfolio_summary(db: Database, portfolio_id: str) -> dict[str, Any]:
         "id": portfolio.id,
         "name": portfolio.name,
         "base_currency": portfolio.base_currency,
+        "owner_id": portfolio.owner_id,
+        "owner": _owner_block(db, portfolio.owner_id),
         "open_positions": open_positions,
         "total_cost_cents": total_cost,
         "realized_pnl_cents": realized_pnl,

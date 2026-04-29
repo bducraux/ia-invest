@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
 
 import pytest
 
 from extractors.binance_simple_earn import BinanceSimpleEarnExtractor, _normalize_date
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

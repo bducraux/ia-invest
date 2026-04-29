@@ -5,11 +5,11 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from domain.models import Portfolio
+from domain.previdencia import PrevidenciaSnapshot
 from mcp_server.http_api import create_http_app
 from storage.repository.db import Database
 from storage.repository.portfolios import PortfolioRepository
 from storage.repository.previdencia import PrevidenciaSnapshotRepository
-from domain.previdencia import PrevidenciaSnapshot
 
 
 def _seed_previdencia_db(db_path: Path) -> None:

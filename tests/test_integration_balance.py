@@ -14,7 +14,6 @@ from storage.repository.operations import OperationRepository
 from storage.repository.portfolios import PortfolioRepository
 from storage.repository.positions import PositionRepository
 
-
 _BUY_TYPES = {"buy", "transfer_in", "split_bonus"}
 _SELL_TYPES = {"sell", "transfer_out"}
 

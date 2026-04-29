@@ -8,9 +8,6 @@ Handles conversion of trading values to base currency (BRL) using:
 
 from __future__ import annotations
 
-from datetime import date
-from typing import Optional
-
 
 class FXRate:
     """Single FX rate for a currency pair at a specific date."""
@@ -129,8 +126,8 @@ class FXRateCache:
         self._rates[key] = FXRate(pair, rate_date, rate, source, method)
 
     def get_rate(
-        self, pair: str, rate_date: str, default: Optional[float] = None
-    ) -> Optional[float]:
+        self, pair: str, rate_date: str, default: float | None = None
+    ) -> float | None:
         """Retrieve exchange rate for a pair on a specific date.
 
         Tries exact date first, then falls back to the most recent rate before
@@ -160,7 +157,7 @@ class FXRateCache:
 
     def get_rate_with_info(
         self, pair: str, rate_date: str
-    ) -> Optional[tuple[float, str, str]]:
+    ) -> tuple[float, str, str] | None:
         """Retrieve rate with source and method metadata.
 
         Returns: (rate, source, method) or None if not found.

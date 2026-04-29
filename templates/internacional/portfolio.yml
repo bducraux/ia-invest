@@ -3,6 +3,7 @@ name: Internacional
 description: Ações, ETFs e REITs no exterior (Avenue, Nomad, IBKR…)
 base_currency: BRL
 status: active
+owner_id: default  # Member who owns this portfolio (must exist in DB; create with scripts/create_member.py)
 
 rules:
   allowed_asset_types:

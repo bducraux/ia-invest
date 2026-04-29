@@ -34,8 +34,15 @@ base de dados SQLite consistente e consultável, acessível via servidor MCP par
 
 ### 1. Filesystem (`portfolios/`)
 
-Ponto de entrada operacional. Cada subpasta representa um portfólio com seu manifesto YAML e
-subpastas de ciclo de vida: `inbox → staging → processed / rejected`.
+Ponto de entrada operacional. A hierarquia é
+`portfolios/<owner-id>/<portfolio-id>/`, com o owner-id correspondendo a um
+membro registrado em `members.id`. Cada subpasta de portfólio contém seu
+manifesto YAML e subpastas de ciclo de vida: `inbox → staging → processed
+/ rejected`.
+
+O manifesto `portfolio.yml` deve declarar `owner_id` igual ao nome da
+pasta-pai. O importador rejeita o arquivo caso essa consistência seja
+violada.
 
 **Responsabilidade:** organizar arquivos brutos e registrar o estado de importação visualmente.
 
@@ -116,17 +123,32 @@ críticos que **nunca** devem ser delegados ao agente.
 Camada de persistência usando SQLite único com separação lógica por `portfolio_id`.
 
 **Schema central (`storage/schema.sql`):**
-- `portfolios` — cadastro de portfólios
+- `members` — cadastro de donos de portfólios (família/usuário)
+- `portfolios` — cadastro de portfólios (com `owner_id` FK NOT NULL para `members.id`)
 - `operations` — operações normalizadas
 - `positions` — posições consolidadas (cache calculado)
 - `import_jobs` — auditoria de importações
 - `import_errors` — erros individuais por importação
 
 **Repository pattern:**
-- `PortfolioRepository` — CRUD de portfólios
+- `MemberRepository` — CRUD de membros, com regra de bloquear remoção
+  enquanto `count_portfolios > 0`.
+- `PortfolioRepository` — CRUD de portfólios, incluindo `list_by_owner` e
+  `transfer_ownership`.
 - `OperationRepository` — inserção e consulta de operações
 - `PositionRepository` — leitura e atualização de posições
 - `ImportJobRepository` — criação e atualização de jobs de importação
+
+**Relação `Portfolio.owner_id → Member.id`:** todo portfólio é dono por
+exatamente um membro. Essa relação é refletida em três lugares e devem
+estar sempre em sincronia:
+
+1. SQLite — coluna `portfolios.owner_id` (FK NOT NULL).
+2. Manifesto — chave `owner_id` em `portfolio.yml`.
+3. Filesystem — pasta-pai do portfólio (`portfolios/<owner>/<portfolio>/`).
+
+A operação de transferência (`scripts/transfer_portfolio_owner.py`)
+atualiza os três atomicamente, com rollback em caso de falha.
 
 **Convenções:**
 - Todas as queries ficam nas classes de repositório.
@@ -144,12 +166,15 @@ Servidor MCP local que expõe ferramentas de negócio para agentes de IA (Claude
 **Filosofia:** expor tools orientadas ao domínio, não SQL livre.
 
 **Tools disponíveis (`mcp_server/tools/`):**
-- `list_portfolios` — lista portfólios ativos com metadados
-- `get_portfolio_summary` — resumo de posição e PnL de um portfólio
+- `list_portfolios` — lista portfólios ativos com metadados e bloco `owner`
+- `get_portfolio_summary` — resumo de posição e PnL de um portfólio (inclui `owner`)
 - `get_portfolio_positions` — posições abertas com preço médio
 - `get_portfolio_operations` — operações filtráveis por período/ativo
 - `compare_portfolios` — comparação entre portfólios
-- `get_consolidated_summary` — visão consolidada de todos os portfólios
+- `get_consolidated_summary` — visão consolidada (parâmetro opcional `owner_id` para filtrar)
+- **Members:** `list_members`, `get_member`, `get_member_summary`,
+  `get_member_positions`, `get_member_operations`, `compare_members`,
+  `transfer_portfolio_owner`
 
 **Convenções:**
 - Respostas em JSON estável e documentado.

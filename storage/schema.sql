@@ -7,8 +7,28 @@ PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
 
 -- ---------------------------------------------------------------------------
+-- members
+-- Family members who own portfolios.  Every portfolio must have exactly one
+-- owner.  Members cannot be hard-deleted while they still own active
+-- portfolios — only inactivated.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS members (
+    id              TEXT PRIMARY KEY,            -- kebab-case slug
+    name            TEXT NOT NULL,
+    display_name    TEXT,
+    email           TEXT UNIQUE,                 -- nullable but unique when set
+    status          TEXT NOT NULL DEFAULT 'active'
+                        CHECK (status IN ('active', 'inactive')),
+    created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    updated_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_members_status ON members(status);
+
+-- ---------------------------------------------------------------------------
 -- portfolios
 -- Source of truth for portfolio configuration derived from portfolio.yml.
+-- Each portfolio has a mandatory owner_id pointing at members.id.
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS portfolios (
     id              TEXT PRIMARY KEY,           -- matches portfolio.yml id
@@ -17,10 +37,13 @@ CREATE TABLE IF NOT EXISTS portfolios (
     base_currency   TEXT NOT NULL DEFAULT 'BRL',
     status          TEXT NOT NULL DEFAULT 'active'
                         CHECK (status IN ('active', 'inactive', 'archived')),
+    owner_id        TEXT NOT NULL REFERENCES members(id),
     config_json     TEXT,                       -- full portfolio.yml as JSON
     created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     updated_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
+
+CREATE INDEX IF NOT EXISTS idx_portfolios_owner ON portfolios(owner_id);
 
 -- ---------------------------------------------------------------------------
 -- operations
@@ -318,3 +341,6 @@ CREATE INDEX IF NOT EXISTS idx_avenue_aliases_code
 -- Record this baseline schema version
 INSERT OR IGNORE INTO schema_migrations (version, description)
 VALUES ('0001', 'initial schema — all tables, indexes, and constraints');
+
+INSERT OR IGNORE INTO schema_migrations (version, description)
+VALUES ('0002', 'add members table and portfolios.owner_id');

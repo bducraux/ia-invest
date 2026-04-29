@@ -8,6 +8,20 @@ export type PortfolioSpecialization =
   | "PREVIDENCIA"
   | "INTERNACIONAL";
 
+export interface Owner {
+  id: string;
+  name: string;
+  displayName?: string | null;
+  email?: string | null;
+  status: "active" | "inactive" | "unknown";
+}
+
+export interface Member extends Owner {
+  portfolioCount: number;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
 export type AssetClass =
   | "ACAO"
   | "FII"
@@ -26,6 +40,8 @@ export interface Portfolio {
   currency: "BRL";
   allowedAssetTypes: string[];
   specialization: PortfolioSpecialization;
+  ownerId: string;
+  owner?: Owner | null;
 }
 
 export interface PortfolioSummary {

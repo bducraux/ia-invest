@@ -13,7 +13,6 @@ from storage.repository.operations import OperationRepository
 from storage.repository.portfolios import PortfolioRepository
 from storage.repository.positions import PositionRepository
 
-
 PORTFOLIO_ID = "rv-portfolio"
 
 

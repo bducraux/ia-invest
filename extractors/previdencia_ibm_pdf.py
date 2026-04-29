@@ -11,7 +11,6 @@ import pdfplumber
 
 from extractors.base import BaseExtractor, ExtractionResult
 
-
 _DATE_RANGE_RE = re.compile(r"(\d{2}/\d{2}/\d{4})\s+A\s+(\d{2}/\d{2}/\d{4})")
 _PLAN_RE = re.compile(r"Plano:\s*([^\n]+?)\s+CNPJ", re.IGNORECASE)
 

@@ -14,7 +14,6 @@ from storage.repository.db import Database
 from storage.repository.members import MemberRepository
 from storage.repository.portfolios import PortfolioRepository
 
-
 _MANIFEST = """
 id: rv
 name: RV

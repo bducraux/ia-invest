@@ -50,7 +50,6 @@ THE SOLUTION: Bullet-Proof Tests Must Include:
    - Verify quantities at each transformation point
 """
 
-import sqlite3
 from pathlib import Path
 
 import pytest
@@ -186,7 +185,7 @@ class TestBulletProofValidation:
         has_transfers = any(r[1] in ('transfer_in', 'transfer_out') for r in rows)
 
         if has_trades:
-            print(f"✓ Found trade operations (buy/sell)")
+            print("✓ Found trade operations (buy/sell)")
             assert has_transfers or True, \
                 "If trades exist, transfer operations (quote legs) should also exist"
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -29,13 +30,11 @@ def _seed_default_member() -> Iterator[None]:
 
     def patched_initialize(self: Database) -> None:
         original_initialize(self)
-        try:
+        # Be defensive: never break a test because the seed couldn't run.
+        with contextlib.suppress(Exception):
             MemberRepository(self.connection).upsert(
                 Member(id="default", name="Default Member", status="active")
             )
-        except Exception:  # noqa: BLE001
-            # Be defensive: never break a test because the seed couldn't run.
-            pass
 
     Database.initialize = patched_initialize  # type: ignore[method-assign]
     try:

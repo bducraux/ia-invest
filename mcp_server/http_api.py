@@ -21,6 +21,8 @@ from pydantic import BaseModel
 from domain.fixed_income import FixedIncomePosition
 from domain.fixed_income_rates import SQLiteDailyRateProvider
 from domain.fixed_income_valuation import FixedIncomeValuationService
+from domain.members import MemberService, MemberServiceError
+from domain.portfolio_service import PortfolioService
 from domain.position_service import PositionService
 from mcp_server.services.benchmark_sync import (
     BACENBenchmarkSyncService,
@@ -46,6 +48,7 @@ from storage.repository.benchmark_rates import BenchmarkRatesRepository
 from storage.repository.db import Database
 from storage.repository.fixed_income import FixedIncomePositionRepository
 from storage.repository.fx_rates import FxRatesRepository
+from storage.repository.members import MemberRepository
 from storage.repository.operations import OperationRepository
 from storage.repository.portfolios import PortfolioRepository
 from storage.repository.positions import PositionRepository
@@ -64,16 +67,56 @@ _CDI_AUTO_SYNC_MIN_INTERVAL = timedelta(hours=1)
 _CDI_AUTO_SYNC_STATE: dict[str, datetime] = {}
 
 
+class OwnerSummary(BaseModel):
+    id: str
+    name: str
+    displayName: str | None = None
+    email: str | None = None
+    status: str = "active"
+
+
 class PortfolioOut(BaseModel):
     id: str
     name: str
     currency: str = "BRL"
     allowedAssetTypes: list[str] = []
     specialization: str = "GENERIC"
+    ownerId: str
+    owner: OwnerSummary | None = None
 
 
 class PortfolioUpdate(BaseModel):
     name: str
+    ownerId: str | None = None
+
+
+class TransferOwnerRequest(BaseModel):
+    newOwnerId: str
+
+
+class MemberCreate(BaseModel):
+    id: str
+    name: str
+    displayName: str | None = None
+    email: str | None = None
+
+
+class MemberUpdate(BaseModel):
+    name: str | None = None
+    displayName: str | None = None
+    email: str | None = None
+    status: str | None = None  # active | inactive
+
+
+class MemberOut(BaseModel):
+    id: str
+    name: str
+    displayName: str | None = None
+    email: str | None = None
+    status: str = "active"
+    portfolioCount: int = 0
+    createdAt: str | None = None
+    updatedAt: str | None = None
 
 
 class AllocationSliceOut(BaseModel):
@@ -774,19 +817,54 @@ def create_http_app(
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    def _owner_summary(db: Database, owner_id: str) -> OwnerSummary | None:
+        member = MemberRepository(db.connection).get(owner_id)
+        if member is None:
+            return OwnerSummary(id=owner_id, name=owner_id, status="unknown")
+        return OwnerSummary(
+            id=member.id,
+            name=member.name,
+            displayName=member.display_name,
+            email=member.email,
+            status=member.status,
+        )
+
+    def _portfolio_to_out(db: Database, portfolio: Any) -> PortfolioOut:
+        return PortfolioOut(
+            id=portfolio.id,
+            name=portfolio.name,
+            currency=portfolio.base_currency,
+            allowedAssetTypes=portfolio.allowed_asset_types,
+            specialization=_portfolio_specialization(portfolio.allowed_asset_types),
+            ownerId=portfolio.owner_id,
+            owner=_owner_summary(db, portfolio.owner_id),
+        )
+
+    def _member_to_out(db: Database, member: Any) -> MemberOut:
+        repo = MemberRepository(db.connection)
+        return MemberOut(
+            id=member.id,
+            name=member.name,
+            displayName=member.display_name,
+            email=member.email,
+            status=member.status,
+            portfolioCount=repo.count_portfolios(member.id),
+            createdAt=member.created_at,
+            updatedAt=member.updated_at,
+        )
+
     @app.get("/api/portfolios", response_model=list[PortfolioOut])
-    def list_portfolios(db: Database = Depends(get_db)) -> list[PortfolioOut]:  # noqa: B008
+    def list_portfolios(
+        owner_id: str | None = Query(default=None, alias="ownerId"),
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> list[PortfolioOut]:
         repo = PortfolioRepository(db.connection)
-        return [
-            PortfolioOut(
-                id=p.id,
-                name=p.name,
-                currency=p.base_currency,
-                allowedAssetTypes=p.allowed_asset_types,
-                specialization=_portfolio_specialization(p.allowed_asset_types),
-            )
-            for p in repo.list_active()
-        ]
+        portfolios = (
+            repo.list_by_owner(owner_id, only_active=True)
+            if owner_id
+            else repo.list_active()
+        )
+        return [_portfolio_to_out(db, p) for p in portfolios]
 
     @app.put("/api/portfolios/{portfolio_id}", response_model=PortfolioOut)
     def update_portfolio(
@@ -802,16 +880,160 @@ def create_http_app(
         name = payload.name.strip()
         if not name:
             raise HTTPException(status_code=422, detail="name must not be empty")
-
         portfolio.name = name
+
+        if payload.ownerId:
+            new_owner = payload.ownerId.strip().lower()
+            if MemberRepository(db.connection).get(new_owner) is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Member '{new_owner}' not found",
+                )
+            portfolio.owner_id = new_owner
+
         repo.upsert(portfolio)
-        return PortfolioOut(
-            id=portfolio.id,
-            name=portfolio.name,
-            currency=portfolio.base_currency,
-            allowedAssetTypes=portfolio.allowed_asset_types,
-            specialization=_portfolio_specialization(portfolio.allowed_asset_types),
+        return _portfolio_to_out(db, portfolio)
+
+    @app.post(
+        "/api/portfolios/{portfolio_id}/transfer-owner",
+        response_model=PortfolioOut,
+    )
+    def transfer_portfolio_owner(
+        portfolio_id: str,
+        payload: TransferOwnerRequest,
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> PortfolioOut:
+        portfolio_repo = PortfolioRepository(db.connection)
+        member_repo = MemberRepository(db.connection)
+        svc = PortfolioService(
+            portfolio_repo=portfolio_repo, member_repo=member_repo
         )
+        try:
+            portfolio = svc.transfer_ownership(portfolio_id, payload.newOwnerId)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _portfolio_to_out(db, portfolio)
+
+    # ------------------------------------------------------------------ Members
+    @app.get("/api/members", response_model=list[MemberOut])
+    def list_members(
+        status: str | None = Query(default=None),
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> list[MemberOut]:
+        repo = MemberRepository(db.connection)
+        if status == "active":
+            members = repo.list_active()
+        elif status == "inactive":
+            members = [m for m in repo.list_all() if m.status == "inactive"]
+        else:
+            members = repo.list_all()
+        return [_member_to_out(db, m) for m in members]
+
+    @app.get("/api/members/{member_id}", response_model=MemberOut)
+    def get_member(
+        member_id: str, db: Database = Depends(get_db)  # noqa: B008
+    ) -> MemberOut:
+        repo = MemberRepository(db.connection)
+        member = repo.get(member_id) or repo.get_by_id_or_name(member_id)
+        if member is None:
+            raise HTTPException(status_code=404, detail=f"Member '{member_id}' not found")
+        return _member_to_out(db, member)
+
+    @app.post("/api/members", response_model=MemberOut, status_code=201)
+    def create_member(
+        payload: MemberCreate, db: Database = Depends(get_db)  # noqa: B008
+    ) -> MemberOut:
+        svc = MemberService(
+            MemberRepository(db.connection), PortfolioRepository(db.connection)
+        )
+        try:
+            member = svc.create(
+                member_id=payload.id,
+                name=payload.name,
+                display_name=payload.displayName,
+                email=payload.email,
+            )
+        except MemberServiceError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return _member_to_out(db, member)
+
+    @app.patch("/api/members/{member_id}", response_model=MemberOut)
+    def update_member(
+        member_id: str,
+        payload: MemberUpdate,
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> MemberOut:
+        svc = MemberService(
+            MemberRepository(db.connection), PortfolioRepository(db.connection)
+        )
+        try:
+            updated = svc.update(
+                member_id,
+                name=payload.name,
+                display_name=payload.displayName,
+                email=payload.email,
+            )
+            if payload.status == "active":
+                updated = svc.activate(member_id)
+            elif payload.status == "inactive":
+                updated = svc.inactivate(member_id)
+        except MemberServiceError as exc:
+            status_code = 404 if "not found" in str(exc) else 422
+            raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+        return _member_to_out(db, updated)
+
+    @app.delete("/api/members/{member_id}", status_code=204)
+    def delete_member(
+        member_id: str, db: Database = Depends(get_db)  # noqa: B008
+    ) -> None:
+        svc = MemberService(
+            MemberRepository(db.connection), PortfolioRepository(db.connection)
+        )
+        try:
+            svc.delete(member_id)
+        except MemberServiceError as exc:
+            status_code = 404 if "not found" in str(exc) else 409
+            raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+
+    @app.get(
+        "/api/members/{member_id}/portfolios",
+        response_model=list[PortfolioOut],
+    )
+    def get_member_portfolios(
+        member_id: str, db: Database = Depends(get_db)  # noqa: B008
+    ) -> list[PortfolioOut]:
+        member_repo = MemberRepository(db.connection)
+        member = member_repo.get(member_id) or member_repo.get_by_id_or_name(member_id)
+        if member is None:
+            raise HTTPException(status_code=404, detail=f"Member '{member_id}' not found")
+        portfolios = PortfolioRepository(db.connection).list_by_owner(
+            member.id, only_active=True
+        )
+        return [_portfolio_to_out(db, p) for p in portfolios]
+
+    @app.get("/api/members/{member_id}/summary")
+    def get_member_summary_endpoint(
+        member_id: str, db: Database = Depends(get_db)  # noqa: B008
+    ) -> dict[str, Any]:
+        from mcp_server.tools.members import get_member_summary
+
+        result = get_member_summary(db, member_id)
+        if "error" in result:
+            raise HTTPException(status_code=404, detail=result["error"])
+        return result
+
+    @app.get("/api/members/{member_id}/positions")
+    def get_member_positions_endpoint(
+        member_id: str,
+        open_only: bool = Query(default=True, alias="openOnly"),
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> list[dict[str, Any]]:
+        from mcp_server.tools.members import get_member_positions
+
+        result = get_member_positions(db, member_id, open_only=open_only)
+        if result and "error" in result[0]:
+            raise HTTPException(status_code=404, detail=result[0]["error"])
+        return result
 
     @app.get("/api/benchmarks/{benchmark}/coverage", response_model=BenchmarkCoverageOut)
     def get_benchmark_coverage(

@@ -95,6 +95,14 @@ def test_list_portfolios_endpoint(tmp_path: Path) -> None:
             "currency": "BRL",
             "allowedAssetTypes": ["stock", "fii"],
             "specialization": "RENDA_VARIAVEL",
+            "ownerId": "default",
+            "owner": {
+                "id": "default",
+                "name": "Default Member",
+                "displayName": None,
+                "email": None,
+                "status": "active",
+            },
         }
     ]
 
@@ -127,6 +135,14 @@ def test_list_portfolios_endpoint_exposes_specialization_for_fixed_income(tmp_pa
             "currency": "BRL",
             "allowedAssetTypes": ["CDB", "LCI", "LCA"],
             "specialization": "RENDA_FIXA",
+            "ownerId": "default",
+            "owner": {
+                "id": "default",
+                "name": "Default Member",
+                "displayName": None,
+                "email": None,
+                "status": "active",
+            },
         }
     ]
 

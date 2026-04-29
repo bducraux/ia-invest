@@ -17,6 +17,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import contextlib
 import sys
 from pathlib import Path
 from typing import Any
@@ -112,9 +113,7 @@ def transfer_portfolio_owner(
     moved = True
     try:
         # Step 2 — update manifest
-        previous_owner_in_yml = _rewrite_manifest_owner(
-            target_dir / "portfolio.yml", new_owner_id
-        )
+        _rewrite_manifest_owner(target_dir / "portfolio.yml", new_owner_id)
 
         # Step 3 — update DB
         with Database(db_path) as db:
@@ -146,17 +145,13 @@ def transfer_portfolio_owner(
     except Exception:
         # Roll back the filesystem move on any failure during step 2 or 3.
         if moved and target_dir.exists():
-            try:
+            with contextlib.suppress(OSError):
                 target_dir.rename(current_dir)
-            except OSError:
-                pass  # leave the partially-moved tree for manual recovery
             # Restore manifest owner_id only if it was changed
-            try:
+            with contextlib.suppress(Exception):
                 _rewrite_manifest_owner(
                     current_dir / "portfolio.yml", current_owner_id
                 )
-            except Exception:  # noqa: BLE001
-                pass
         raise
 
     return target_dir

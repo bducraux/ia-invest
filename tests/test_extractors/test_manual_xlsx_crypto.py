@@ -2,18 +2,16 @@
 
 from __future__ import annotations
 
-import io
 from pathlib import Path
 
-import pytest
 import openpyxl
+import pytest
 
 from extractors.manual_xlsx_crypto import (
     ManualXlsxCryptoExtractor,
     _excel_serial_to_date,
     _parse_brl,
 )
-
 
 # ---------------------------------------------------------------------------
 # Unit tests for helper functions

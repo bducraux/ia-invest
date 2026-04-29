@@ -213,6 +213,7 @@ def test_portfolio_transfer_ownership_unknown_member(db: Database) -> None:
 def test_portfolio_owner_id_required_at_db_level(db: Database) -> None:
     """Schema enforces NOT NULL on owner_id."""
     import sqlite3
+
     import pytest as _pytest
 
     with _pytest.raises(sqlite3.IntegrityError):

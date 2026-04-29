@@ -8,7 +8,6 @@ import pytest
 
 from scripts import import_portfolio as import_portfolio_module
 
-
 _MINIMAL_MANIFEST = """
 id: rv-test
 name: RV Test

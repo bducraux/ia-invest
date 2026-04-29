@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from extractors.binance_csv import BinanceCsvExtractor, _parse_base_asset, _normalize_date
+from extractors.binance_csv import BinanceCsvExtractor, _normalize_date, _parse_base_asset
 
 
 @pytest.fixture

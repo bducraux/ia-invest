@@ -115,7 +115,7 @@ export default function MembersPage() {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, id: e.target.value.toLowerCase() }))
                   }
-                  placeholder="bruno"
+                  placeholder="usuario"
                 />
               </label>
               <label className="space-y-1 text-sm">
@@ -124,7 +124,7 @@ export default function MembersPage() {
                   required
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="Bruno"
+                  placeholder="Nome completo"
                 />
               </label>
               <label className="space-y-1 text-sm">

@@ -16,7 +16,6 @@ import {
   Bitcoin,
   ShieldCheck,
   Globe,
-  Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -24,10 +23,6 @@ import {
   CONTEXT_AWARE_SECTIONS,
   useDashboardScope,
 } from "@/lib/dashboard-scope";
-import {
-  groupPortfoliosByOwner,
-  portfolioExpansionKey,
-} from "@/lib/portfolio-grouping";
 import { usePortfolios } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
@@ -44,7 +39,6 @@ const patrimonioItems = [
 ];
 
 const systemItems = [
-  { href: "/members", label: "Membros", icon: Users },
   { href: "/import", label: "Importar", icon: Upload },
   { href: "/settings", label: "Configurações", icon: Settings },
 ];
@@ -59,24 +53,12 @@ export function Sidebar() {
   const portfoliosQuery = usePortfolios();
   const portfolios = portfoliosQuery.data ?? [];
   const [expandedPortfolios, setExpandedPortfolios] = useState<Record<string, boolean>>({});
-  const [collapsedOwners, setCollapsedOwners] = useState<Record<string, boolean>>({});
   const activePortfolio = portfolios.find((portfolio) => portfolio.id === scope.portfolioId);
 
-  const ownerGroups = groupPortfoliosByOwner(portfolios);
-  const showOwnerGroups = ownerGroups.length > 1;
-
-  function togglePortfolio(ownerId: string, portfolioId: string) {
-    const key = portfolioExpansionKey(ownerId, portfolioId);
+  function togglePortfolio(portfolioId: string) {
     setExpandedPortfolios((prev) => ({
       ...prev,
-      [key]: !(prev[key] ?? false),
-    }));
-  }
-
-  function toggleOwner(ownerId: string) {
-    setCollapsedOwners((prev) => ({
-      ...prev,
-      [ownerId]: !(prev[ownerId] ?? false),
+      [portfolioId]: !(prev[portfolioId] ?? false),
     }));
   }
 
@@ -132,117 +114,64 @@ export function Sidebar() {
             Carteiras
           </p>
 
-          {ownerGroups.map((group) => {
-            const isOwnerCollapsed = collapsedOwners[group.ownerId] ?? false;
+          {portfolios.map((portfolio) => {
+            const isActive = scope.portfolioId === portfolio.id;
+            const overviewHref = buildScopedPath(portfolio.id, "/");
+            const isExpanded = expandedPortfolios[portfolio.id] ?? isActive;
+
             return (
-              <div key={group.ownerId} className="mb-2">
-                {showOwnerGroups ? (
+              <div key={portfolio.id} className="mb-2 rounded-lg border border-transparent px-1 py-1">
+                <div className="flex items-center gap-1">
                   <button
                     type="button"
-                    onClick={() => toggleOwner(group.ownerId)}
-                    aria-expanded={!isOwnerCollapsed}
-                    aria-label={
-                      isOwnerCollapsed
-                        ? `Expandir membro ${group.ownerName}`
-                        : `Recolher membro ${group.ownerName}`
-                    }
-                    className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-[11px] uppercase tracking-wider text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
+                    onClick={() => togglePortfolio(portfolio.id)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
+                    aria-label={isExpanded ? "Recolher carteira" : "Expandir carteira"}
+                    aria-expanded={isExpanded}
                   >
                     <ChevronRight
-                      className={cn(
-                        "h-3 w-3 transition-transform",
-                        isOwnerCollapsed ? "" : "rotate-90",
-                      )}
+                      className={cn("h-4 w-4 transition-transform", isExpanded ? "rotate-90" : "")}
                     />
-                    <span className="truncate font-medium">{group.ownerName}</span>
-                    <span className="ml-auto text-[10px] tabular-nums text-muted-foreground/70">
-                      {group.portfolios.length}
-                    </span>
                   </button>
-                ) : null}
+                  <Link
+                    href={overviewHref}
+                    className={cn(
+                      "flex min-w-0 flex-1 items-center justify-between gap-2 rounded-md px-2 py-2 text-sm transition-colors",
+                      isActive && scope.sectionPath === "/"
+                        ? "bg-accent text-accent-foreground font-medium"
+                        : isActive
+                          ? "text-foreground"
+                          : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                    )}
+                  >
+                    <span className="truncate">{portfolio.name}</span>
+                    {isActive ? <Badge variant="outline">Ativa</Badge> : null}
+                  </Link>
+                </div>
 
-                {isOwnerCollapsed && showOwnerGroups
-                  ? null
-                  : group.portfolios.map((portfolio) => {
-                      const isActive = scope.portfolioId === portfolio.id;
-                      const overviewHref = buildScopedPath(portfolio.id, "/");
-                      const expansionKey = portfolioExpansionKey(
-                        group.ownerId,
-                        portfolio.id,
-                      );
-                      const isExpanded =
-                        expandedPortfolios[expansionKey] ?? isActive;
+                {isExpanded ? (
+                  <div className="mt-1 space-y-1 pl-9">
+                    {portfolioSections.map((section) => {
+                      const href = buildScopedPath(portfolio.id, section.href);
+                      const isSectionActive = isActive && scope.sectionPath === section.href;
 
                       return (
-                        <div
-                          key={portfolio.id}
+                        <Link
+                          key={`${portfolio.id}-${section.href}`}
+                          href={href}
                           className={cn(
-                            "mb-1 rounded-lg border border-transparent px-1 py-1",
-                            showOwnerGroups && "ml-2",
+                            "block rounded-md px-2 py-1.5 text-sm transition-colors",
+                            isSectionActive
+                              ? "bg-accent text-accent-foreground font-medium"
+                              : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
                           )}
                         >
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                togglePortfolio(group.ownerId, portfolio.id)
-                              }
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
-                              aria-label={
-                                isExpanded ? "Recolher carteira" : "Expandir carteira"
-                              }
-                              aria-expanded={isExpanded}
-                            >
-                              <ChevronRight
-                                className={cn(
-                                  "h-4 w-4 transition-transform",
-                                  isExpanded ? "rotate-90" : "",
-                                )}
-                              />
-                            </button>
-                            <Link
-                              href={overviewHref}
-                              className={cn(
-                                "flex min-w-0 flex-1 items-center justify-between gap-2 rounded-md px-2 py-2 text-sm transition-colors",
-                                isActive && scope.sectionPath === "/"
-                                  ? "bg-accent text-accent-foreground font-medium"
-                                  : isActive
-                                    ? "text-foreground"
-                                    : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
-                              )}
-                            >
-                              <span className="truncate">{portfolio.name}</span>
-                              {isActive ? <Badge variant="outline">Ativa</Badge> : null}
-                            </Link>
-                          </div>
-
-                          {isExpanded ? (
-                            <div className="mt-1 space-y-1 pl-9">
-                              {portfolioSections.map((section) => {
-                                const href = buildScopedPath(portfolio.id, section.href);
-                                const isSectionActive =
-                                  isActive && scope.sectionPath === section.href;
-
-                                return (
-                                  <Link
-                                    key={`${portfolio.id}-${section.href}`}
-                                    href={href}
-                                    className={cn(
-                                      "block rounded-md px-2 py-1.5 text-sm transition-colors",
-                                      isSectionActive
-                                        ? "bg-accent text-accent-foreground font-medium"
-                                        : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
-                                    )}
-                                  >
-                                    {section.label}
-                                  </Link>
-                                );
-                              })}
-                            </div>
-                          ) : null}
-                        </div>
+                          {section.label}
+                        </Link>
                       );
                     })}
+                  </div>
+                ) : null}
               </div>
             );
           })}

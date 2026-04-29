@@ -15,8 +15,6 @@ export const mockPortfolios: Portfolio[] = [
     currency: "BRL",
     allowedAssetTypes: ["stock", "fii"],
     specialization: "RENDA_VARIAVEL",
-    ownerId: "default",
-    owner: { id: "default", name: "Default", status: "active" },
   },
   {
     id: "p2",
@@ -24,8 +22,6 @@ export const mockPortfolios: Portfolio[] = [
     currency: "BRL",
     allowedAssetTypes: ["CDB", "LCI", "LCA"],
     specialization: "RENDA_FIXA",
-    ownerId: "default",
-    owner: { id: "default", name: "Default", status: "active" },
   },
 ];
 

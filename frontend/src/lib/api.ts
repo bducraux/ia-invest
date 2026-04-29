@@ -1,10 +1,4 @@
-import type {
-  Member,
-  Operation,
-  Portfolio,
-  PortfolioSummary,
-  Position,
-} from "@/types/domain";
+import type { Operation, Portfolio, PortfolioSummary, Position } from "@/types/domain";
 
 export type AssetClassFilter = Position["assetClass"] | "RENDA_VARIAVEL";
 
@@ -117,9 +111,8 @@ function toQueryString(params: Record<string, string | number | boolean | undefi
   return rendered ? `?${rendered}` : "";
 }
 
-export function getPortfolios(ownerId?: string): Promise<Portfolio[]> {
-  const query = toQueryString({ ownerId });
-  return apiFetch<Portfolio[]>(`/api/portfolios${query}`);
+export function getPortfolios(): Promise<Portfolio[]> {
+  return apiFetch<Portfolio[]>("/api/portfolios");
 }
 
 export function getPortfolioSummary(portfolioId: string): Promise<PortfolioSummary> {
@@ -128,7 +121,7 @@ export function getPortfolioSummary(portfolioId: string): Promise<PortfolioSumma
 
 export async function updatePortfolioName(
   portfolioId: string,
-  payload: { name: string; ownerId?: string },
+  payload: { name: string },
 ): Promise<Portfolio> {
   const response = await fetch(`${API_BASE}/api/portfolios/${portfolioId}`, {
     method: "PUT",
@@ -143,16 +136,6 @@ export async function updatePortfolioName(
     throw new Error(`API ${response.status}: ${body || response.statusText}`);
   }
   return (await response.json()) as Portfolio;
-}
-
-export function transferPortfolioOwner(
-  portfolioId: string,
-  newOwnerId: string,
-): Promise<Portfolio> {
-  return apiPostJson<Portfolio>(
-    `/api/portfolios/${portfolioId}/transfer-owner`,
-    { newOwnerId },
-  );
 }
 
 export async function getPortfolioPositions(
@@ -539,77 +522,4 @@ export async function deletePrevidenciaSnapshot(
   return apiDelete(
     `/api/portfolios/${portfolioId}/previdencia/${encodeURIComponent(assetCode)}`,
   );
-}
-
-// --- Members ----------------------------------------------------------------
-
-export interface MemberSummary {
-  member: Member;
-  portfolios: Array<{
-    id: string;
-    name: string;
-    open_positions: number;
-    total_cost_cents: number;
-    realized_pnl_cents: number;
-    dividends_cents: number;
-  }>;
-  totals: {
-    open_positions: number;
-    total_cost_cents: number;
-    realized_pnl_cents: number;
-    dividends_cents: number;
-  };
-}
-
-export interface MemberCreateInput {
-  id: string;
-  name: string;
-  displayName?: string;
-  email?: string;
-}
-
-export interface MemberUpdateInput {
-  name?: string;
-  displayName?: string | null;
-  email?: string | null;
-  status?: "active" | "inactive";
-}
-
-export function getMembers(status?: "active" | "inactive"): Promise<Member[]> {
-  const query = toQueryString({ status });
-  return apiFetch<Member[]>(`/api/members${query}`);
-}
-
-export function getMember(memberId: string): Promise<Member> {
-  return apiFetch<Member>(`/api/members/${encodeURIComponent(memberId)}`);
-}
-
-export function getMemberPortfolios(memberId: string): Promise<Portfolio[]> {
-  return apiFetch<Portfolio[]>(
-    `/api/members/${encodeURIComponent(memberId)}/portfolios`,
-  );
-}
-
-export function getMemberSummary(memberId: string): Promise<MemberSummary> {
-  return apiFetch<MemberSummary>(
-    `/api/members/${encodeURIComponent(memberId)}/summary`,
-  );
-}
-
-export function createMember(input: MemberCreateInput): Promise<Member> {
-  return apiPostJson<Member>("/api/members", input);
-}
-
-export function updateMember(
-  memberId: string,
-  input: MemberUpdateInput,
-): Promise<Member> {
-  return apiPatch<Member>(
-    `/api/members/${encodeURIComponent(memberId)}`,
-    input,
-  );
-}
-
-export function deleteMember(memberId: string): Promise<void> {
-  return apiDelete(`/api/members/${encodeURIComponent(memberId)}`);
 }

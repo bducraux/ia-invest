@@ -3,6 +3,7 @@ name: Renda Variável
 description: Carteira de ações, FIIs, ETFs e BDRs listados na B3
 base_currency: BRL
 status: active
+owner_id: default  # Member who owns this portfolio (must exist in DB; create with scripts/create_member.py)
 
 rules:
   allowed_asset_types:

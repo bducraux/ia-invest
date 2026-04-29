@@ -24,6 +24,7 @@ name: Renda Fixa Test
 description: Test portfolio
 base_currency: BRL
 status: active
+owner_id: default
 rules:
   allowed_asset_types:
     - CDB

@@ -29,6 +29,7 @@ id: fundacao-ibm
 name: Fundacao IBM
 base_currency: BRL
 status: active
+owner_id: default
 rules:
   allowed_asset_types:
     - previdencia

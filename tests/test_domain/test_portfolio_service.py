@@ -22,6 +22,7 @@ def valid_manifest(tmp_path: Path) -> Path:
         "name": "Renda Variável",
         "base_currency": "BRL",
         "status": "active",
+        "owner_id": "default",
         "rules": {"allowed_asset_types": ["stock", "fii"]},
     }
     f = tmp_path / "portfolio.yml"
@@ -35,6 +36,7 @@ def test_load_valid_manifest(svc: PortfolioService, valid_manifest: Path) -> Non
     assert portfolio.name == "Renda Variável"
     assert portfolio.base_currency == "BRL"
     assert portfolio.status == "active"
+    assert portfolio.owner_id == "default"
 
 
 def test_load_nonexistent_manifest_raises(svc: PortfolioService, tmp_path: Path) -> None:
@@ -43,15 +45,34 @@ def test_load_nonexistent_manifest_raises(svc: PortfolioService, tmp_path: Path)
 
 
 def test_load_missing_required_field_raises(svc: PortfolioService, tmp_path: Path) -> None:
-    config = {"name": "Missing ID", "base_currency": "BRL", "status": "active"}
+    config = {
+        "name": "Missing ID",
+        "base_currency": "BRL",
+        "status": "active",
+        "owner_id": "default",
+    }
     f = tmp_path / "portfolio.yml"
     f.write_text(yaml.dump(config), encoding="utf-8")
     with pytest.raises(ValueError, match="id"):
         svc.load_from_yaml(f)
 
 
+def test_load_missing_owner_raises(svc: PortfolioService, tmp_path: Path) -> None:
+    config = {"id": "p1", "name": "P1", "base_currency": "BRL", "status": "active"}
+    f = tmp_path / "portfolio.yml"
+    f.write_text(yaml.dump(config), encoding="utf-8")
+    with pytest.raises(ValueError, match="owner_id"):
+        svc.load_from_yaml(f)
+
+
 def test_load_invalid_status_raises(svc: PortfolioService, tmp_path: Path) -> None:
-    config = {"id": "p1", "name": "P1", "base_currency": "BRL", "status": "unknown_status"}
+    config = {
+        "id": "p1",
+        "name": "P1",
+        "base_currency": "BRL",
+        "status": "unknown_status",
+        "owner_id": "default",
+    }
     f = tmp_path / "portfolio.yml"
     f.write_text(yaml.dump(config), encoding="utf-8")
     with pytest.raises(ValueError, match="status"):
@@ -70,7 +91,13 @@ def test_validate_asset_type_not_allowed(svc: PortfolioService, valid_manifest: 
 
 
 def test_validate_asset_type_no_restrictions(svc: PortfolioService, tmp_path: Path) -> None:
-    config = {"id": "p1", "name": "P1", "base_currency": "BRL", "status": "active"}
+    config = {
+        "id": "p1",
+        "name": "P1",
+        "base_currency": "BRL",
+        "status": "active",
+        "owner_id": "default",
+    }
     f = tmp_path / "portfolio.yml"
     f.write_text(yaml.dump(config), encoding="utf-8")
     portfolio = svc.load_from_yaml(f)

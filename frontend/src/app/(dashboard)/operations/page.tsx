@@ -29,9 +29,11 @@ import { useDashboardScope } from "@/lib/dashboard-scope";
 import { formatBRL, formatQuantity } from "@/lib/money";
 import { formatDate } from "@/lib/date";
 import {
+  deriveOwnerLabel,
   mergeOperations,
   type OperationWithPortfolio,
 } from "@/lib/portfolio-aggregation";
+import { OwnerPortfolioBadge } from "@/components/portfolio/owner-portfolio-badge";
 import {
   useCreateOperation,
   useDeleteOperation,
@@ -208,6 +210,7 @@ export default function OperationsPage() {
         ...operation,
         portfolioId: activePortfolio?.id ?? "",
         portfolioName: activePortfolio?.name ?? "Carteira",
+        ...deriveOwnerLabel(activePortfolio),
       }));
 
   const filteredOperations = useMemo(() => {
@@ -416,7 +419,10 @@ export default function OperationsPage() {
                       <TableCell>{formatDate(op.date)}</TableCell>
                       {scope.isGlobalScope ? (
                         <TableCell>
-                          <Badge variant="outline">{op.portfolioName}</Badge>
+                          <OwnerPortfolioBadge
+                            portfolioName={op.portfolioName}
+                            ownerName={op.ownerName}
+                          />
                         </TableCell>
                       ) : null}
                       <TableCell className="font-medium">{op.assetCode}</TableCell>

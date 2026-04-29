@@ -29,6 +29,7 @@ import { buildScopedPath, useDashboardScope } from "@/lib/dashboard-scope";
 import { formatBRL, formatBRLCompact } from "@/lib/money";
 import { formatDate } from "@/lib/date";
 import { usePortfolios } from "@/lib/queries";
+import { deriveOwnerLabel } from "@/lib/portfolio-aggregation";
 import {
   Bar,
   BarChart,
@@ -71,6 +72,8 @@ const EMPTY_FORM: CreateFixedIncomeInput = {
 type FixedIncomePositionWithPortfolio = FixedIncomePosition & {
   portfolioId: string;
   portfolioName: string;
+  ownerId: string;
+  ownerName: string;
 };
 
 type InstitutionSummary = {
@@ -120,13 +123,15 @@ export default function FixedIncomePage() {
 
   const positions = useMemo<FixedIncomePositionWithPortfolio[]>(
     () =>
-      visiblePortfolios.flatMap((portfolio, index) =>
-        (positionQueries[index]?.data ?? []).map((position) => ({
+      visiblePortfolios.flatMap((portfolio, index) => {
+        const owner = deriveOwnerLabel(portfolio);
+        return (positionQueries[index]?.data ?? []).map((position) => ({
           ...position,
           portfolioId: portfolio.id,
           portfolioName: portfolio.name,
-        })),
-      ),
+          ...owner,
+        }));
+      }),
     [visiblePortfolios, positionQueries],
   );
 
@@ -138,10 +143,13 @@ export default function FixedIncomePage() {
           const applied = list.reduce((sum, position) => sum + position.principalAppliedBrl, 0);
           const gross = list.reduce((sum, position) => sum + position.grossValueCurrentBrl, 0);
           const net = list.reduce((sum, position) => sum + position.netValueCurrentBrl, 0);
+          const owner = deriveOwnerLabel(portfolio);
 
           return {
             portfolioId: portfolio.id,
             portfolioName: portfolio.name,
+            ownerId: owner.ownerId,
+            ownerName: owner.ownerName,
             count: list.length,
             applied,
             gross,

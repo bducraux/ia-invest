@@ -29,11 +29,13 @@ import {
   formatQuantity,
 } from "@/lib/money";
 import {
+  deriveOwnerLabel,
   mergeOperations,
   mergePositions,
   type OperationWithPortfolio,
   type PositionWithPortfolio,
 } from "@/lib/portfolio-aggregation";
+import { OwnerPortfolioBadge } from "@/components/portfolio/owner-portfolio-badge";
 import {
   useClosePosition,
   useCreateOperation,
@@ -247,6 +249,7 @@ function useClassFamilyData(classFamily: ClassFamily) {
         ...position,
         portfolioId: activePortfolio?.id ?? "",
         portfolioName: activePortfolio?.name ?? "Carteira",
+        ...deriveOwnerLabel(activePortfolio),
       }));
 
   const scopeMarketValue = positions.reduce((sum, position) => sum + position.marketValue, 0);
@@ -264,6 +267,7 @@ function useClassFamilyData(classFamily: ClassFamily) {
         ...operation,
         portfolioId: activePortfolio?.id ?? "",
         portfolioName: activePortfolio?.name ?? "Carteira",
+        ...deriveOwnerLabel(activePortfolio),
       }));
 
   return {
@@ -473,7 +477,7 @@ export function ClassFamilyOverviewPage({ classFamily }: { classFamily: ClassFam
                       </TableCell>
                       {scope.isGlobalScope ? (
                         <TableCell>
-                          <Badge variant="outline">{position.portfolioName}</Badge>
+                          <OwnerPortfolioBadge portfolioName={position.portfolioName} ownerName={position.ownerName} />
                         </TableCell>
                       ) : null}
                       <TableCell className="text-right">{formatQuantity(position.quantity)}</TableCell>
@@ -521,7 +525,7 @@ export function ClassFamilyOverviewPage({ classFamily }: { classFamily: ClassFam
                       <TableCell>{formatDate(operation.date)}</TableCell>
                       {scope.isGlobalScope ? (
                         <TableCell>
-                          <Badge variant="outline">{operation.portfolioName}</Badge>
+                          <OwnerPortfolioBadge portfolioName={operation.portfolioName} ownerName={operation.ownerName} />
                         </TableCell>
                       ) : null}
                       <TableCell className="font-medium">{operation.assetCode}</TableCell>
@@ -558,7 +562,7 @@ export function ClassFamilyPositionsPage({ classFamily }: { classFamily: ClassFa
 
   function handleConfirmClose() {
     if (!closeTarget) return;
-    const isPrevidencia = closeTarget.assetType === "PREVIDENCIA";
+    const isPrevidencia = closeTarget.assetClass === "PREVIDENCIA";
     const mutation = isPrevidencia ? deletePrevidenciaMutation : closePositionMutation;
     mutation.mutate(closeTarget.assetCode, {
       onSuccess: () => {
@@ -634,7 +638,7 @@ export function ClassFamilyPositionsPage({ classFamily }: { classFamily: ClassFa
                       </TableCell>
                       {scope.isGlobalScope ? (
                         <TableCell>
-                          <Badge variant="outline">{position.portfolioName}</Badge>
+                          <OwnerPortfolioBadge portfolioName={position.portfolioName} ownerName={position.ownerName} />
                         </TableCell>
                       ) : null}
                       <TableCell className="text-right">{formatQuantity(position.quantity)}</TableCell>
@@ -665,7 +669,7 @@ export function ClassFamilyPositionsPage({ classFamily }: { classFamily: ClassFa
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        {position.assetType === "RENDA_FIXA" ? (
+                        {position.assetClass === "RENDA_FIXA" ? (
                           <span className="text-xs text-muted-foreground">Ver Renda Fixa</span>
                         ) : (
                           <Button
@@ -692,7 +696,7 @@ export function ClassFamilyPositionsPage({ classFamily }: { classFamily: ClassFa
         title="Encerrar posição"
         description={
           closeTarget
-            ? closeTarget.assetType === "PREVIDENCIA"
+            ? closeTarget.assetClass === "PREVIDENCIA"
               ? `Tem certeza que deseja remover o snapshot de previdência ${closeTarget.assetCode}?`
               : `Tem certeza que deseja encerrar a posição ${closeTarget.assetCode}? Todas as operações associadas a este ativo nesta carteira serão excluídas.`
             : ""
@@ -894,7 +898,7 @@ export function ClassFamilyOperationsPage({ classFamily }: { classFamily: ClassF
                       <TableCell>{formatDate(operation.date)}</TableCell>
                       {scope.isGlobalScope ? (
                         <TableCell>
-                          <Badge variant="outline">{operation.portfolioName}</Badge>
+                          <OwnerPortfolioBadge portfolioName={operation.portfolioName} ownerName={operation.ownerName} />
                         </TableCell>
                       ) : null}
                       <TableCell className="font-medium">{operation.assetCode}</TableCell>

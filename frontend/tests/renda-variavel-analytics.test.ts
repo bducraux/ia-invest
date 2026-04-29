@@ -11,6 +11,8 @@ const positions: PositionWithPortfolio[] = [
   {
     portfolioId: "rv-1",
     portfolioName: "Renda Variável 1",
+    ownerId: "bruno",
+    ownerName: "Bruno",
     assetCode: "BBAS3",
     name: "Banco do Brasil",
     assetClass: "ACAO",
@@ -27,6 +29,8 @@ const positions: PositionWithPortfolio[] = [
   {
     portfolioId: "rv-2",
     portfolioName: "Renda Variável 2",
+    ownerId: "bruno",
+    ownerName: "Bruno",
     assetCode: "BBAS3",
     name: "Banco do Brasil",
     assetClass: "ACAO",
@@ -43,6 +47,8 @@ const positions: PositionWithPortfolio[] = [
   {
     portfolioId: "rv-1",
     portfolioName: "Renda Variável 1",
+    ownerId: "bruno",
+    ownerName: "Bruno",
     assetCode: "HGLG11",
     name: "HGLG11",
     assetClass: "FII",

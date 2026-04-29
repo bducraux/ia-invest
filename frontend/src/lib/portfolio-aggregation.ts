@@ -18,17 +18,43 @@ type PortfolioSummaryInput = {
 export type PositionWithPortfolio = Position & {
   portfolioId: string;
   portfolioName: string;
+  ownerId: string;
+  ownerName: string;
 };
 
 export type OperationWithPortfolio = Operation & {
   portfolioId: string;
   portfolioName: string;
+  ownerId: string;
+  ownerName: string;
 };
 
 export type DividendEntryWithPortfolio = DividendEntry & {
   portfolioId: string;
   portfolioName: string;
+  ownerId: string;
+  ownerName: string;
 };
+
+function ownerOf(portfolio: Portfolio): { ownerId: string; ownerName: string } {
+  const ownerId = portfolio.ownerId || portfolio.owner?.id || "default";
+  const ownerName =
+    portfolio.owner?.displayName || portfolio.owner?.name || ownerId;
+  return { ownerId, ownerName };
+}
+
+/**
+ * Public version of {@link ownerOf} that also handles `undefined` (callers
+ * frequently work with `find()` results that may be missing).
+ */
+export function deriveOwnerLabel(
+  portfolio: Portfolio | undefined,
+): { ownerId: string; ownerName: string } {
+  if (!portfolio) {
+    return { ownerId: "", ownerName: "" };
+  }
+  return ownerOf(portfolio);
+}
 
 export function aggregateSummaries(inputs: PortfolioSummaryInput[]): {
   summary: PortfolioSummary;
@@ -117,13 +143,15 @@ export function mergePositions(
   portfolios: Portfolio[],
   positionsByPortfolio: Position[][],
 ): PositionWithPortfolio[] {
-  return portfolios.flatMap((portfolio, index) =>
-    (positionsByPortfolio[index] ?? []).map((position) => ({
+  return portfolios.flatMap((portfolio, index) => {
+    const owner = ownerOf(portfolio);
+    return (positionsByPortfolio[index] ?? []).map((position) => ({
       ...position,
       portfolioId: portfolio.id,
       portfolioName: portfolio.name,
-    })),
-  );
+      ...owner,
+    }));
+  });
 }
 
 export function mergeOperations(
@@ -131,13 +159,15 @@ export function mergeOperations(
   operationsByPortfolio: Operation[][],
 ): OperationWithPortfolio[] {
   return portfolios
-    .flatMap((portfolio, index) =>
-      (operationsByPortfolio[index] ?? []).map((operation) => ({
+    .flatMap((portfolio, index) => {
+      const owner = ownerOf(portfolio);
+      return (operationsByPortfolio[index] ?? []).map((operation) => ({
         ...operation,
         portfolioId: portfolio.id,
         portfolioName: portfolio.name,
-      })),
-    )
+        ...owner,
+      }));
+    })
     .sort((a, b) => b.date.localeCompare(a.date));
 }
 
@@ -158,6 +188,8 @@ export function toDividendEntries(operations: OperationWithPortfolio[]): Dividen
       amount: cents(operation.total),
       portfolioId: operation.portfolioId,
       portfolioName: operation.portfolioName,
+      ownerId: operation.ownerId,
+      ownerName: operation.ownerName,
     }))
     .sort((a, b) => b.date.localeCompare(a.date));
 }

@@ -63,7 +63,11 @@ export function Sidebar() {
   const activePortfolio = portfolios.find((portfolio) => portfolio.id === scope.portfolioId);
 
   const ownerGroups = groupPortfoliosByOwner(portfolios);
-  const showOwnerGroups = ownerGroups.length > 1;
+  const activeOwnerGroup = activePortfolio
+    ? ownerGroups.find((group) =>
+        group.portfolios.some((p) => p.id === activePortfolio.id),
+      )
+    : undefined;
 
   function togglePortfolio(ownerId: string, portfolioId: string) {
     const key = portfolioExpansionKey(ownerId, portfolioId);
@@ -136,8 +140,7 @@ export function Sidebar() {
             const isOwnerCollapsed = collapsedOwners[group.ownerId] ?? false;
             return (
               <div key={group.ownerId} className="mb-2">
-                {showOwnerGroups ? (
-                  <button
+                <button
                     type="button"
                     onClick={() => toggleOwner(group.ownerId)}
                     aria-expanded={!isOwnerCollapsed}
@@ -159,9 +162,8 @@ export function Sidebar() {
                       {group.portfolios.length}
                     </span>
                   </button>
-                ) : null}
 
-                {isOwnerCollapsed && showOwnerGroups
+                {isOwnerCollapsed
                   ? null
                   : group.portfolios.map((portfolio) => {
                       const isActive = scope.portfolioId === portfolio.id;
@@ -177,8 +179,7 @@ export function Sidebar() {
                         <div
                           key={portfolio.id}
                           className={cn(
-                            "mb-1 rounded-lg border border-transparent px-1 py-1",
-                            showOwnerGroups && "ml-2",
+                            "mb-1 rounded-lg border border-transparent px-1 py-1 ml-2",
                           )}
                         >
                           <div className="flex items-center gap-1">
@@ -287,6 +288,11 @@ export function Sidebar() {
             ? "Patrimônio consolidado"
             : activePortfolio?.name ?? "Carteira selecionada"}
         </p>
+        {!scope.isGlobalScope && activeOwnerGroup ? (
+          <p className="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground/80">
+            {activeOwnerGroup.ownerName}
+          </p>
+        ) : null}
       </div>
     </aside>
   );

@@ -30,9 +30,11 @@ import {
 import { formatDate } from "@/lib/date";
 import {
   aggregateSummaries,
+  deriveOwnerLabel,
   mergeOperations,
   type OperationWithPortfolio,
 } from "@/lib/portfolio-aggregation";
+import { OwnerPortfolioBadge } from "@/components/portfolio/owner-portfolio-badge";
 import {
   usePortfolioOperations,
   usePortfolioOperationsList,
@@ -198,6 +200,7 @@ export default function OverviewPage() {
         ...operation,
         portfolioId: activePortfolio?.id ?? "",
         portfolioName: activePortfolio?.name ?? "Carteira",
+        ...deriveOwnerLabel(activePortfolio),
       }));
 
   const contextTitle = scope.isGlobalScope ? "Visão família" : activePortfolio?.name ?? "Carteira";
@@ -326,7 +329,10 @@ export default function OverviewPage() {
                     <TableCell>{formatDate(op.date)}</TableCell>
                     {scope.isGlobalScope ? (
                       <TableCell>
-                        <Badge variant="outline">{op.portfolioName}</Badge>
+                        <OwnerPortfolioBadge
+                          portfolioName={op.portfolioName}
+                          ownerName={op.ownerName}
+                        />
                       </TableCell>
                     ) : null}
                     <TableCell className="font-medium">{op.assetCode}</TableCell>

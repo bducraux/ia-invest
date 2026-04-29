@@ -25,11 +25,15 @@ import { formatDate } from "@/lib/date";
 import { useDashboardScope } from "@/lib/dashboard-scope";
 import { formatBRL } from "@/lib/money";
 import { getFixedIncomePositions, type FixedIncomePosition } from "@/lib/api";
+import { deriveOwnerLabel } from "@/lib/portfolio-aggregation";
+import { OwnerPortfolioBadge } from "@/components/portfolio/owner-portfolio-badge";
 import { usePortfolios } from "@/lib/queries";
 
 type FixedIncomeRow = FixedIncomePosition & {
   portfolioId: string;
   portfolioName: string;
+  ownerId: string;
+  ownerName: string;
 };
 
 function fixedIncomeDisplayName(position: FixedIncomePosition): string {
@@ -72,13 +76,15 @@ export function FixedIncomeOperationsPage() {
 
   const rows = useMemo<FixedIncomeRow[]>(
     () => visiblePortfolios
-      .flatMap((portfolio, index) =>
-        (positionQueries[index]?.data ?? []).map((position) => ({
+      .flatMap((portfolio, index) => {
+        const owner = deriveOwnerLabel(portfolio);
+        return (positionQueries[index]?.data ?? []).map((position) => ({
           ...position,
           portfolioId: portfolio.id,
           portfolioName: portfolio.name,
-        })),
-      )
+          ...owner,
+        }));
+      })
       .sort((left, right) => right.applicationDate.localeCompare(left.applicationDate)),
     [visiblePortfolios, positionQueries],
   );
@@ -161,7 +167,10 @@ export function FixedIncomeOperationsPage() {
                       <TableCell>{formatDate(row.applicationDate)}</TableCell>
                       {scope.isGlobalScope ? (
                         <TableCell>
-                          <Badge variant="outline">{row.portfolioName}</Badge>
+                          <OwnerPortfolioBadge
+                            portfolioName={row.portfolioName}
+                            ownerName={row.ownerName}
+                          />
                         </TableCell>
                       ) : null}
                       <TableCell>

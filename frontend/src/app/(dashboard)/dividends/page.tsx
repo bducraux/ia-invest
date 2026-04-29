@@ -24,9 +24,11 @@ import { formatBRL } from "@/lib/money";
 import { formatDate } from "@/lib/date";
 import {
   aggregateDividendsByMonth,
+  deriveOwnerLabel,
   mergeOperations,
   toDividendEntries,
 } from "@/lib/portfolio-aggregation";
+import { OwnerPortfolioBadge } from "@/components/portfolio/owner-portfolio-badge";
 import {
   usePortfolioOperations,
   usePortfolioOperationsList,
@@ -107,6 +109,7 @@ export default function DividendsPage() {
         ...operation,
         portfolioId: activePortfolio?.id ?? "",
         portfolioName: activePortfolio?.name ?? "Carteira",
+        ...deriveOwnerLabel(activePortfolio),
       }));
 
   const dividends = toDividendEntries(mergedOperations);
@@ -159,7 +162,10 @@ export default function DividendsPage() {
                     <TableCell>{formatDate(d.date)}</TableCell>
                     {scope.isGlobalScope ? (
                       <TableCell>
-                        <Badge variant="outline">{d.portfolioName}</Badge>
+                        <OwnerPortfolioBadge
+                          portfolioName={d.portfolioName}
+                          ownerName={d.ownerName}
+                        />
                       </TableCell>
                     ) : null}
                     <TableCell className="font-medium">{d.assetCode}</TableCell>

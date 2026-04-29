@@ -31,7 +31,8 @@ import {
   formatPercent,
   formatQuantity,
 } from "@/lib/money";
-import { mergePositions, type PositionWithPortfolio } from "@/lib/portfolio-aggregation";
+import { deriveOwnerLabel, mergePositions, type PositionWithPortfolio } from "@/lib/portfolio-aggregation";
+import { OwnerPortfolioBadge } from "@/components/portfolio/owner-portfolio-badge";
 import {
   useClosePosition,
   useDeletePrevidenciaSnapshot,
@@ -175,6 +176,7 @@ export default function PositionsPage() {
         ...position,
         portfolioId: activePortfolio?.id ?? "",
         portfolioName: activePortfolio?.name ?? "Carteira",
+        ...deriveOwnerLabel(activePortfolio),
       }));
 
   const positionsWithScopeWeight = useMemo(() => {
@@ -384,7 +386,10 @@ export default function PositionsPage() {
                       </TableCell>
                       {scope.isGlobalScope ? (
                         <TableCell>
-                          <Badge variant="outline">{p.portfolioName}</Badge>
+                          <OwnerPortfolioBadge
+                            portfolioName={p.portfolioName}
+                            ownerName={p.ownerName}
+                          />
                         </TableCell>
                       ) : null}
                       <TableCell>

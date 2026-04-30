@@ -177,8 +177,11 @@ export function toDividendEntries(operations: OperationWithPortfolio[]): Dividen
       (
         operation,
       ): operation is OperationWithPortfolio & {
-        type: "DIVIDENDO" | "JCP";
-      } => operation.type === "DIVIDENDO" || operation.type === "JCP",
+        type: "DIVIDENDO" | "JCP" | "RENDIMENTO";
+      } =>
+        operation.type === "DIVIDENDO" ||
+        operation.type === "JCP" ||
+        operation.type === "RENDIMENTO",
     )
     .map((operation) => ({
       id: operation.id,

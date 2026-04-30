@@ -15,13 +15,17 @@ rules:
 sources:
   - type: b3_csv
     enabled: true
+  - type: b3_movimentacao_xlsx
+    enabled: true
+  - type: manual_dividends_csv
+    enabled: true
   - type: broker_csv
     enabled: true
   # Bootstrap por XLSX manual — habilite se quiser carregar histórico
   # antigo a partir de uma planilha preenchida à mão.
   # Veja docs/fontes-de-dados/manual-xlsx.md
   - type: manual_xlsx_b3
-    enabled: false
+    enabled: true
 
 import:
   move_processed_files: true

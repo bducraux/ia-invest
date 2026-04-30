@@ -710,6 +710,9 @@ export default function FixedIncomePage() {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="font-medium text-foreground">{summary.portfolioName}</p>
+                          {summary.ownerName ? (
+                            <p className="text-xs text-muted-foreground">Membro: {summary.ownerName}</p>
+                          ) : null}
                           <p className="text-sm text-muted-foreground">
                             {summary.count} aplicaç{summary.count === 1 ? "ão" : "ões"}
                           </p>
@@ -799,6 +802,9 @@ export default function FixedIncomePage() {
                             <Wallet className="h-4 w-4 text-muted-foreground" />
                             <span>{p.portfolioName}</span>
                           </div>
+                          {p.ownerName ? (
+                            <div className="text-xs text-muted-foreground">{p.ownerName}</div>
+                          ) : null}
                         </TableCell>
                       ) : null}
                       <TableCell>

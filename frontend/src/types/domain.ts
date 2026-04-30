@@ -32,7 +32,7 @@ export type AssetClass =
   | "CRIPTO"
   | "INTERNACIONAL";
 
-export type OperationType = "COMPRA" | "VENDA" | "DIVIDENDO" | "JCP" | "DESDOBRAMENTO";
+export type OperationType = "COMPRA" | "VENDA" | "DIVIDENDO" | "JCP" | "RENDIMENTO" | "DESDOBRAMENTO";
 
 export interface Portfolio {
   id: string;
@@ -90,6 +90,7 @@ export interface Operation {
   id: string;
   date: string; // ISO
   assetCode: string;
+  assetType?: string;
   type: OperationType;
   quantity: number;
   unitPrice: Cents;
@@ -106,6 +107,6 @@ export interface DividendEntry {
   id: string;
   date: string;
   assetCode: string;
-  type: "DIVIDENDO" | "JCP";
+  type: "DIVIDENDO" | "JCP" | "RENDIMENTO";
   amount: Cents;
 }

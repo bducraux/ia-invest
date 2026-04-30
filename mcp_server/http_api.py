@@ -169,6 +169,7 @@ class OperationOut(BaseModel):
     id: str
     date: str
     assetCode: str
+    assetType: str
     type: str
     quantity: float
     unitPrice: int
@@ -440,6 +441,7 @@ def _to_ui_operation_type(operation_type: str) -> str:
         "sell": "VENDA",
         "dividend": "DIVIDENDO",
         "jcp": "JCP",
+        "rendimento": "RENDIMENTO",
         "split": "DESDOBRAMENTO",
         "transfer_in": "COMPRA",
         "transfer_out": "VENDA",
@@ -1239,6 +1241,7 @@ def create_http_app(
                 id=str(row["id"]),
                 date=row["operation_date"],
                 assetCode=row["asset_code"],
+                assetType=str(row["asset_type"] or ""),
                 type=_to_ui_operation_type(row["operation_type"]),
                 quantity=float(row["quantity"]),
                 unitPrice=int(row["unit_price"]),

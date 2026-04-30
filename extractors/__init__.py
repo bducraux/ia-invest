@@ -11,20 +11,24 @@ from __future__ import annotations
 
 from extractors.avenue_apex_pdf import AvenueApexPdfExtractor
 from extractors.b3_csv import B3CsvExtractor
+from extractors.b3_movimentacao_xlsx import B3MovimentacaoXlsxExtractor
 from extractors.base import BaseExtractor, ExtractionResult
 from extractors.binance_csv import BinanceCsvExtractor
 from extractors.binance_simple_earn import BinanceSimpleEarnExtractor
 from extractors.broker_csv import BrokerCsvExtractor
+from extractors.manual_dividends_csv import ManualDividendsCsvExtractor
 from extractors.manual_xlsx_b3 import ManualXlsxB3Extractor
 from extractors.manual_xlsx_crypto import ManualXlsxCryptoExtractor
 from extractors.previdencia_ibm_pdf import PrevidenciaIbmPdfExtractor
 
 _REGISTRY: dict[str, type[BaseExtractor]] = {
     "b3_csv": B3CsvExtractor,
+    "b3_movimentacao_xlsx": B3MovimentacaoXlsxExtractor,
     "broker_csv": BrokerCsvExtractor,
     "binance_csv": BinanceCsvExtractor,
     "binance_simple_earn": BinanceSimpleEarnExtractor,
     "avenue_apex_pdf": AvenueApexPdfExtractor,
+    "manual_dividends_csv": ManualDividendsCsvExtractor,
     "manual_xlsx_b3": ManualXlsxB3Extractor,
     "manual_xlsx_crypto": ManualXlsxCryptoExtractor,
     "previdencia_ibm_pdf": PrevidenciaIbmPdfExtractor,
@@ -50,9 +54,11 @@ __all__ = [
     "BaseExtractor",
     "ExtractionResult",
     "B3CsvExtractor",
+    "B3MovimentacaoXlsxExtractor",
     "BrokerCsvExtractor",
     "BinanceCsvExtractor",
     "AvenueApexPdfExtractor",
+    "ManualDividendsCsvExtractor",
     "ManualXlsxB3Extractor",
     "ManualXlsxCryptoExtractor",
     "PrevidenciaIbmPdfExtractor",

@@ -6,7 +6,7 @@ from scripts import import_portfolio as import_portfolio_module
 from storage.repository.db import Database
 
 
-def test_import_portfolio_previdencia_processes_only_latest_pdf(monkeypatch, tmp_path: Path) -> None:
+def test_import_portfolio_previdencia_imports_all_pdfs_as_history(monkeypatch, tmp_path: Path) -> None:
     source_inbox = (
         Path(__file__).resolve().parents[1]
         / "fixtures"
@@ -52,8 +52,8 @@ import:
     result = import_portfolio_module.import_portfolio("fundacao-ibm", db_path=db_path)
 
     assert result["files_processed"] == 3
-    assert result["inserted"] == 1
-    assert result["skipped"] == 2
+    assert result["inserted"] == 3
+    assert result["skipped"] == 0
     assert result["errors"] == 0
 
     assert not (inbox_dir / "extrato_janeiro_2026.pdf").exists()
@@ -66,17 +66,19 @@ import:
 
     db = Database(db_path)
     db.initialize()
-    row = db.connection.execute(
+    rows = db.connection.execute(
         """
         SELECT asset_code, product_name, period_month, unit_price_cents
         FROM previdencia_snapshots
         WHERE portfolio_id = 'default__fundacao-ibm'
+        ORDER BY period_month
         """
-    ).fetchone()
+    ).fetchall()
     db.close()
 
-    assert row is not None
-    assert row["asset_code"] == "PREV_IBM_CD"
-    assert row["product_name"] == "IBM CD"
-    assert row["period_month"] == "2026-03"
-    assert row["unit_price_cents"] == 4751
+    assert len(rows) == 3
+    assert [r["period_month"] for r in rows] == ["2026-01", "2026-02", "2026-03"]
+    latest = rows[-1]
+    assert latest["asset_code"] == "PREV_IBM_CD"
+    assert latest["product_name"] == "IBM CD"
+    assert latest["unit_price_cents"] == 4751

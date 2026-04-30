@@ -4,6 +4,7 @@ import OverviewPage from "@/app/(dashboard)/page";
 import OperationsPage from "@/app/(dashboard)/operations/page";
 import PositionsPage from "@/app/(dashboard)/positions/page";
 import FixedIncomePage from "@/app/(dashboard)/fixed-income/page";
+import PrevidenciaPage from "@/app/(dashboard)/previdencia/page";
 import { ClassFamilyOperationsPage, ClassFamilyOverviewPage, ClassFamilyPositionsPage } from "@/features/asset-classes/class-family-pages";
 import { FixedIncomeOperationsPage } from "@/features/asset-classes/fixed-income-operations-page";
 import { useDashboardScope } from "@/lib/dashboard-scope";
@@ -36,7 +37,7 @@ export function PortfolioSpecializedOverviewRoute() {
     case "CRIPTO":
       return <ClassFamilyOverviewPage classFamily="CRIPTO" />;
     case "PREVIDENCIA":
-      return <ClassFamilyOverviewPage classFamily="PREVIDENCIA" />;
+      return <PrevidenciaPage />;
     case "INTERNACIONAL":
       return <ClassFamilyOverviewPage classFamily="INTERNACIONAL" />;
     default:
@@ -56,7 +57,7 @@ export function PortfolioSpecializedPositionsRoute() {
     case "CRIPTO":
       return <ClassFamilyPositionsPage classFamily="CRIPTO" />;
     case "PREVIDENCIA":
-      return <ClassFamilyPositionsPage classFamily="PREVIDENCIA" />;
+      return <PrevidenciaPage />;
     case "INTERNACIONAL":
       return <ClassFamilyPositionsPage classFamily="INTERNACIONAL" />;
     default:

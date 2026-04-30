@@ -31,6 +31,8 @@ class _ParsedSnapshot:
 
 class PrevidenciaIbmPdfExtractor(BaseExtractor):
     source_type = "previdencia_ibm_pdf"
+    ENABLE_EXTRACTION_CACHE = True
+    EXTRACTOR_VERSION = 1
 
     def can_handle(self, file_path: Path) -> bool:
         if file_path.suffix.lower() != ".pdf":

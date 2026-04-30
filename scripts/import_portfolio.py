@@ -129,30 +129,6 @@ def _is_fixed_income_csv(file_path: Path) -> bool:
     return all(column in normalized_header for column in FIXED_INCOME_REQUIRED_COLUMNS)
 
 
-def _select_latest_previdencia_file(files: list[Path], enabled_sources: list[str]) -> Path | None:
-    if "previdencia_ibm_pdf" not in enabled_sources:
-        return None
-
-    extractor = get_extractor("previdencia_ibm_pdf")
-    if not isinstance(extractor, PrevidenciaIbmPdfExtractor):
-        return None
-
-    latest: tuple[Path, str] | None = None
-    for file_path in files:
-        if not extractor.can_handle(file_path):
-            continue
-        try:
-            period_month = extractor.extract_period_month(file_path)
-        except Exception as exc:  # noqa: BLE001
-            log.warning("skip_previdencia_file", path=str(file_path), error=str(exc))
-            continue
-
-        if latest is None or period_month > latest[1]:
-            latest = (file_path, period_month)
-
-    return latest[0] if latest is not None else None
-
-
 def _import_fixed_income_file(
     *,
     portfolio_id: str,
@@ -206,8 +182,15 @@ def _import_previdencia_ibm_file(
     job_repo: ImportJobRepository,
     prev_repo: PrevidenciaSnapshotRepository,
     extractor: PrevidenciaIbmPdfExtractor,
+    file_hash: str | None = None,
 ) -> dict[str, int]:
-    extraction = extractor.extract(staged_path)
+    cached = load_cached_extraction(staged_path, extractor, file_hash=file_hash)
+    if cached is not None:
+        extraction = cached
+        log.info("extraction_cache_hit", file=staged_path.name)
+    else:
+        extraction = extractor.extract(staged_path)
+        save_cached_extraction(staged_path, extractor, extraction, file_hash=file_hash)
     for err in extraction.errors:
         log.warning(
             "extraction_error",
@@ -249,17 +232,8 @@ def _import_previdencia_ibm_file(
                 import_job_id=job_id,
             )
             status = prev_repo.upsert_if_newer(snapshot)
-            if status == "skipped_older":
+            if status == "updated":
                 skipped += 1
-                if job_id:
-                    job_repo.log_error(
-                        job_id,
-                        error_type="deduplication",
-                        message=(
-                            "Snapshot skipped because statement month is older than current state"
-                        ),
-                        raw_data=record,
-                    )
             else:
                 inserted += 1
 
@@ -385,7 +359,6 @@ def import_portfolio(
     # but the canonical database id is owner-scoped (e.g. "bruno__renda-fixa").
     # Reassign so every downstream call (repositories, FKs, log entries) uses
     # the namespaced id consistently.
-    portfolio_slug = portfolio.slug
     portfolio_id = portfolio.id
 
     inbox = portfolio_dir / "inbox"
@@ -457,9 +430,9 @@ def import_portfolio(
             "errors": 0,
         }
 
-        latest_previdencia_file: Path | None = None
-        if portfolio_slug == "fundacao-ibm":
-            latest_previdencia_file = _select_latest_previdencia_file(files, enabled_sources)
+        # Previdência: importar TODOS os PDFs históricos. A constraint UNIQUE
+        # (portfolio_id, asset_code, period_month) na tabela previdencia_snapshots
+        # garante idempotência por mês — re-imports não duplicam.
 
         # Pre-pass: harvest Avenue/Apex aliases (description → ticker) from
         # ALL Apex PDFs before the main import so chronologically-early
@@ -534,19 +507,6 @@ def import_portfolio(
                 summary["files_rejected"] += 1
                 continue
 
-            if is_previdencia_file and portfolio_slug == "fundacao-ibm" and latest_previdencia_file is not None:
-                if file_path != latest_previdencia_file:
-                    log.info(
-                        "previdencia_file_skipped_not_latest",
-                        file=file_path.name,
-                        latest=latest_previdencia_file.name,
-                    )
-                    if not dry_run and portfolio.move_processed_files:
-                        shutil.move(str(file_path), str(processed / file_path.name))
-                    summary["files_processed"] += 1
-                    summary["skipped"] += 1
-                    continue
-
             # Move to staging
             staged_path = staging / file_path.name
             if not dry_run:
@@ -597,6 +557,7 @@ def import_portfolio(
                     job_repo=job_repo,
                     prev_repo=prev_repo,
                     extractor=previdencia_extractor,
+                    file_hash=file_hash,
                 )
                 inserted = file_result["inserted"]
                 skipped = file_result["skipped"]

@@ -49,7 +49,13 @@ function filterByRange(months: EquityCurve["series"], range: RangeKey) {
 function formatMonthPt(month: string): string {
   const [y, m] = month.split("-").map((s) => Number(s));
   const dt = new Date(Date.UTC(y, m - 1, 1));
-  return dt.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "");
+  return dt
+    .toLocaleDateString("pt-BR", {
+      month: "short",
+      year: "2-digit",
+      timeZone: "UTC",
+    })
+    .replace(".", "");
 }
 
 export interface EquityCurveChartProps {

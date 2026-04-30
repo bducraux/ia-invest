@@ -54,6 +54,10 @@ const portfolioSections = [
   { href: "/operations", label: "Operações" },
 ];
 
+// Specializations whose detail view doesn't need separate Posições/Operações
+// pages (the overview itself already shows everything relevant).
+const SPECIALIZATIONS_WITHOUT_SUBSECTIONS = new Set(["PREVIDENCIA"]);
+
 export function Sidebar() {
   const scope = useDashboardScope();
   const portfoliosQuery = usePortfolios();
@@ -174,6 +178,9 @@ export function Sidebar() {
                       );
                       const isExpanded =
                         expandedPortfolios[expansionKey] ?? isActive;
+                      const hasSubsections = !SPECIALIZATIONS_WITHOUT_SUBSECTIONS.has(
+                        portfolio.specialization,
+                      );
 
                       return (
                         <div
@@ -183,24 +190,28 @@ export function Sidebar() {
                           )}
                         >
                           <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                togglePortfolio(group.ownerId, portfolio.id)
-                              }
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
-                              aria-label={
-                                isExpanded ? "Recolher carteira" : "Expandir carteira"
-                              }
-                              aria-expanded={isExpanded}
-                            >
-                              <ChevronRight
-                                className={cn(
-                                  "h-4 w-4 transition-transform",
-                                  isExpanded ? "rotate-90" : "",
-                                )}
-                              />
-                            </button>
+                            {hasSubsections ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  togglePortfolio(group.ownerId, portfolio.id)
+                                }
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
+                                aria-label={
+                                  isExpanded ? "Recolher carteira" : "Expandir carteira"
+                                }
+                                aria-expanded={isExpanded}
+                              >
+                                <ChevronRight
+                                  className={cn(
+                                    "h-4 w-4 transition-transform",
+                                    isExpanded ? "rotate-90" : "",
+                                  )}
+                                />
+                              </button>
+                            ) : (
+                              <span className="inline-block h-8 w-8" aria-hidden="true" />
+                            )}
                             <Link
                               href={overviewHref}
                               className={cn(
@@ -217,7 +228,7 @@ export function Sidebar() {
                             </Link>
                           </div>
 
-                          {isExpanded ? (
+                          {isExpanded && hasSubsections ? (
                             <div className="mt-1 space-y-1 pl-9">
                               {portfolioSections.map((section) => {
                                 const href = buildScopedPath(portfolio.id, section.href);

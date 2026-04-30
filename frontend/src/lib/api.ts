@@ -586,6 +586,35 @@ export async function deletePrevidenciaSnapshot(
   );
 }
 
+export interface PrevidenciaHistorySnapshot {
+  id: number | null;
+  assetCode: string;
+  productName: string;
+  periodMonth: string;
+  periodStartDate: string | null;
+  periodEndDate: string | null;
+  quantity: number;
+  unitPriceCents: number;
+  marketValueCents: number;
+  sourceFile: string | null;
+}
+
+export interface PrevidenciaHistory {
+  portfolioId: string;
+  assetCode: string | null;
+  snapshots: PrevidenciaHistorySnapshot[];
+}
+
+export async function getPrevidenciaHistory(
+  portfolioId: string,
+  assetCode?: string,
+): Promise<PrevidenciaHistory> {
+  const qs = assetCode ? `?asset_code=${encodeURIComponent(assetCode)}` : "";
+  return apiFetch<PrevidenciaHistory>(
+    `/api/portfolios/${portfolioId}/previdencia/history${qs}`,
+  );
+}
+
 // --- Members ----------------------------------------------------------------
 
 export interface MemberSummary {

@@ -2001,6 +2001,43 @@ def create_http_app(
             raise HTTPException(status_code=404, detail="Snapshot not found")
         repo.delete(portfolio_id, asset_code)
 
+    @app.get(
+        "/api/portfolios/{portfolio_id}/previdencia/history",
+        response_model=None,
+    )
+    def get_previdencia_history(
+        portfolio_id: str,
+        asset_code: str | None = Query(default=None, alias="asset_code"),
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> dict[str, Any]:
+        """Return the full monthly snapshot history for a previdência portfolio.
+
+        Snapshots are ordered ascending by ``period_month``. When ``asset_code``
+        is provided, only that asset's history is returned.
+        """
+        require_portfolio(portfolio_id, db)
+        repo = PrevidenciaSnapshotRepository(db.connection)
+        snapshots = repo.list_history(portfolio_id, asset_code=asset_code)
+        return {
+            "portfolioId": portfolio_id,
+            "assetCode": asset_code,
+            "snapshots": [
+                {
+                    "id": snap.id,
+                    "assetCode": snap.asset_code,
+                    "productName": snap.product_name,
+                    "periodMonth": snap.period_month,
+                    "periodStartDate": snap.period_start_date,
+                    "periodEndDate": snap.period_end_date,
+                    "quantity": snap.quantity,
+                    "unitPriceCents": snap.unit_price_cents,
+                    "marketValueCents": snap.market_value_cents,
+                    "sourceFile": snap.source_file,
+                }
+                for snap in snapshots
+            ],
+        }
+
     return app
 
 

@@ -10,6 +10,7 @@ import {
   getPortfolios,
   getPortfolioPositions,
   getPortfolioSummary,
+  getPrevidenciaHistory,
   updateOperation,
   updatePrevidenciaSnapshot,
   type AssetClassFilter,
@@ -18,6 +19,7 @@ import {
   type ListOperationsParams,
   type OperationCreateInput,
   type OperationUpdateInput,
+  type PrevidenciaHistory,
   type PrevidenciaSnapshotUpdateInput,
 } from "@/lib/api";
 import type { EquityCurve, EquityCurvePoint } from "@/types/domain";
@@ -175,6 +177,18 @@ export function useDeletePrevidenciaSnapshot(portfolioId: string) {
     mutationFn: (assetCode: string) =>
       deletePrevidenciaSnapshot(portfolioId, assetCode),
     onSuccess: () => invalidatePortfolioCaches(queryClient, portfolioId),
+  });
+}
+
+export function usePrevidenciaHistory(
+  portfolioId: string | null | undefined,
+  assetCode?: string,
+) {
+  return useQuery<PrevidenciaHistory>({
+    queryKey: ["previdencia-history", portfolioId ?? null, assetCode ?? null],
+    queryFn: () => getPrevidenciaHistory(portfolioId as string, assetCode),
+    enabled: Boolean(portfolioId),
+    staleTime: 60_000,
   });
 }
 

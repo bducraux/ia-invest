@@ -1,4 +1,4 @@
-.PHONY: help install init migrate reset-db clear-cache create-portfolio adjust-balance check-balance import-all portfolio-overview lint type-check test clean server api-server start stop logs frontend-install frontend-dev frontend-build frontend-test frontend-lint
+.PHONY: help install init migrate reset-db clear-cache create-portfolio adjust-balance check-balance import-all portfolio-overview lint type-check test clean server api-server start stop logs frontend-install frontend-dev frontend-build frontend-test frontend-lint sync-historical-prices sync-historical-prices-full
 
 API_PORT ?= 8010
 
@@ -76,6 +76,10 @@ reset-db:
 	@echo "Bootstrapping USDBRL PTAX historical series from BACEN..."
 	@uv run python scripts/sync_fx_rates.py --pair USDBRL --full || \
 		echo "WARNING: USDBRL sync failed (offline?). Run 'make sync-fx-full' later."
+	@echo ""
+	@echo "Bootstrapping monthly historical prices (Yahoo) for every asset..."
+	@uv run python scripts/sync_historical_prices.py --full || \
+		echo "WARNING: historical prices sync failed (offline?). Run 'make sync-historical-prices-full' later."
 
 create-portfolio:
 	uv run python scripts/create_portfolio.py
@@ -133,6 +137,12 @@ sync-fx:
 
 sync-fx-full:
 	uv run python scripts/sync_fx_rates.py --full
+
+sync-historical-prices:
+	uv run python scripts/sync_historical_prices.py $(ARGS)
+
+sync-historical-prices-full:
+	uv run python scripts/sync_historical_prices.py --full
 
 frontend-install:
 	cd frontend && npm ci

@@ -70,6 +70,25 @@ export interface PerformancePoint {
   value: Cents;
 }
 
+export interface EquityCurvePoint {
+  month: string; // YYYY-MM
+  asOfDate: string; // YYYY-MM-DD
+  marketValue: Cents;
+  breakdownByClass: Record<string, Cents>;
+  netContributions: Cents;
+  cumulativeContributions: Cents;
+  dividendsReceived: Cents;
+  warnings: string[];
+}
+
+export interface EquityCurve {
+  portfolioIds: string[];
+  fromMonth: string | null;
+  toMonth: string | null;
+  series: EquityCurvePoint[];
+  generatedAt: string;
+}
+
 export interface Position {
   assetCode: string;
   name: string;

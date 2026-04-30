@@ -126,6 +126,51 @@ export function getPortfolioSummary(portfolioId: string): Promise<PortfolioSumma
   return apiFetch<PortfolioSummary>(`/api/portfolios/${portfolioId}/summary`);
 }
 
+export interface EquityCurveQuery {
+  from?: string;
+  to?: string;
+  periodMonths?: number;
+}
+
+export interface EquityCurveRawPoint {
+  month: string;
+  as_of_date: string;
+  market_value_cents: number;
+  breakdown_by_class: Record<string, number>;
+  net_contributions_cents: number;
+  cumulative_contributions_cents: number;
+  dividends_received_cents: number;
+  warnings: string[];
+}
+
+export interface EquityCurveRaw {
+  portfolio_ids: string[];
+  from_month: string | null;
+  to_month: string | null;
+  series: EquityCurveRawPoint[];
+  generated_at: string;
+}
+
+function buildEquityCurveQuery(params: EquityCurveQuery = {}): string {
+  return toQueryString({
+    from: params.from,
+    to: params.to,
+    period_months: params.periodMonths,
+  });
+}
+
+export function getEquityCurve(
+  portfolioId: string | null,
+  params: EquityCurveQuery = {},
+): Promise<EquityCurveRaw> {
+  const query = buildEquityCurveQuery(params);
+  const path =
+    portfolioId === null
+      ? `/api/equity-curve${query}`
+      : `/api/portfolios/${portfolioId}/equity-curve${query}`;
+  return apiFetch<EquityCurveRaw>(path);
+}
+
 export async function updatePortfolioName(
   portfolioId: string,
   payload: { name: string; ownerId?: string },

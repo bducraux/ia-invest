@@ -51,6 +51,7 @@ from mcp_server.tools.members import (
     list_members,
     transfer_portfolio_owner_tool,
 )
+from mcp_server.tools.equity_curve import get_portfolio_equity_curve
 from mcp_server.tools.performance import get_portfolio_performance
 from mcp_server.tools.portfolio_alerts import get_portfolio_alerts
 from mcp_server.tools.portfolios import (
@@ -304,6 +305,40 @@ async def handle_list_tools() -> list[types.Tool]:
                 "required": ["portfolio_id"],
             },
         ),
+        types.Tool(
+            name="get_portfolio_equity_curve",
+            description=(
+                "Monthly equity curve (evolução patrimonial) covering all "
+                "asset classes: renda variável, internacional, cripto, "
+                "renda fixa e previdência. Returns one point per month "
+                "with consolidated market value, per-class breakdown, "
+                "net contributions and dividends received in the month."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "portfolio_id": {
+                        "type": "string",
+                        "description": "Portfolio ID. Omit for consolidated view.",
+                    },
+                    "from_month": {
+                        "type": "string",
+                        "description": "Lower bound (YYYY-MM, inclusive).",
+                    },
+                    "to_month": {
+                        "type": "string",
+                        "description": "Upper bound (YYYY-MM, inclusive). Defaults to current month.",
+                    },
+                    "period_months": {
+                        "type": "integer",
+                        "description": "Window size when from_month is omitted (default 24).",
+                        "default": 24,
+                        "minimum": 1,
+                    },
+                },
+                "required": [],
+            },
+        ),
         # ----------------------------------------------------------- members
         types.Tool(
             name="list_members",
@@ -462,6 +497,14 @@ async def handle_call_tool(
             result = get_fixed_income_summary(db, args["portfolio_id"])
         elif name == "get_portfolio_alerts":
             result = get_portfolio_alerts(db, args["portfolio_id"])
+        elif name == "get_portfolio_equity_curve":
+            result = get_portfolio_equity_curve(
+                db,
+                portfolio_id=args.get("portfolio_id"),
+                from_month=args.get("from_month"),
+                to_month=args.get("to_month"),
+                period_months=int(args.get("period_months", 24)),
+            )
         elif name == "list_members":
             result = list_members(db, only_active=args.get("only_active", True))
         elif name == "get_member":

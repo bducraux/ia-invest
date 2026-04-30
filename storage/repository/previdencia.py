@@ -14,40 +14,110 @@ class PrevidenciaSnapshotRepository:
         self._conn = conn
 
     def get_by_asset(self, portfolio_id: str, asset_code: str) -> PrevidenciaSnapshot | None:
+        """Return the most recent snapshot for the asset (by ``period_month``)."""
         row = self._conn.execute(
             """
             SELECT *
             FROM previdencia_snapshots
             WHERE portfolio_id = ? AND asset_code = ?
+            ORDER BY period_month DESC, id DESC
+            LIMIT 1
             """,
             (portfolio_id, asset_code),
         ).fetchone()
         return self._row_to_model(row) if row else None
 
     def list_by_portfolio(self, portfolio_id: str) -> list[PrevidenciaSnapshot]:
+        """Return latest snapshot per asset for the portfolio."""
         rows = self._conn.execute(
+            """
+            SELECT s.*
+            FROM previdencia_snapshots s
+            JOIN (
+                SELECT asset_code, MAX(period_month) AS max_month
+                FROM previdencia_snapshots
+                WHERE portfolio_id = ?
+                GROUP BY asset_code
+            ) latest
+              ON latest.asset_code = s.asset_code
+             AND latest.max_month  = s.period_month
+            WHERE s.portfolio_id = ?
+            ORDER BY s.asset_code ASC
+            """,
+            (portfolio_id, portfolio_id),
+        ).fetchall()
+        return [self._row_to_model(r) for r in rows]
+
+    def list_history(
+        self,
+        portfolio_id: str,
+        asset_code: str | None = None,
+    ) -> list[PrevidenciaSnapshot]:
+        """Return all snapshots for the portfolio (optionally a single asset),
+        ordered by ``period_month`` ascending."""
+        if asset_code is None:
+            rows = self._conn.execute(
+                """
+                SELECT *
+                FROM previdencia_snapshots
+                WHERE portfolio_id = ?
+                ORDER BY period_month ASC, asset_code ASC
+                """,
+                (portfolio_id,),
+            ).fetchall()
+        else:
+            rows = self._conn.execute(
+                """
+                SELECT *
+                FROM previdencia_snapshots
+                WHERE portfolio_id = ? AND asset_code = ?
+                ORDER BY period_month ASC
+                """,
+                (portfolio_id, asset_code),
+            ).fetchall()
+        return [self._row_to_model(r) for r in rows]
+
+    def get_at_or_before(
+        self, portfolio_id: str, asset_code: str, period_month: str
+    ) -> PrevidenciaSnapshot | None:
+        """Return the most recent snapshot with ``period_month <= bound``."""
+        row = self._conn.execute(
             """
             SELECT *
             FROM previdencia_snapshots
             WHERE portfolio_id = ?
-            ORDER BY asset_code ASC
+              AND asset_code = ?
+              AND period_month <= ?
+            ORDER BY period_month DESC
+            LIMIT 1
             """,
-            (portfolio_id,),
-        ).fetchall()
-        return [self._row_to_model(r) for r in rows]
+            (portfolio_id, asset_code, period_month),
+        ).fetchone()
+        return self._row_to_model(row) if row else None
 
     def upsert_if_newer(self, snapshot: PrevidenciaSnapshot) -> str:
-        """Upsert a snapshot when period_month is not older than current row.
+        """Insert a snapshot for its ``period_month``.
 
-        Returns one of: "inserted", "updated", "skipped_older".
+        With history enabled, every distinct period is kept. If a snapshot
+        for the same ``(portfolio_id, asset_code, period_month)`` already
+        exists, it is updated (idempotent re-imports). Older periods are
+        never "skipped" — they fill in the historical timeline.
+
+        Returns one of: "inserted", "updated".
         """
-        current = self.get_by_asset(snapshot.portfolio_id, snapshot.asset_code)
-        if current is None:
+        existing = self._conn.execute(
+            """
+            SELECT id
+            FROM previdencia_snapshots
+            WHERE portfolio_id = ?
+              AND asset_code = ?
+              AND period_month = ?
+            """,
+            (snapshot.portfolio_id, snapshot.asset_code, snapshot.period_month),
+        ).fetchone()
+        if existing is None:
             self._insert(snapshot)
             return "inserted"
-
-        if snapshot.period_month < current.period_month:
-            return "skipped_older"
 
         self._conn.execute(
             """
@@ -56,20 +126,17 @@ class PrevidenciaSnapshotRepository:
                 quantity = :quantity,
                 unit_price_cents = :unit_price_cents,
                 market_value_cents = :market_value_cents,
-                period_month = :period_month,
                 period_start_date = :period_start_date,
                 period_end_date = :period_end_date,
                 source_file = :source_file,
                 import_job_id = :import_job_id,
                 updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
-            WHERE portfolio_id = :portfolio_id
-              AND asset_code = :asset_code
+            WHERE id = :id
             """,
-            self._to_params(snapshot),
+            {**self._to_params(snapshot), "id": int(existing["id"])},
         )
         self._conn.commit()
         return "updated"
-
     def _insert(self, snapshot: PrevidenciaSnapshot) -> int:
         cur = self._conn.execute(
             """

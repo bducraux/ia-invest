@@ -17,7 +17,7 @@ def _seed_portfolio(tmp_db) -> None:
     )
 
 
-def test_upsert_if_newer_skips_older_month(tmp_db) -> None:
+def test_upsert_if_newer_inserts_each_distinct_period(tmp_db) -> None:
     _seed_portfolio(tmp_db)
     repo = PrevidenciaSnapshotRepository(tmp_db.connection)
 
@@ -41,15 +41,20 @@ def test_upsert_if_newer_skips_older_month(tmp_db) -> None:
     )
 
     assert repo.upsert_if_newer(newer) == "inserted"
-    assert repo.upsert_if_newer(older) == "skipped_older"
+    # Older periods are now also persisted (history-aware behaviour).
+    assert repo.upsert_if_newer(older) == "inserted"
 
+    # get_by_asset returns the latest period.
     current = repo.get_by_asset("p1", "PREV_IBM_CD")
     assert current is not None
     assert current.period_month == "2026-03"
     assert current.unit_price_cents == 1000
 
+    history = repo.list_history("p1", "PREV_IBM_CD")
+    assert [s.period_month for s in history] == ["2026-02", "2026-03"]
 
-def test_upsert_if_newer_updates_same_or_newer_month(tmp_db) -> None:
+
+def test_upsert_if_newer_updates_same_period(tmp_db) -> None:
     _seed_portfolio(tmp_db)
     repo = PrevidenciaSnapshotRepository(tmp_db.connection)
 

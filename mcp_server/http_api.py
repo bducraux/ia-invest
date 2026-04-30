@@ -38,6 +38,7 @@ from mcp_server.services.quotes import MarketQuoteService
 from mcp_server.tools.app_settings import get_app_settings
 from mcp_server.tools.concentration import get_concentration_analysis
 from mcp_server.tools.dividends_summary import get_dividends_summary
+from mcp_server.tools.equity_curve import get_portfolio_equity_curve
 from mcp_server.tools.fixed_income_summary import get_fixed_income_summary
 from mcp_server.tools.performance import get_portfolio_performance
 from mcp_server.tools.portfolio_alerts import get_portfolio_alerts
@@ -1829,6 +1830,44 @@ def create_http_app(
             db,
             portfolio_id,
             quote_service=build_quote_service(db),
+        )
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        return result
+
+    @app.get("/api/portfolios/{portfolio_id}/equity-curve", response_model=None)
+    def equity_curve_endpoint(
+        portfolio_id: str,
+        from_month: str | None = Query(default=None, alias="from"),
+        to_month: str | None = Query(default=None, alias="to"),
+        period_months: int = Query(default=24, ge=1, le=240),
+    ) -> dict[str, Any]:
+        db = get_db()
+        require_portfolio(portfolio_id, db)
+        result = get_portfolio_equity_curve(
+            db,
+            portfolio_id,
+            from_month=from_month,
+            to_month=to_month,
+            period_months=period_months,
+        )
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        return result
+
+    @app.get("/api/equity-curve", response_model=None)
+    def equity_curve_consolidated_endpoint(
+        from_month: str | None = Query(default=None, alias="from"),
+        to_month: str | None = Query(default=None, alias="to"),
+        period_months: int = Query(default=24, ge=1, le=240),
+    ) -> dict[str, Any]:
+        db = get_db()
+        result = get_portfolio_equity_curve(
+            db,
+            None,
+            from_month=from_month,
+            to_month=to_month,
+            period_months=period_months,
         )
         if "error" in result:
             raise HTTPException(status_code=400, detail=result["error"])

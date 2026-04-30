@@ -21,6 +21,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { KpiCard } from "@/features/dashboard/kpi-card";
 import { AllocationDonut } from "@/features/dashboard/allocation-donut";
 import { AssetAllocationDonut } from "@/features/dashboard/asset-allocation-donut";
+import { EquityCurveChart } from "@/features/dashboard/equity-curve-chart";
 import { useDashboardScope } from "@/lib/dashboard-scope";
 import {
   formatBRL,
@@ -43,6 +44,7 @@ import {
   usePortfolios,
   usePortfolioSummaries,
   usePortfolioSummary,
+  useEquityCurve,
 } from "@/lib/queries";
 import {
   Banknote,
@@ -302,6 +304,20 @@ export default function OverviewPage() {
         </div>
 
         <Card>
+          <CardHeader>
+            <CardTitle className="text-base text-foreground">
+              Evolução patrimonial
+            </CardTitle>
+            <CardDescription>
+              Patrimônio mensal por classe, aportes acumulados e proventos.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <EquityCurveSection scope={scope} />
+          </CardContent>
+        </Card>
+
+        <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <div>
               <CardTitle className="text-base text-foreground">
@@ -364,5 +380,21 @@ export default function OverviewPage() {
         </Card>
       </main>
     </>
+  );
+}
+
+function EquityCurveSection({
+  scope,
+}: {
+  scope: ReturnType<typeof useDashboardScope>;
+}) {
+  const portfolioId = scope.isGlobalScope ? null : (scope.portfolioId ?? null);
+  const query = useEquityCurve(portfolioId, { periodMonths: 24 });
+  return (
+    <EquityCurveChart
+      data={query.data}
+      isLoading={query.isLoading}
+      defaultRange="12m"
+    />
   );
 }

@@ -264,11 +264,12 @@ CREATE TABLE IF NOT EXISTS previdencia_snapshots (
     created_at                    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     updated_at                    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
 
-    UNIQUE (portfolio_id, asset_code)
+    UNIQUE (portfolio_id, asset_code, period_month)
 );
 
 CREATE INDEX IF NOT EXISTS idx_prev_positions_portfolio ON previdencia_snapshots(portfolio_id);
 CREATE INDEX IF NOT EXISTS idx_prev_positions_period    ON previdencia_snapshots(portfolio_id, period_month);
+CREATE INDEX IF NOT EXISTS idx_prev_positions_asset_per ON previdencia_snapshots(portfolio_id, asset_code, period_month DESC);
 
 -- ---------------------------------------------------------------------------
 -- app_settings
@@ -325,6 +326,27 @@ CREATE INDEX IF NOT EXISTS idx_fx_rates_lookup
     ON fx_rates(pair, rate_date DESC);
 
 -- ---------------------------------------------------------------------------
+-- historical_prices
+-- Persistent cache of historical closing prices for equity-curve reporting.
+-- No TTL: a closing price for a past date is immutable. The current month's
+-- price still comes from market_quotes_cache (which has TTL).
+-- Currency stored to support international assets; equity-curve service
+-- converts to BRL via fx_rates on the fly.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS historical_prices (
+    asset_code      TEXT NOT NULL,
+    rate_date       TEXT NOT NULL,
+    close_cents     INTEGER NOT NULL CHECK (close_cents >= 0),
+    currency        TEXT NOT NULL DEFAULT 'BRL',
+    source          TEXT NOT NULL,
+    fetched_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    PRIMARY KEY (asset_code, rate_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_historical_prices_lookup
+    ON historical_prices(asset_code, rate_date DESC);
+
+-- ---------------------------------------------------------------------------
 -- avenue_symbol_aliases
 -- Persistent description→ticker cache for Avenue/Apex monthly PDF statements.
 -- Apex statements identify equities by long descriptions in the BUY/SELL
@@ -354,3 +376,9 @@ VALUES ('0002', 'add members table and portfolios.owner_id');
 
 INSERT OR IGNORE INTO schema_migrations (version, description)
 VALUES ('0003', 'namespace portfolios.id as owner__slug; add slug column');
+
+INSERT OR IGNORE INTO schema_migrations (version, description)
+VALUES ('0004', 'previdencia snapshots keep history per period_month');
+
+INSERT OR IGNORE INTO schema_migrations (version, description)
+VALUES ('0005', 'historical_prices cache for equity-curve reporting');

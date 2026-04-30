@@ -5,6 +5,7 @@ import {
   createOperation,
   deleteOperation,
   deletePrevidenciaSnapshot,
+  getEquityCurve,
   getPortfolioOperations,
   getPortfolios,
   getPortfolioPositions,
@@ -12,11 +13,15 @@ import {
   updateOperation,
   updatePrevidenciaSnapshot,
   type AssetClassFilter,
+  type EquityCurveQuery,
+  type EquityCurveRaw,
   type ListOperationsParams,
   type OperationCreateInput,
   type OperationUpdateInput,
   type PrevidenciaSnapshotUpdateInput,
 } from "@/lib/api";
+import type { EquityCurve, EquityCurvePoint } from "@/types/domain";
+import type { Cents } from "@/lib/money";
 
 export function usePortfolios() {
   return useQuery({
@@ -170,6 +175,41 @@ export function useDeletePrevidenciaSnapshot(portfolioId: string) {
     mutationFn: (assetCode: string) =>
       deletePrevidenciaSnapshot(portfolioId, assetCode),
     onSuccess: () => invalidatePortfolioCaches(queryClient, portfolioId),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Equity curve (evolução patrimonial mensal)
+// ---------------------------------------------------------------------------
+
+function mapEquityCurve(raw: EquityCurveRaw): EquityCurve {
+  return {
+    portfolioIds: raw.portfolio_ids,
+    fromMonth: raw.from_month,
+    toMonth: raw.to_month,
+    generatedAt: raw.generated_at,
+    series: raw.series.map<EquityCurvePoint>((p) => ({
+      month: p.month,
+      asOfDate: p.as_of_date,
+      marketValue: p.market_value_cents as Cents,
+      breakdownByClass: Object.fromEntries(
+        Object.entries(p.breakdown_by_class).map(([k, v]) => [k, v as Cents]),
+      ),
+      netContributions: p.net_contributions_cents as Cents,
+      cumulativeContributions: p.cumulative_contributions_cents as Cents,
+      dividendsReceived: p.dividends_received_cents as Cents,
+      warnings: p.warnings,
+    })),
+  };
+}
+
+export function useEquityCurve(
+  portfolioId: string | null,
+  params: EquityCurveQuery = {},
+) {
+  return useQuery({
+    queryKey: ["equity-curve", portfolioId ?? "__all__", params],
+    queryFn: async () => mapEquityCurve(await getEquityCurve(portfolioId, params)),
   });
 }
 

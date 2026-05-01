@@ -40,6 +40,7 @@ from mcp.server.models import InitializationOptions
 from mcp_server.tools.app_settings import get_app_settings
 from mcp_server.tools.concentration import get_concentration_analysis
 from mcp_server.tools.dividends_summary import get_dividends_summary
+from mcp_server.tools.equity_curve import get_portfolio_equity_curve
 from mcp_server.tools.fixed_income_summary import get_fixed_income_summary
 from mcp_server.tools.members import (
     compare_members,
@@ -51,7 +52,7 @@ from mcp_server.tools.members import (
     list_members,
     transfer_portfolio_owner_tool,
 )
-from mcp_server.tools.equity_curve import get_portfolio_equity_curve
+from mcp_server.tools.operations import add_operations
 from mcp_server.tools.performance import get_portfolio_performance
 from mcp_server.tools.portfolio_alerts import get_portfolio_alerts
 from mcp_server.tools.portfolios import (
@@ -426,6 +427,90 @@ async def handle_list_tools() -> list[types.Tool]:
                 "required": ["portfolio_id", "new_owner_id"],
             },
         ),
+        types.Tool(
+            name="add_operations",
+            description=(
+                "Record one or more buy/sell (or other) operations in a portfolio. "
+                "Atomic batch: all entries are inserted in a single transaction and "
+                "positions are recomputed once at the end. "
+                "Resolve the portfolio by passing portfolio_id (e.g. 'alice__renda-variavel') "
+                "OR member_id and/or portfolio_type (slug). When ambiguous (multiple "
+                "active portfolios match), the tool returns the candidates so the agent "
+                "can ask the user. "
+                "Each operation requires asset_code, quantity, unit_price_brl (decimal in "
+                "BRL — NOT cents), and operation_date (YYYY-MM-DD). operation_type defaults "
+                "to 'buy'. asset_type is inferred when omitted. "
+                "If the user did not state the date, ask before calling — there is no "
+                "implicit 'today' default."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "portfolio_id": {
+                        "type": "string",
+                        "description": (
+                            "Namespaced portfolio id (e.g. 'alice__renda-variavel'). "
+                            "Wins over member_id/portfolio_type when set."
+                        ),
+                    },
+                    "member_id": {
+                        "type": "string",
+                        "description": "Member owner id when portfolio_id is not given.",
+                    },
+                    "portfolio_type": {
+                        "type": "string",
+                        "description": (
+                            "Portfolio slug ('renda-variavel', 'renda-fixa', 'cripto', "
+                            "'internacional'). Combined with member_id (or alone, if "
+                            "unique) to resolve the portfolio."
+                        ),
+                    },
+                    "operations": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "asset_code": {"type": "string"},
+                                "quantity": {"type": "number"},
+                                "unit_price_brl": {
+                                    "type": "number",
+                                    "description": "Unit price in BRL as decimal (e.g. 3.57). NOT cents.",
+                                },
+                                "operation_date": {
+                                    "type": "string",
+                                    "description": "ISO 8601 YYYY-MM-DD. Required.",
+                                },
+                                "operation_type": {
+                                    "type": "string",
+                                    "description": "Defaults to 'buy'. Use 'sell', 'transfer_in', etc. for other types.",
+                                },
+                                "asset_type": {
+                                    "type": "string",
+                                    "description": "Optional. Inferred when omitted (stock/fii/bdr/etf/treasury).",
+                                },
+                                "fees_brl": {
+                                    "type": "number",
+                                    "description": "Optional fees in BRL (decimal). Defaults to 0.",
+                                },
+                                "asset_name": {"type": "string"},
+                                "broker": {"type": "string"},
+                                "account": {"type": "string"},
+                                "notes": {"type": "string"},
+                                "settlement_date": {"type": "string"},
+                            },
+                            "required": [
+                                "asset_code",
+                                "quantity",
+                                "unit_price_brl",
+                                "operation_date",
+                            ],
+                        },
+                    },
+                },
+                "required": ["operations"],
+            },
+        ),
     ]
 
 
@@ -532,6 +617,14 @@ async def handle_call_tool(
         elif name == "transfer_portfolio_owner":
             result = transfer_portfolio_owner_tool(
                 db, args["portfolio_id"], args["new_owner_id"]
+            )
+        elif name == "add_operations":
+            result = add_operations(
+                db,
+                portfolio_id=args.get("portfolio_id"),
+                member_id=args.get("member_id"),
+                portfolio_type=args.get("portfolio_type"),
+                operations=args.get("operations") or [],
             )
         else:
             result = {"error": f"Unknown tool: {name}"}

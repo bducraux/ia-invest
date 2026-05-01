@@ -40,12 +40,12 @@ def test_create_portfolio_creates_owner_subfolder(tmp_path: Path) -> None:
     target = create_portfolio(
         "Minha Renda Fixa",
         portfolio_type="renda-fixa",
-        owner_id="bruno",
+        owner_id="bob",
         templates_root=templates,
         portfolios_dir=portfolios,
     )
 
-    assert target == portfolios / "bruno" / "minha-renda-fixa"
+    assert target == portfolios / "bob" / "minha-renda-fixa"
     assert (target / "portfolio.yml").exists()
     for sub in ("inbox", "staging", "processed", "rejected", "exports"):
         assert (target / sub).is_dir()
@@ -53,7 +53,7 @@ def test_create_portfolio_creates_owner_subfolder(tmp_path: Path) -> None:
     manifest = yaml.safe_load((target / "portfolio.yml").read_text(encoding="utf-8"))
     assert manifest["id"] == "minha-renda-fixa"
     assert manifest["name"] == "Minha Renda Fixa"
-    assert manifest["owner_id"] == "bruno"
+    assert manifest["owner_id"] == "bob"
 
 
 def test_create_portfolio_requires_owner(tmp_path: Path) -> None:
@@ -76,7 +76,7 @@ def test_create_portfolio_unknown_type(tmp_path: Path) -> None:
         create_portfolio(
             "X",
             portfolio_type="does-not-exist",
-            owner_id="bruno",
+            owner_id="bob",
             templates_root=templates,
             portfolios_dir=tmp_path / "portfolios",
         )
@@ -90,7 +90,7 @@ def test_create_portfolio_existing_target_aborts(tmp_path: Path) -> None:
     create_portfolio(
         "Carteira",
         portfolio_type="renda-fixa",
-        owner_id="bruno",
+        owner_id="bob",
         templates_root=templates,
         portfolios_dir=portfolios,
     )
@@ -98,7 +98,7 @@ def test_create_portfolio_existing_target_aborts(tmp_path: Path) -> None:
         create_portfolio(
             "Carteira",
             portfolio_type="renda-fixa",
-            owner_id="bruno",
+            owner_id="bob",
             templates_root=templates,
             portfolios_dir=portfolios,
         )
@@ -112,11 +112,11 @@ def test_create_portfolio_generic_type(tmp_path: Path) -> None:
     target = create_portfolio(
         "Misturada",
         portfolio_type="generic",
-        owner_id="rafa",
+        owner_id="alice",
         templates_root=templates,
         portfolios_dir=portfolios,
     )
-    assert target == portfolios / "rafa" / "misturada"
+    assert target == portfolios / "alice" / "misturada"
     assert (target / "portfolio.yml").exists()
     manifest = yaml.safe_load((target / "portfolio.yml").read_text(encoding="utf-8"))
-    assert manifest["owner_id"] == "rafa"
+    assert manifest["owner_id"] == "alice"

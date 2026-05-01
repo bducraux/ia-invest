@@ -11,8 +11,8 @@ describe("dashboard scope helpers", () => {
   });
 
   it("builds fixed-income scoped path for selected portfolio", () => {
-    expect(buildScopedPath("renda-fixa-bruno", "/fixed-income")).toBe(
-      "/portfolio/renda-fixa-bruno/fixed-income",
+    expect(buildScopedPath("renda-fixa-bob", "/fixed-income")).toBe(
+      "/portfolio/renda-fixa-bob/fixed-income",
     );
   });
 });

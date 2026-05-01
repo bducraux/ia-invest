@@ -24,19 +24,19 @@ function portfolio(
 describe("portfolio-grouping", () => {
   it("groups portfolios by owner with the owner display name", () => {
     const groups = groupPortfoliosByOwner([
-      portfolio("rv-bruno", "bruno", "Bruno"),
-      portfolio("rf-rafa", "rafa", "Rafa"),
-      portfolio("crypto-bruno", "bruno", "Bruno"),
+      portfolio("rv-bob", "bob", "Bob"),
+      portfolio("rf-alice", "alice", "Alice"),
+      portfolio("crypto-bob", "bob", "Bob"),
     ]);
 
     expect(groups).toHaveLength(2);
-    const bruno = groups.find((g) => g.ownerId === "bruno");
-    expect(bruno?.portfolios.map((p) => p.id)).toEqual([
-      "rv-bruno",
-      "crypto-bruno",
+    const bob = groups.find((g) => g.ownerId === "bob");
+    expect(bob?.portfolios.map((p) => p.id)).toEqual([
+      "rv-bob",
+      "crypto-bob",
     ]);
-    const rafa = groups.find((g) => g.ownerId === "rafa");
-    expect(rafa?.portfolios.map((p) => p.id)).toEqual(["rf-rafa"]);
+    const alice = groups.find((g) => g.ownerId === "alice");
+    expect(alice?.portfolios.map((p) => p.id)).toEqual(["rf-alice"]);
   });
 
   it("sorts owner groups alphabetically by display name", () => {
@@ -71,6 +71,6 @@ describe("portfolio-grouping", () => {
   });
 
   it("composes a stable expansion key", () => {
-    expect(portfolioExpansionKey("bruno", "rv")).toBe("bruno:rv");
+    expect(portfolioExpansionKey("bob", "rv")).toBe("bob:rv");
   });
 });

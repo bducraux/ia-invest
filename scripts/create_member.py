@@ -3,8 +3,8 @@
 Usage::
 
     python scripts/create_member.py
-    python scripts/create_member.py --id bruno --name "Bruno"
-    python scripts/create_member.py --id rafa --name "Rafa" --email rafa@example.com
+    python scripts/create_member.py --id bob --name "Bob"
+    python scripts/create_member.py --id alice --name "Alice" --email alice@example.com
 """
 
 from __future__ import annotations

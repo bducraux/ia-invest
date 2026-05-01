@@ -116,6 +116,70 @@ _END_OF_SECTION_RE = re.compile(
 # "(THE)", "COMMON STOCK", "VANGUARD REAL ESTATE ETF").
 _NAME_CONTINUATION_TOKENS = re.compile(r"^[A-Z(][A-Z0-9 .,&'/()\-]+$")
 
+# Static skip tokens that appear in Apex page headers regardless of account.
+# Account-holder name lines (which differ per customer) are detected
+# dynamically by ``_detect_page_header_skip_tokens`` — never hardcoded.
+_STATIC_HEADER_SKIP = (
+    "SYMBOL/",
+    "DESCRIPTION CUSIP",
+    "PORTFOLIO SUMMARY",
+    "ACCOUNT NUMBER",
+    "PAGE ",
+)
+
+# Regex matching "PAGE X OF Y" — the surrounding lines on every page form the
+# repeating page header and contain the account holder's name. We harvest
+# them once per file so we don't have to know the customer name in advance.
+_PAGE_NUMBER_RE = re.compile(r"^PAGE\s+\d+\s+OF\s+\d+$", re.IGNORECASE)
+
+
+def _detect_page_header_skip_tokens(lines: list[str]) -> set[str]:
+    """Return the set of UPPERCASE lines that surround the ``PAGE X OF Y``
+    marker on every page of an Apex statement.
+
+    Apex prints the same header block on every page (period, account
+    number, account holder name, address). When the ``EQUITIES / OPTIONS``
+    summary spans multiple pages, that header reappears mid-section and
+    its lines (notably the holder name) would otherwise be picked up as
+    asset-name continuations. We collect them automatically by walking
+    a small neighbourhood around each ``PAGE X OF Y`` marker, keeping
+    only lines that are pure UPPERCASE prose (no digits, no recognised
+    section markers, no summary entries).
+    """
+    tokens: set[str] = set()
+    for index, raw in enumerate(lines):
+        stripped = raw.strip()
+        if not _PAGE_NUMBER_RE.match(stripped):
+            continue
+        # Apex prints holder name immediately above ACCOUNT NUMBER and again
+        # below PAGE X OF Y; capture a small window on both sides.
+        start = max(0, index - 4)
+        end = min(len(lines), index + 4)
+        for j in range(start, end):
+            candidate = lines[j].strip()
+            if not candidate:
+                continue
+            upper = candidate.upper()
+            if candidate != upper:
+                continue
+            if _PAGE_NUMBER_RE.match(candidate):
+                continue
+            if any(key in upper for key in _STATIC_HEADER_SKIP):
+                continue
+            if upper in _SECTION_HEADERS:
+                continue
+            if _SUMMARY_LINE_RE.match(candidate):
+                continue
+            if _END_OF_SECTION_RE.match(candidate):
+                continue
+            # Skip lines containing digits (addresses with ZIP, e.g.
+            # "00000000 TEST CITY") — they cannot be confused with an asset
+            # name continuation by ``_NAME_CONTINUATION_TOKENS`` either.
+            if any(ch.isdigit() for ch in candidate):
+                continue
+            tokens.add(upper)
+    return tokens
+
 
 @dataclass
 class _AliasResolver(Protocol):
@@ -329,6 +393,7 @@ class AvenueApexPdfExtractor(BaseExtractor):
         out: dict[str, _SummaryEntry] = {}
         in_section = False
         pending: _SummaryEntry | None = None
+        dynamic_skip = _detect_page_header_skip_tokens(lines)
 
         for raw in lines:
             line = raw.rstrip()
@@ -349,19 +414,12 @@ class AvenueApexPdfExtractor(BaseExtractor):
                     pending = None
                 in_section = False
                 continue
-            # Skip page-flow noise inside the summary block.
-            if any(
-                key in upper
-                for key in (
-                    "SYMBOL/",
-                    "DESCRIPTION CUSIP",
-                    "PORTFOLIO SUMMARY",
-                    "ACCOUNT NUMBER",
-                    "PAGE ",
-                    "BRUNO DUCRAUX",
-                    "B. DUCRAUX",
-                )
-            ):
+            # Skip page-flow noise inside the summary block. The static set
+            # covers Apex section/page markers; the dynamic set covers the
+            # account-holder header lines harvested from the file itself.
+            if any(key in upper for key in _STATIC_HEADER_SKIP):
+                continue
+            if upper in dynamic_skip:
                 continue
 
             match = _SUMMARY_LINE_RE.match(stripped)

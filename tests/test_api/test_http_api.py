@@ -114,8 +114,8 @@ def test_list_portfolios_endpoint_exposes_specialization_for_fixed_income(tmp_pa
 
     PortfolioRepository(db.connection).upsert(
         Portfolio(
-            id="renda-fixa-bruno",
-            name="Renda Fixa Bruno",
+            id="renda-fixa-bob",
+            name="Renda Fixa Bob",
             base_currency="BRL",
             status="active",
             config={"rules": {"allowed_asset_types": ["CDB", "LCI", "LCA"]}},
@@ -130,8 +130,8 @@ def test_list_portfolios_endpoint_exposes_specialization_for_fixed_income(tmp_pa
     payload = response.json()
     assert payload == [
         {
-            "id": "renda-fixa-bruno",
-            "name": "Renda Fixa Bruno",
+            "id": "renda-fixa-bob",
+            "name": "Renda Fixa Bob",
             "currency": "BRL",
             "allowedAssetTypes": ["CDB", "LCI", "LCA"],
             "specialization": "RENDA_FIXA",

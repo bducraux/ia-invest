@@ -175,6 +175,158 @@ class PositionLifecycleService:
         return dict(new_row)
 
     # ------------------------------------------------------------------
+    # Create operations (batch) — atomic insert + single recompute
+    # ------------------------------------------------------------------
+
+    def create_operations(
+        self,
+        portfolio_id: str,
+        fields_list: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Insert a batch of manual operations atomically.
+
+        All entries are inserted in a single transaction; if any row fails
+        validation or the INSERT raises (UNIQUE constraint, etc.) the whole
+        batch is rolled back. Affected ``asset_code`` values are recomputed
+        once at the end.
+
+        Returns ``{"inserted": [<row dict>...], "affected_assets": [...]}``.
+        Raises ``ValueError`` on validation/constraint failure with a
+        message indicating which entry caused it (1-indexed).
+        """
+        if not fields_list:
+            return {"inserted": [], "affected_assets": []}
+
+        required = (
+            "asset_code",
+            "asset_type",
+            "operation_type",
+            "operation_date",
+            "quantity",
+            "unit_price",
+            "gross_value",
+        )
+
+        # Reserve a contiguous block of synthetic external_ids upfront so
+        # the entire batch is deterministic before opening the transaction.
+        row = self._conn.execute(
+            "SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM operations",
+        ).fetchone()
+        next_id = int(row["next_id"])
+
+        prepared: list[Operation] = []
+        for index, fields in enumerate(fields_list):
+            for key in required:
+                if fields.get(key) in (None, ""):
+                    raise ValueError(
+                        f"Entry #{index + 1}: missing required field '{key}'"
+                    )
+            external_id = fields.get("external_id") or f"manual:created:{next_id + index}"
+            prepared.append(
+                Operation(
+                    portfolio_id=portfolio_id,
+                    source=fields.get("source") or "manual",
+                    external_id=external_id,
+                    asset_code=str(fields["asset_code"]).upper(),
+                    asset_type=str(fields["asset_type"]).upper(),
+                    asset_name=fields.get("asset_name"),
+                    operation_type=str(fields["operation_type"]),
+                    operation_date=str(fields["operation_date"]),
+                    settlement_date=fields.get("settlement_date"),
+                    quantity=float(fields["quantity"]),
+                    unit_price=int(fields["unit_price"]),
+                    gross_value=int(fields["gross_value"]),
+                    fees=int(fields.get("fees") or 0),
+                    net_value=int(fields.get("net_value") or 0),
+                    broker=fields.get("broker"),
+                    account=fields.get("account"),
+                    notes=fields.get("notes"),
+                )
+            )
+
+        affected: list[str] = []
+        seen: set[str] = set()
+        for op in prepared:
+            if op.asset_code not in seen:
+                seen.add(op.asset_code)
+                affected.append(op.asset_code)
+
+        inserted_ids: list[int] = []
+        self._conn.execute("BEGIN IMMEDIATE")
+        try:
+            for index, op in enumerate(prepared):
+                try:
+                    cursor = self._conn.execute(
+                        """
+                        INSERT INTO operations (
+                            portfolio_id, source, external_id,
+                            asset_code, asset_type, asset_name,
+                            operation_type, operation_date, settlement_date,
+                            quantity, unit_price, gross_value, fees, net_value,
+                            trade_currency, unit_price_native, gross_value_native,
+                            fees_native, fx_rate_at_trade, fx_rate_source,
+                            broker, account, notes
+                        ) VALUES (
+                            :portfolio_id, :source, :external_id,
+                            :asset_code, :asset_type, :asset_name,
+                            :operation_type, :operation_date, :settlement_date,
+                            :quantity, :unit_price, :gross_value, :fees, :net_value,
+                            :trade_currency, :unit_price_native, :gross_value_native,
+                            :fees_native, :fx_rate_at_trade, :fx_rate_source,
+                            :broker, :account, :notes
+                        )
+                        """,
+                        {
+                            "portfolio_id": op.portfolio_id,
+                            "source": op.source,
+                            "external_id": op.external_id,
+                            "asset_code": op.asset_code,
+                            "asset_type": op.asset_type,
+                            "asset_name": op.asset_name,
+                            "operation_type": op.operation_type,
+                            "operation_date": op.operation_date,
+                            "settlement_date": op.settlement_date,
+                            "quantity": op.quantity,
+                            "unit_price": op.unit_price,
+                            "gross_value": op.gross_value,
+                            "fees": op.fees,
+                            "net_value": op.net_value,
+                            "trade_currency": op.trade_currency,
+                            "unit_price_native": op.unit_price_native,
+                            "gross_value_native": op.gross_value_native,
+                            "fees_native": op.fees_native,
+                            "fx_rate_at_trade": op.fx_rate_at_trade,
+                            "fx_rate_source": op.fx_rate_source,
+                            "broker": op.broker,
+                            "account": op.account,
+                            "notes": op.notes,
+                        },
+                    )
+                except sqlite3.IntegrityError as exc:
+                    raise ValueError(
+                        f"Entry #{index + 1}: duplicate operation "
+                        f"({op.asset_code} {op.operation_type} {op.operation_date} "
+                        f"qty={op.quantity}) — matches an existing entry."
+                    ) from exc
+                inserted_ids.append(int(cursor.lastrowid or 0))
+
+            self._recompute_assets(portfolio_id, affected)
+            self._conn.commit()
+        except Exception:
+            self._conn.rollback()
+            raise
+
+        placeholders = ",".join(["?"] * len(inserted_ids))
+        rows = self._conn.execute(
+            f"SELECT * FROM operations WHERE id IN ({placeholders}) ORDER BY id",
+            inserted_ids,
+        ).fetchall()
+        return {
+            "inserted": [dict(r) for r in rows],
+            "affected_assets": affected,
+        }
+
+    # ------------------------------------------------------------------
     # Close position — delete all operations + positions row
     # ------------------------------------------------------------------
 

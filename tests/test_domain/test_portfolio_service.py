@@ -128,10 +128,10 @@ def test_create_requires_existing_owner(tmp_db: Database) -> None:
 def test_create_persists_portfolio(tmp_db: Database) -> None:
     m_repo = MemberRepository(tmp_db.connection)
     p_repo = PortfolioRepository(tmp_db.connection)
-    m_repo.upsert(Member(id="bruno", name="Bruno"))
+    m_repo.upsert(Member(id="bob", name="Bob"))
     svc = PortfolioService(portfolio_repo=p_repo, member_repo=m_repo)
 
-    portfolio = svc.create(Portfolio(id="rv", name="RV", owner_id="bruno"))
+    portfolio = svc.create(Portfolio(id="rv", name="RV", owner_id="bob"))
     assert portfolio.id == "rv"
     assert p_repo.get("rv") is not None
 
@@ -139,32 +139,32 @@ def test_create_persists_portfolio(tmp_db: Database) -> None:
 def test_create_duplicate_id_rejected(tmp_db: Database) -> None:
     m_repo = MemberRepository(tmp_db.connection)
     p_repo = PortfolioRepository(tmp_db.connection)
-    m_repo.upsert(Member(id="bruno", name="Bruno"))
+    m_repo.upsert(Member(id="bob", name="Bob"))
     svc = PortfolioService(portfolio_repo=p_repo, member_repo=m_repo)
-    svc.create(Portfolio(id="rv", name="RV", owner_id="bruno"))
+    svc.create(Portfolio(id="rv", name="RV", owner_id="bob"))
     with pytest.raises(ValueError, match="already exists"):
-        svc.create(Portfolio(id="rv", name="RV", owner_id="bruno"))
+        svc.create(Portfolio(id="rv", name="RV", owner_id="bob"))
 
 
 def test_transfer_ownership_updates_db(tmp_db: Database) -> None:
     m_repo = MemberRepository(tmp_db.connection)
     p_repo = PortfolioRepository(tmp_db.connection)
-    m_repo.upsert(Member(id="bruno", name="Bruno"))
-    m_repo.upsert(Member(id="rafa", name="Rafa"))
+    m_repo.upsert(Member(id="bob", name="Bob"))
+    m_repo.upsert(Member(id="alice", name="Alice"))
     svc = PortfolioService(portfolio_repo=p_repo, member_repo=m_repo)
-    svc.create(Portfolio(id="rv", name="RV", owner_id="bruno"))
+    svc.create(Portfolio(id="rv", name="RV", owner_id="bob"))
 
-    portfolio = svc.transfer_ownership("rv", "rafa")
-    assert portfolio.owner_id == "rafa"
+    portfolio = svc.transfer_ownership("rv", "alice")
+    assert portfolio.owner_id == "alice"
     refreshed = p_repo.get("rv")
-    assert refreshed is not None and refreshed.owner_id == "rafa"
+    assert refreshed is not None and refreshed.owner_id == "alice"
 
 
 def test_transfer_ownership_no_op(tmp_db: Database) -> None:
     m_repo = MemberRepository(tmp_db.connection)
     p_repo = PortfolioRepository(tmp_db.connection)
-    m_repo.upsert(Member(id="bruno", name="Bruno"))
+    m_repo.upsert(Member(id="bob", name="Bob"))
     svc = PortfolioService(portfolio_repo=p_repo, member_repo=m_repo)
-    svc.create(Portfolio(id="rv", name="RV", owner_id="bruno"))
-    portfolio = svc.transfer_ownership("rv", "bruno")
-    assert portfolio.owner_id == "bruno"
+    svc.create(Portfolio(id="rv", name="RV", owner_id="bob"))
+    portfolio = svc.transfer_ownership("rv", "bob")
+    assert portfolio.owner_id == "bob"

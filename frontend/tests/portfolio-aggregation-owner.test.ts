@@ -9,29 +9,29 @@ import {
 } from "@/lib/portfolio-aggregation";
 import type { Operation, Portfolio, Position } from "@/types/domain";
 
-const brunoCripto: Portfolio = {
-  id: "bruno__cripto",
+const bobCripto: Portfolio = {
+  id: "bob__cripto",
   name: "Cripto",
   currency: "BRL",
   allowedAssetTypes: ["crypto"],
   specialization: "CRIPTO",
-  ownerId: "bruno",
+  ownerId: "bob",
   owner: {
-    id: "bruno",
-    name: "Bruno",
+    id: "bob",
+    name: "Bob",
     displayName: "Brunão",
     status: "active",
   },
 };
 
-const rafaRendaFixa: Portfolio = {
-  id: "rafa__renda-fixa",
+const aliceRendaFixa: Portfolio = {
+  id: "alice__renda-fixa",
   name: "Renda Fixa",
   currency: "BRL",
   allowedAssetTypes: ["cdb"],
   specialization: "RENDA_FIXA",
-  ownerId: "rafa",
-  owner: { id: "rafa", name: "Rafa", status: "active" },
+  ownerId: "alice",
+  owner: { id: "alice", name: "Alice", status: "active" },
 };
 
 const samplePosition: Position = {
@@ -62,16 +62,16 @@ const sampleOperation: Operation = {
 
 describe("deriveOwnerLabel", () => {
   it("prefers displayName over name", () => {
-    expect(deriveOwnerLabel(brunoCripto)).toEqual({
-      ownerId: "bruno",
+    expect(deriveOwnerLabel(bobCripto)).toEqual({
+      ownerId: "bob",
       ownerName: "Brunão",
     });
   });
 
   it("falls back to name when displayName is missing", () => {
-    expect(deriveOwnerLabel(rafaRendaFixa)).toEqual({
-      ownerId: "rafa",
-      ownerName: "Rafa",
+    expect(deriveOwnerLabel(aliceRendaFixa)).toEqual({
+      ownerId: "alice",
+      ownerName: "Alice",
     });
   });
 
@@ -83,29 +83,29 @@ describe("deriveOwnerLabel", () => {
 describe("mergePositions / mergeOperations", () => {
   it("attaches owner fields to merged positions", () => {
     const merged = mergePositions(
-      [brunoCripto, rafaRendaFixa],
+      [bobCripto, aliceRendaFixa],
       [[samplePosition], [samplePosition]],
     );
     expect(merged).toHaveLength(2);
     expect(merged[0]).toMatchObject({
-      portfolioId: "bruno__cripto",
+      portfolioId: "bob__cripto",
       portfolioName: "Cripto",
-      ownerId: "bruno",
+      ownerId: "bob",
       ownerName: "Brunão",
     });
     expect(merged[1]).toMatchObject({
-      portfolioId: "rafa__renda-fixa",
-      ownerId: "rafa",
-      ownerName: "Rafa",
+      portfolioId: "alice__renda-fixa",
+      ownerId: "alice",
+      ownerName: "Alice",
     });
   });
 
   it("propagates owner through operations and dividend entries", () => {
     const dividendOp: Operation = { ...sampleOperation, type: "DIVIDENDO" };
-    const merged = mergeOperations([brunoCripto], [[dividendOp]]);
+    const merged = mergeOperations([bobCripto], [[dividendOp]]);
     const entries = toDividendEntries(merged);
     expect(entries[0]).toMatchObject({
-      ownerId: "bruno",
+      ownerId: "bob",
       ownerName: "Brunão",
       portfolioName: "Cripto",
     });

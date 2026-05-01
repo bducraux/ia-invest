@@ -169,16 +169,16 @@ def test_portfolio_list_by_owner(db: Database) -> None:
     from domain.members import Member
     from storage.repository.members import MemberRepository
 
-    MemberRepository(db.connection).upsert(Member(id="bruno", name="Bruno"))
-    MemberRepository(db.connection).upsert(Member(id="rafa", name="Rafa"))
+    MemberRepository(db.connection).upsert(Member(id="bob", name="Bob"))
+    MemberRepository(db.connection).upsert(Member(id="alice", name="Alice"))
     repo = PortfolioRepository(db.connection)
-    repo.upsert(Portfolio(id="rv-bruno", name="RV", owner_id="bruno"))
-    repo.upsert(Portfolio(id="rf-bruno", name="RF", owner_id="bruno"))
-    repo.upsert(Portfolio(id="rv-rafa", name="RV", owner_id="rafa"))
+    repo.upsert(Portfolio(id="rv-bob", name="RV", owner_id="bob"))
+    repo.upsert(Portfolio(id="rf-bob", name="RF", owner_id="bob"))
+    repo.upsert(Portfolio(id="rv-alice", name="RV", owner_id="alice"))
 
-    bruno_pids = [p.id for p in repo.list_by_owner("bruno")]
-    assert bruno_pids == ["rf-bruno", "rv-bruno"]
-    assert [p.id for p in repo.list_by_owner("rafa")] == ["rv-rafa"]
+    bob_pids = [p.id for p in repo.list_by_owner("bob")]
+    assert bob_pids == ["rf-bob", "rv-bob"]
+    assert [p.id for p in repo.list_by_owner("alice")] == ["rv-alice"]
     assert repo.list_by_owner("missing") == []
 
 
@@ -186,23 +186,23 @@ def test_portfolio_transfer_ownership(db: Database) -> None:
     from domain.members import Member
     from storage.repository.members import MemberRepository
 
-    MemberRepository(db.connection).upsert(Member(id="bruno", name="Bruno"))
-    MemberRepository(db.connection).upsert(Member(id="rafa", name="Rafa"))
+    MemberRepository(db.connection).upsert(Member(id="bob", name="Bob"))
+    MemberRepository(db.connection).upsert(Member(id="alice", name="Alice"))
     repo = PortfolioRepository(db.connection)
-    repo.upsert(Portfolio(id="rv", name="RV", owner_id="bruno"))
+    repo.upsert(Portfolio(id="rv", name="RV", owner_id="bob"))
 
-    repo.transfer_ownership("rv", "rafa")
+    repo.transfer_ownership("rv", "alice")
     got = repo.get("rv")
-    assert got is not None and got.owner_id == "rafa"
+    assert got is not None and got.owner_id == "alice"
 
 
 def test_portfolio_transfer_ownership_unknown_member(db: Database) -> None:
     from domain.members import Member
     from storage.repository.members import MemberRepository
 
-    MemberRepository(db.connection).upsert(Member(id="bruno", name="Bruno"))
+    MemberRepository(db.connection).upsert(Member(id="bob", name="Bob"))
     repo = PortfolioRepository(db.connection)
-    repo.upsert(Portfolio(id="rv", name="RV", owner_id="bruno"))
+    repo.upsert(Portfolio(id="rv", name="RV", owner_id="bob"))
 
     with pytest.raises(ValueError, match="Member 'ghost' not found"):
         repo.transfer_ownership("rv", "ghost")

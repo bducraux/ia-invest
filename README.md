@@ -28,7 +28,7 @@ make install
 make init
 
 # 3. criar pelo menos um membro (dono dos portfólios)
-uv run python scripts/create_member.py --id bruno --name "Bruno"
+uv run python scripts/create_member.py --id bob --name "Bob"
 
 # 4. criar a primeira carteira (interativo) — pede o owner
 make create-portfolio

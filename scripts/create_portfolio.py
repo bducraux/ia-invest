@@ -11,8 +11,8 @@ Layout (since the Members feature):
 Usage::
 
     python scripts/create_portfolio.py
-    python scripts/create_portfolio.py --owner bruno --type renda-fixa --name "Renda Fixa"
-    python scripts/create_portfolio.py --owner bruno --type renda-variavel --name "Acoes"
+    python scripts/create_portfolio.py --owner bob --type renda-fixa --name "Renda Fixa"
+    python scripts/create_portfolio.py --owner bob --type renda-variavel --name "Acoes"
     python scripts/create_portfolio.py --templates-root /path/to/templates
 """
 
@@ -188,7 +188,7 @@ def _resolve_owner(member_repo: MemberRepository, value: str | None) -> str:
         print(
             "ERROR: no active members found in the database.\n"
             "       Create one first with: python scripts/create_member.py "
-            "--name 'Bruno'",
+            "--name 'Bob'",
             file=sys.stderr,
         )
         sys.exit(2)

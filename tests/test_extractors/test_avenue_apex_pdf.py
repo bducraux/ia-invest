@@ -115,3 +115,35 @@ def test_summary_only_records_no_dividends_no_journals() -> None:
     # March 2026 has only dividends + journals (no buys).
     assert result.records == []
     assert result.errors == []
+
+
+def test_page_header_detector_picks_up_holder_name_dynamically() -> None:
+    """The parser must not depend on a hardcoded customer name. Lines that
+    surround ``PAGE X OF Y`` (account holder name in particular) are
+    discovered automatically and excluded from name-continuation parsing.
+    """
+    from extractors.avenue_apex_pdf import _detect_page_header_skip_tokens
+
+    # Realistic header layout: holder name surrounds ACCOUNT NUMBER and
+    # PAGE X OF Y. Detector must capture the holder name without it being
+    # spelled out anywhere in the parser source.
+    pdf_text = "\n".join(
+        [
+            "January 1 2024 - January 31 2024",
+            "ACCOUNT NUMBER 0AV-XYZ-12 RR AVA",
+            "JANE Q SAMPLE",
+            "Apex Clearing Corporation",
+            "PAGE 1 OF 2",
+            "JANE Q SAMPLE",
+            "100 MAIN STREET",
+            "EQUITIES / OPTIONS",
+            "AMAZON.COM INC AMZN C 1 100.00 200.00 200.00 0% 0 100.000%",
+            "Total Equities $200.00 $0 100.000%",
+        ]
+    )
+    tokens = _detect_page_header_skip_tokens(pdf_text.splitlines())
+    assert "JANE Q SAMPLE" in tokens
+    # The static markers must NOT be in the dynamic set (they are handled
+    # separately and would shadow the dynamic skip).
+    assert not any("ACCOUNT NUMBER" in t for t in tokens)
+    assert not any(t.startswith("PAGE ") for t in tokens)

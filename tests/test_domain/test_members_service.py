@@ -25,26 +25,26 @@ def svc(db: Database) -> MemberService:
 
 
 def test_create_member_minimal(svc: MemberService) -> None:
-    member = svc.create(member_id="bruno", name="Bruno")
-    assert member.id == "bruno"
-    assert member.name == "Bruno"
+    member = svc.create(member_id="bob", name="Bob")
+    assert member.id == "bob"
+    assert member.name == "Bob"
     assert member.status == "active"
 
 
 def test_create_member_with_email(svc: MemberService) -> None:
     member = svc.create(
-        member_id="bruno",
-        name="Bruno",
-        email="bruno@example.com",
-        display_name="Bruno S.",
+        member_id="bob",
+        name="Bob",
+        email="bob@example.com",
+        display_name="Bob S.",
     )
-    assert member.email == "bruno@example.com"
-    assert member.display_name == "Bruno S."
+    assert member.email == "bob@example.com"
+    assert member.display_name == "Bob S."
 
 
 def test_create_invalid_email_rejected(svc: MemberService) -> None:
     with pytest.raises(MemberServiceError, match="Invalid email"):
-        svc.create(member_id="bruno", name="Bruno", email="not-an-email")
+        svc.create(member_id="bob", name="Bob", email="not-an-email")
 
 
 def test_create_duplicate_email_rejected(svc: MemberService) -> None:
@@ -55,20 +55,20 @@ def test_create_duplicate_email_rejected(svc: MemberService) -> None:
 
 def test_create_invalid_id_rejected(svc: MemberService) -> None:
     with pytest.raises(MemberServiceError, match="Invalid member id"):
-        svc.create(member_id="Bruno!", name="Bruno")
+        svc.create(member_id="Bob!", name="Bob")
 
 
 def test_create_duplicate_id_rejected(svc: MemberService) -> None:
-    svc.create(member_id="bruno", name="Bruno")
+    svc.create(member_id="bob", name="Bob")
     with pytest.raises(MemberServiceError, match="already exists"):
-        svc.create(member_id="bruno", name="Other")
+        svc.create(member_id="bob", name="Other")
 
 
 def test_update_member(svc: MemberService) -> None:
-    svc.create(member_id="bruno", name="Bruno")
-    updated = svc.update("bruno", name="Bruno Silva", email="bruno@example.com")
-    assert updated.name == "Bruno Silva"
-    assert updated.email == "bruno@example.com"
+    svc.create(member_id="bob", name="Bob")
+    updated = svc.update("bob", name="Bob Silva", email="bob@example.com")
+    assert updated.name == "Bob Silva"
+    assert updated.email == "bob@example.com"
 
 
 def test_update_unknown_member_raises(svc: MemberService) -> None:
@@ -79,49 +79,49 @@ def test_update_unknown_member_raises(svc: MemberService) -> None:
 def test_inactivate_blocked_when_owns_active_portfolio(
     db: Database, svc: MemberService
 ) -> None:
-    svc.create(member_id="bruno", name="Bruno")
+    svc.create(member_id="bob", name="Bob")
     PortfolioRepository(db.connection).upsert(
-        Portfolio(id="rv", name="RV", owner_id="bruno", status="active")
+        Portfolio(id="rv", name="RV", owner_id="bob", status="active")
     )
     with pytest.raises(MemberServiceError, match="still owns"):
-        svc.inactivate("bruno")
+        svc.inactivate("bob")
 
 
 def test_inactivate_allowed_when_no_active_portfolio(
     db: Database, svc: MemberService
 ) -> None:
-    svc.create(member_id="bruno", name="Bruno")
+    svc.create(member_id="bob", name="Bob")
     PortfolioRepository(db.connection).upsert(
-        Portfolio(id="rv", name="RV", owner_id="bruno", status="archived")
+        Portfolio(id="rv", name="RV", owner_id="bob", status="archived")
     )
-    member = svc.inactivate("bruno")
+    member = svc.inactivate("bob")
     assert member.status == "inactive"
 
 
 def test_activate_brings_member_back(svc: MemberService) -> None:
-    svc.create(member_id="bruno", name="Bruno")
-    svc.inactivate("bruno")
-    activated = svc.activate("bruno")
+    svc.create(member_id="bob", name="Bob")
+    svc.inactivate("bob")
+    activated = svc.activate("bob")
     assert activated.status == "active"
 
 
 def test_delete_blocked_when_owns_portfolios(
     db: Database, svc: MemberService
 ) -> None:
-    svc.create(member_id="bruno", name="Bruno")
+    svc.create(member_id="bob", name="Bob")
     PortfolioRepository(db.connection).upsert(
-        Portfolio(id="rv", name="RV", owner_id="bruno")
+        Portfolio(id="rv", name="RV", owner_id="bob")
     )
     with pytest.raises(MemberServiceError, match="Cannot delete"):
-        svc.delete("bruno")
+        svc.delete("bob")
 
 
 def test_list_portfolios_of(db: Database, svc: MemberService) -> None:
-    svc.create(member_id="bruno", name="Bruno")
+    svc.create(member_id="bob", name="Bob")
     p_repo = PortfolioRepository(db.connection)
-    p_repo.upsert(Portfolio(id="rv", name="RV", owner_id="bruno"))
-    p_repo.upsert(Portfolio(id="rf", name="RF", owner_id="bruno"))
-    portfolios = svc.list_portfolios_of("bruno")
+    p_repo.upsert(Portfolio(id="rv", name="RV", owner_id="bob"))
+    p_repo.upsert(Portfolio(id="rf", name="RF", owner_id="bob"))
+    portfolios = svc.list_portfolios_of("bob")
     assert {p.id for p in portfolios} == {"rv", "rf"}
 
 

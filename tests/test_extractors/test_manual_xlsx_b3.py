@@ -104,7 +104,7 @@ def test_normalizer_infers_b3_asset_types_from_generic_manual_records(
     records = extractor.extract(b3_manual_file).records
     normalizer = OperationNormalizer()
 
-    result = normalizer.normalize(records, portfolio_id="renda-variavel-bruno")
+    result = normalizer.normalize(records, portfolio_id="renda-variavel-bob")
 
     assert result.errors == []
     asset_types = {op.asset_code: op.asset_type for op in result.valid}
@@ -138,7 +138,7 @@ class TestRealFile:
         records = result.records
 
         normalizer = OperationNormalizer()
-        norm_result = normalizer.normalize(records, portfolio_id="renda-variavel-bruno")
+        norm_result = normalizer.normalize(records, portfolio_id="renda-variavel-bob")
 
         asset_types = {op.asset_code: op.asset_type for op in norm_result.valid}
 

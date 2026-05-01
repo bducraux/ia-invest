@@ -253,7 +253,7 @@ def _find_portfolio_dir(portfolio_id: str, *, owner_id: str | None = None) -> Pa
 
     ``portfolio_id`` may be either:
       * a raw slug (e.g. ``renda-fixa``), or
-      * a namespaced id (e.g. ``bruno__renda-fixa``) which encodes the owner
+      * a namespaced id (e.g. ``bob__renda-fixa``) which encodes the owner
         directly and bypasses the cross-owner ambiguity check.
     """
     # Namespaced id takes precedence over the optional owner_id arg.
@@ -356,7 +356,7 @@ def import_portfolio(
         return {"error": message}
 
     # The local CLI argument `portfolio_id` may be a slug (e.g. "renda-fixa")
-    # but the canonical database id is owner-scoped (e.g. "bruno__renda-fixa").
+    # but the canonical database id is owner-scoped (e.g. "bob__renda-fixa").
     # Reassign so every downstream call (repositories, FKs, log entries) uses
     # the namespaced id consistently.
     portfolio_id = portfolio.id

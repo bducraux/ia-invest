@@ -24,20 +24,20 @@ def repo(db: Database) -> MemberRepository:
 
 
 def test_upsert_and_get(repo: MemberRepository) -> None:
-    repo.upsert(Member(id="bruno", name="Bruno", email="bruno@example.com"))
-    got = repo.get("bruno")
+    repo.upsert(Member(id="bob", name="Bob", email="bob@example.com"))
+    got = repo.get("bob")
     assert got is not None
-    assert got.id == "bruno"
-    assert got.name == "Bruno"
-    assert got.email == "bruno@example.com"
+    assert got.id == "bob"
+    assert got.name == "Bob"
+    assert got.email == "bob@example.com"
     assert got.status == "active"
     assert got.created_at is not None and got.updated_at is not None
 
 
 def test_upsert_updates_existing(repo: MemberRepository) -> None:
-    repo.upsert(Member(id="bruno", name="Old", email="old@example.com"))
-    repo.upsert(Member(id="bruno", name="New", email="new@example.com"))
-    got = repo.get("bruno")
+    repo.upsert(Member(id="bob", name="Old", email="old@example.com"))
+    repo.upsert(Member(id="bob", name="New", email="new@example.com"))
+    got = repo.get("bob")
     assert got is not None
     assert got.name == "New"
     assert got.email == "new@example.com"
@@ -52,17 +52,17 @@ def test_email_uniqueness_enforced_at_db_level(
 
 
 def test_get_by_email(repo: MemberRepository) -> None:
-    repo.upsert(Member(id="bruno", name="Bruno", email="b@x.com"))
+    repo.upsert(Member(id="bob", name="Bob", email="b@x.com"))
     got = repo.get_by_email("b@x.com")
-    assert got is not None and got.id == "bruno"
+    assert got is not None and got.id == "bob"
     assert repo.get_by_email("missing@x.com") is None
 
 
 def test_get_by_id_or_name_resolves_id(repo: MemberRepository) -> None:
-    repo.upsert(Member(id="bruno", name="Bruno Silva"))
-    assert repo.get_by_id_or_name("bruno") is not None
-    assert repo.get_by_id_or_name("bruno silva") is not None
-    assert repo.get_by_id_or_name("BRUNO SILVA") is not None
+    repo.upsert(Member(id="bob", name="Bob Silva"))
+    assert repo.get_by_id_or_name("bob") is not None
+    assert repo.get_by_id_or_name("bob silva") is not None
+    assert repo.get_by_id_or_name("BOB SILVA") is not None
     assert repo.get_by_id_or_name("missing") is None
 
 
@@ -78,38 +78,38 @@ def test_list_active_filters_inactive(repo: MemberRepository) -> None:
 
 
 def test_set_status(repo: MemberRepository) -> None:
-    repo.upsert(Member(id="bruno", name="Bruno"))
-    repo.set_status("bruno", "inactive")
-    got = repo.get("bruno")
+    repo.upsert(Member(id="bob", name="Bob"))
+    repo.set_status("bob", "inactive")
+    got = repo.get("bob")
     assert got is not None and got.status == "inactive"
 
 
 def test_count_portfolios(db: Database, repo: MemberRepository) -> None:
-    repo.upsert(Member(id="bruno", name="Bruno"))
+    repo.upsert(Member(id="bob", name="Bob"))
     p_repo = PortfolioRepository(db.connection)
     p_repo.upsert(
-        Portfolio(id="rv", name="RV", owner_id="bruno", status="active")
+        Portfolio(id="rv", name="RV", owner_id="bob", status="active")
     )
     p_repo.upsert(
-        Portfolio(id="rf", name="RF", owner_id="bruno", status="inactive")
+        Portfolio(id="rf", name="RF", owner_id="bob", status="inactive")
     )
-    assert repo.count_portfolios("bruno") == 2
-    assert repo.count_portfolios("bruno", only_active=True) == 1
+    assert repo.count_portfolios("bob") == 2
+    assert repo.count_portfolios("bob", only_active=True) == 1
     assert repo.count_portfolios("missing") == 0
 
 
 def test_delete_blocked_when_owns_portfolio(
     db: Database, repo: MemberRepository
 ) -> None:
-    repo.upsert(Member(id="bruno", name="Bruno"))
+    repo.upsert(Member(id="bob", name="Bob"))
     PortfolioRepository(db.connection).upsert(
-        Portfolio(id="rv", name="RV", owner_id="bruno")
+        Portfolio(id="rv", name="RV", owner_id="bob")
     )
     with pytest.raises(ValueError, match="still owns"):
-        repo.delete("bruno")
+        repo.delete("bob")
 
 
 def test_delete_succeeds_when_no_portfolios(repo: MemberRepository) -> None:
-    repo.upsert(Member(id="bruno", name="Bruno"))
-    repo.delete("bruno")
-    assert repo.get("bruno") is None
+    repo.upsert(Member(id="bob", name="Bob"))
+    repo.delete("bob")
+    assert repo.get("bob") is None

@@ -8,7 +8,7 @@ interface OwnerPortfolioBadgeProps {
 /**
  * Compact badge that always renders the portfolio name, prefixed with the
  * owner display name when available. Used in consolidated/global listings to
- * make the multi-tenancy explicit ("Bruno · Cripto").
+ * make the multi-tenancy explicit ("Bob · Cripto").
  */
 export function OwnerPortfolioBadge({
   portfolioName,

@@ -13,7 +13,7 @@ id: rv-test
 name: RV Test
 base_currency: BRL
 status: active
-owner_id: bruno
+owner_id: bob
 rules:
   allowed_asset_types:
     - stock
@@ -37,12 +37,12 @@ def _setup_portfolio(tmp_path: Path, owner: str, manifest: str) -> Path:
 def test_finds_portfolio_in_owner_subfolder(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    portfolios_dir = _setup_portfolio(tmp_path, "bruno", _MINIMAL_MANIFEST)
+    portfolios_dir = _setup_portfolio(tmp_path, "bob", _MINIMAL_MANIFEST)
     monkeypatch.setattr(import_portfolio_module, "_PORTFOLIOS_DIR", portfolios_dir)
 
     db_path = tmp_path / "ia.db"
     result = import_portfolio_module.import_portfolio(
-        "rv-test", db_path=db_path, owner_id="bruno"
+        "rv-test", db_path=db_path, owner_id="bob"
     )
     # Empty inbox => 0 files processed but no error.
     assert "error" not in result
@@ -52,12 +52,12 @@ def test_finds_portfolio_in_owner_subfolder(
 def test_explicit_owner_must_match_folder(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    portfolios_dir = _setup_portfolio(tmp_path, "bruno", _MINIMAL_MANIFEST)
+    portfolios_dir = _setup_portfolio(tmp_path, "bob", _MINIMAL_MANIFEST)
     monkeypatch.setattr(import_portfolio_module, "_PORTFOLIOS_DIR", portfolios_dir)
 
     db_path = tmp_path / "ia.db"
     result = import_portfolio_module.import_portfolio(
-        "rv-test", db_path=db_path, owner_id="rafa"
+        "rv-test", db_path=db_path, owner_id="alice"
     )
     assert "error" in result
     assert "not found" in result["error"]
@@ -66,9 +66,9 @@ def test_explicit_owner_must_match_folder(
 def test_owner_id_in_manifest_must_match_parent_folder(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # Manifest declares owner_id=bruno but the file lives under rafa/.
-    bad_manifest = _MINIMAL_MANIFEST.replace("owner_id: bruno", "owner_id: rafa")
-    portfolios_dir = _setup_portfolio(tmp_path, "bruno", bad_manifest)
+    # Manifest declares owner_id=bob but the file lives under alice/.
+    bad_manifest = _MINIMAL_MANIFEST.replace("owner_id: bob", "owner_id: alice")
+    portfolios_dir = _setup_portfolio(tmp_path, "bob", bad_manifest)
     monkeypatch.setattr(import_portfolio_module, "_PORTFOLIOS_DIR", portfolios_dir)
 
     db_path = tmp_path / "ia.db"

@@ -8,7 +8,7 @@ it repeatedly is cheap.
 Usage:
 
     uv run python scripts/sync_historical_prices.py
-    uv run python scripts/sync_historical_prices.py --portfolio bruno-renda-variavel
+    uv run python scripts/sync_historical_prices.py --portfolio bob-renda-variavel
     uv run python scripts/sync_historical_prices.py --full
 """
 

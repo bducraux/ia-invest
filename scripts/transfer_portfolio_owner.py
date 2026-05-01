@@ -10,8 +10,8 @@ directory is moved back so the filesystem and the database stay in sync.
 
 Usage::
 
-    python scripts/transfer_portfolio_owner.py --portfolio rv --to rafa
-    python scripts/transfer_portfolio_owner.py --portfolio rv --to rafa --owner bruno
+    python scripts/transfer_portfolio_owner.py --portfolio rv --to alice
+    python scripts/transfer_portfolio_owner.py --portfolio rv --to alice --owner bob
 """
 
 from __future__ import annotations

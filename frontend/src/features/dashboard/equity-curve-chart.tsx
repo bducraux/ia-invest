@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import {
   Area,
-  Bar,
   CartesianGrid,
   ComposedChart,
   Legend,
@@ -19,21 +18,14 @@ import type { EquityCurve } from "@/types/domain";
 
 type RangeKey = "12m" | "24m" | "ytd" | "all";
 
-const CLASS_LABELS: Record<string, string> = {
-  "renda-variavel": "Renda variável",
-  "renda-fixa": "Renda fixa",
-  cripto: "Cripto",
-  previdencia: "Previdência",
-  internacional: "Internacional",
-};
-
 interface RowDatum {
   month: string;
   total: number;
   contributions: number;
-  dividends: number;
-  [klass: string]: number | string;
 }
+
+const PATRIMONIO_COLOR = "#1f3a8a"; // dark blue
+const INVESTIDO_COLOR = "#22b8cf"; // cyan
 
 function filterByRange(months: EquityCurve["series"], range: RangeKey) {
   if (range === "all" || months.length === 0) return months;
@@ -78,18 +70,11 @@ export function EquityCurveChart({
 
   const rows: RowDatum[] = useMemo(
     () =>
-      filtered.map((p) => {
-        const row: RowDatum = {
-          month: p.month,
-          total: p.marketValue,
-          contributions: p.cumulativeContributions,
-          dividends: p.dividendsReceived,
-        };
-        for (const [klass, value] of Object.entries(p.breakdownByClass)) {
-          row[klass] = value;
-        }
-        return row;
-      }),
+      filtered.map((p) => ({
+        month: p.month,
+        total: p.marketValue,
+        contributions: p.cumulativeContributions,
+      })),
     [filtered],
   );
 
@@ -127,11 +112,11 @@ export function EquityCurveChart({
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={rows} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
+            <ComposedChart data={rows} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="equityFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
-                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  <stop offset="0%" stopColor={PATRIMONIO_COLOR} stopOpacity={0.18} />
+                  <stop offset="100%" stopColor={PATRIMONIO_COLOR} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
@@ -141,18 +126,9 @@ export function EquityCurveChart({
                 tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
                 axisLine={false}
                 tickLine={false}
+                minTickGap={24}
               />
               <YAxis
-                yAxisId="left"
-                tickFormatter={(v) => formatBRLCompact(Number(v) || 0)}
-                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                axisLine={false}
-                tickLine={false}
-                width={70}
-              />
-              <YAxis
-                yAxisId="right"
-                orientation="right"
                 tickFormatter={(v) => formatBRLCompact(Number(v) || 0)}
                 tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
                 axisLine={false}
@@ -172,45 +148,36 @@ export function EquityCurveChart({
                     name === "total"
                       ? "Patrimônio"
                       : name === "contributions"
-                        ? "Aportes acumulados"
-                        : name === "dividends"
-                          ? "Proventos no mês"
-                          : (CLASS_LABELS[String(name)] ?? String(name));
+                        ? "Valor investido"
+                        : String(name);
                   return [formatBRL(Number(value) || 0), label];
                 }}
               />
               <Legend
                 wrapperStyle={{ fontSize: 11 }}
+                iconType="plainline"
                 formatter={(value) => {
                   if (value === "total") return "Patrimônio";
-                  if (value === "contributions") return "Aportes acumulados";
-                  if (value === "dividends") return "Proventos no mês";
-                  return CLASS_LABELS[value] ?? value;
+                  if (value === "contributions") return "Valor investido";
+                  return value;
                 }}
               />
-              <Bar
-                yAxisId="right"
-                dataKey="dividends"
-                fill="hsl(var(--chart-3, 200 70% 50%))"
-                opacity={0.6}
-                barSize={14}
-              />
               <Area
-                yAxisId="left"
                 type="monotone"
                 dataKey="total"
-                stroke="hsl(var(--primary))"
+                stroke={PATRIMONIO_COLOR}
                 strokeWidth={2}
                 fill="url(#equityFill)"
+                dot={false}
+                activeDot={{ r: 4 }}
               />
               <Line
-                yAxisId="left"
                 type="monotone"
                 dataKey="contributions"
-                stroke="hsl(var(--muted-foreground))"
-                strokeWidth={1.5}
-                strokeDasharray="4 4"
+                stroke={INVESTIDO_COLOR}
+                strokeWidth={2}
                 dot={false}
+                activeDot={{ r: 4 }}
               />
             </ComposedChart>
           </ResponsiveContainer>

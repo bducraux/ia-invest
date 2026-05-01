@@ -68,6 +68,8 @@ class EquityPoint:
     market_value_cents: int = 0
     breakdown_by_class: dict[str, int] = field(default_factory=dict)
     net_contributions_cents: int = 0  # In-month contributions (buys - sells)
+    # Cost basis of open positions at month_end + principal of active RFs.
+    # Mirrors the "Total investido" KPI in the overview.
     cumulative_contributions_cents: int = 0
     dividends_received_cents: int = 0  # In-month income
     warnings: list[str] = field(default_factory=list)
@@ -139,7 +141,6 @@ class MonthlyEquityService:
         # 4) Walk months.
         months = _iter_months(from_month, to_month)
         points: list[EquityPoint] = []
-        cumulative_contributions = 0
 
         # Operations are pre-sorted; track index to compute in-month contributions.
         for month_end in months:
@@ -148,8 +149,11 @@ class MonthlyEquityService:
             in_month_contrib = 0
             in_month_dividends = 0
 
-            # Replay quantities up to month_end.
+            # Replay quantities AND running cost basis up to month_end. Mirrors
+            # PositionService: on a sell, total_cost is reduced proportionally to
+            # the share of quantity sold.
             qty_by_asset: dict[tuple[str, str], float] = defaultdict(float)
+            cost_by_asset: dict[tuple[str, str], int] = defaultdict(int)
             asset_type_of: dict[tuple[str, str], str] = {}
             warnings: set[str] = set()
             for op in all_ops:
@@ -161,18 +165,31 @@ class MonthlyEquityService:
                 asset_type_of[key] = atype
                 op_type = op["operation_type"]
                 qty = op["quantity"]
+                gross = int(op["gross_value"])
+                fees = int(op["fees"])
                 if op_type in _BUY_TYPES:
+                    cost_by_asset[key] += gross + fees
                     qty_by_asset[key] += qty
                 elif op_type in _SELL_TYPES:
+                    current_qty = qty_by_asset[key]
+                    if current_qty > 0:
+                        cost_sold = int(
+                            (
+                                Decimal(cost_by_asset[key])
+                                * Decimal(str(qty))
+                                / Decimal(str(current_qty))
+                            ).to_integral_value()
+                        )
+                        cost_by_asset[key] -= cost_sold
                     qty_by_asset[key] -= qty
                 # In-month metrics
                 if month_start <= op_date <= month_end:
                     if op_type in _BUY_TYPES:
-                        in_month_contrib += int(op["gross_value"]) + int(op["fees"])
+                        in_month_contrib += gross + fees
                     elif op_type in _SELL_TYPES:
-                        in_month_contrib -= int(op["gross_value"]) - int(op["fees"])
+                        in_month_contrib -= gross - fees
                     elif op_type in _INCOME_TYPES:
-                        in_month_dividends += int(op["gross_value"]) - int(op["fees"])
+                        in_month_dividends += gross - fees
 
             # Value renda variável / internacional / cripto positions.
             breakdown: dict[str, int] = defaultdict(int)
@@ -196,15 +213,26 @@ class MonthlyEquityService:
                 cdi_provider=self._cdi, clock=FixedClock(month_end)
             )
             rf_value = 0
+            rf_invested = 0
             for pos in rf_positions:
-                if pos.application_date and datetime.strptime(
-                    pos.application_date, "%Y-%m-%d"
-                ).date() > month_end:
-                    continue
+                applied: date | None = None
+                if pos.application_date:
+                    applied = datetime.strptime(pos.application_date, "%Y-%m-%d").date()
+                    if applied > month_end:
+                        continue
                 valuation = valuation_service.revalue_as_of(pos, month_end)
                 rf_value += int(valuation.net_value_current_brl or valuation.gross_value_current_brl or 0)
                 if not valuation.is_complete:
                     warnings.add(f"rf-incompleta:{pos.id}")
+                # Match the KPI: principal counts toward total_invested only
+                # while the RF is active (applied and not yet matured).
+                matured = False
+                if pos.maturity_date:
+                    maturity = datetime.strptime(pos.maturity_date, "%Y-%m-%d").date()
+                    if maturity <= month_end:
+                        matured = True
+                if not matured:
+                    rf_invested += int(pos.principal_applied_brl or 0)
             if rf_value:
                 breakdown["renda-fixa"] += rf_value
                 total_value += rf_value
@@ -220,7 +248,14 @@ class MonthlyEquityService:
                 breakdown["previdencia"] += prev_value
                 total_value += prev_value
 
-            cumulative_contributions += in_month_contrib
+            # Total invested at month_end mirrors the "Total investido" KPI:
+            # cost basis of open positions (RV/cripto/internacional) plus the
+            # principal of active RFs. Previdência has no historical cost.
+            total_invested_at_month_end = sum(
+                cost
+                for key, cost in cost_by_asset.items()
+                if qty_by_asset[key] > 0
+            ) + rf_invested
 
             points.append(
                 EquityPoint(
@@ -229,7 +264,7 @@ class MonthlyEquityService:
                     market_value_cents=total_value,
                     breakdown_by_class=dict(breakdown),
                     net_contributions_cents=in_month_contrib,
-                    cumulative_contributions_cents=cumulative_contributions,
+                    cumulative_contributions_cents=total_invested_at_month_end,
                     dividends_received_cents=in_month_dividends,
                     warnings=sorted(warnings),
                 )

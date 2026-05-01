@@ -83,7 +83,11 @@ def get_portfolio_equity_curve(
             "generated_at": _utc_now_iso(),
         }
 
-    today = datetime.now(UTC).date()
+    # Local date — matches the rest of the API (e.g. PortfolioSummaryService
+    # uses date.today() for month windows). Using UTC here would tip the
+    # current point into next month after ~21:00 BRT, leaving the chart out
+    # of sync with the "Total investido" KPI.
+    today = date.today()
     end_default = date(today.year, today.month, 1)
     start_default = _months_back(end_default, period_months)
     try:

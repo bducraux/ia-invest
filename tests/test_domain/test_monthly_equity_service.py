@@ -130,6 +130,41 @@ def test_monthly_equity_curve_basic_renda_variavel(tmp_db) -> None:
         assert p.breakdown_by_class.get("renda-variavel") == p.market_value_cents
 
 
+def test_monthly_equity_curve_total_invested_drops_proportionally_on_sell(tmp_db) -> None:
+    """Mirrors the "Total investido" KPI: cost basis of OPEN positions only.
+
+    A sell reduces total_invested proportionally to the share sold (same rule
+    as PositionService), so the chart's "Valor investido" line stays in sync
+    with the overview KPI.
+    """
+    _seed_portfolio(tmp_db, "rv")
+    OperationRepository(tmp_db.connection).insert_many(
+        [
+            # Buy 100 @ R$30 → cost = 300_000
+            _make_op("rv", "PETR4", "buy", "2024-02-10", 100, 3000),
+            # Sell 40 @ R$35 in March → cost reduced by 40/100 of 300_000 = 120_000
+            # Remaining cost = 180_000 (60 shares still open)
+            _make_op("rv", "PETR4", "sell", "2024-03-15", 40, 3500),
+        ]
+    )
+
+    hist = _StubHistoricalPriceService({"PETR4": 3500})
+    service = MonthlyEquityService(
+        tmp_db,
+        historical_prices=hist,  # type: ignore[arg-type]
+        fx_repo=_StubFxRepo(),  # type: ignore[arg-type]
+    )
+
+    points = service.compute(["rv"], "2024-02", "2024-04")
+
+    # Feb: 100 open @ cost 30 → 300_000
+    assert points[0].cumulative_contributions_cents == 300_000
+    # Mar: 60 open with proportional cost reduction → 180_000
+    assert points[1].cumulative_contributions_cents == 180_000
+    # Apr: still 60 open, no further ops → 180_000 (does NOT keep growing)
+    assert points[2].cumulative_contributions_cents == 180_000
+
+
 def test_monthly_equity_curve_includes_previdencia_history(tmp_db) -> None:
     _seed_portfolio(tmp_db, "prev")
     prev_repo = PrevidenciaSnapshotRepository(tmp_db.connection)

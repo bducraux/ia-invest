@@ -49,9 +49,18 @@ const systemItems = [
   { href: "/settings", label: "Configurações", icon: Settings },
 ];
 
-const portfolioSections = [
+type PortfolioSection = {
+  href: string;
+  label: string;
+  // Optional list of specializations that may show this section. When omitted,
+  // the section is shown for every portfolio that has subsections.
+  specializations?: ReadonlyArray<string>;
+};
+
+const portfolioSections: ReadonlyArray<PortfolioSection> = [
   { href: "/positions", label: "Posições" },
   { href: "/operations", label: "Operações" },
+  { href: "/irpf", label: "Simulador IR", specializations: ["RENDA_VARIAVEL"] },
 ];
 
 // Specializations whose detail view doesn't need separate Posições/Operações
@@ -230,7 +239,15 @@ export function Sidebar() {
 
                           {isExpanded && hasSubsections ? (
                             <div className="mt-1 space-y-1 pl-9">
-                              {portfolioSections.map((section) => {
+                              {portfolioSections
+                                .filter(
+                                  (section) =>
+                                    !section.specializations ||
+                                    section.specializations.includes(
+                                      portfolio.specialization,
+                                    ),
+                                )
+                                .map((section) => {
                                 const href = buildScopedPath(portfolio.id, section.href);
                                 const isSectionActive =
                                   isActive && scope.sectionPath === section.href;

@@ -70,3 +70,15 @@ export function formatPercent(value: number): string {
 export function formatQuantity(value: number): string {
   return normalizeSpaces(numberPtBr.format(value));
 }
+
+// Variante sem o prefixo "R$", útil para valores que precisam ser colados
+// em formulários da Receita Federal (ex.: campo "Valor" do IRPF), onde o
+// usuário copia apenas o número formatado em pt-BR ("1.234,56").
+const brlPlain = new Intl.NumberFormat("pt-BR", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+export function formatNumberPtBr(value: Cents | number): string {
+  return normalizeSpaces(brlPlain.format(centsToBRL(value)));
+}

@@ -6,6 +6,7 @@ import {
   deleteOperation,
   deletePrevidenciaSnapshot,
   getEquityCurve,
+  getIrpfReport,
   getPortfolioOperations,
   getPortfolios,
   getPortfolioPositions,
@@ -29,6 +30,17 @@ export function usePortfolios() {
   return useQuery({
     queryKey: ["portfolios"],
     queryFn: () => getPortfolios(),
+  });
+}
+
+export function useIrpfReport(
+  portfolioId: string | undefined,
+  year: number | undefined,
+) {
+  return useQuery({
+    queryKey: ["portfolio", portfolioId, "irpf", year],
+    queryFn: () => getIrpfReport(portfolioId as string, year as number),
+    enabled: Boolean(portfolioId) && Boolean(year),
   });
 }
 

@@ -40,11 +40,17 @@ from mcp_server.tools.concentration import get_concentration_analysis
 from mcp_server.tools.dividends_summary import get_dividends_summary
 from mcp_server.tools.equity_curve import get_portfolio_equity_curve
 from mcp_server.tools.fixed_income_summary import get_fixed_income_summary
+from mcp_server.tools.irpf_report import get_irpf_report
 from mcp_server.tools.performance import get_portfolio_performance
 from mcp_server.tools.portfolio_alerts import get_portfolio_alerts
 from mcp_server.tools.portfolios import get_portfolio_operations
 from mcp_server.tools.positions_with_quote import get_position_with_quote
 from normalizers.fixed_income_csv import FixedIncomeCSVImporter
+from storage.repository.asset_metadata import (
+    AssetMetadata,
+    AssetMetadataRepository,
+    infer_asset_class_irpf,
+)
 from storage.repository.benchmark_rates import BenchmarkRatesRepository
 from storage.repository.db import Database
 from storage.repository.fixed_income import FixedIncomePositionRepository
@@ -240,6 +246,25 @@ class FxSyncResultOut(BaseModel):
     coverageEnd: str | None = None
     source: str
     lastFetchedAt: str | None = None
+
+
+# --- Asset metadata (IRPF registry) ------------------------------------------
+
+
+class AssetMetadataOut(BaseModel):
+    assetCode: str
+    cnpj: str | None
+    assetClassIrpf: str
+    assetNameOficial: str | None
+    source: str
+    notes: str | None
+
+
+class AssetMetadataPatch(BaseModel):
+    cnpj: str | None = None
+    assetClassIrpf: str | None = None
+    assetNameOficial: str | None = None
+    notes: str | None = None
 
 
 # --- Fixed-income (renda fixa) -----------------------------------------------
@@ -1770,6 +1795,129 @@ def create_http_app(
         if "error" in result:
             raise HTTPException(status_code=400, detail=result["error"])
         return result
+
+    @app.get("/api/portfolios/{portfolio_id}/irpf", response_model=None)
+    def irpf_report_endpoint(
+        portfolio_id: str,
+        year: int = Query(..., ge=2000, le=2100),
+    ) -> dict[str, Any]:
+        db = get_db()
+        require_portfolio(portfolio_id, db)
+        portfolio = PortfolioRepository(db.connection).get(portfolio_id)
+        # `require_portfolio` already raised 404 when missing.
+        assert portfolio is not None
+        specialization = _portfolio_specialization(portfolio.allowed_asset_types)
+        if specialization != "RENDA_VARIAVEL":
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "IRPF report is only available for renda-variavel portfolios; "
+                    f"this portfolio is classified as {specialization}."
+                ),
+            )
+        result = get_irpf_report(db, portfolio_id, base_year=year)
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        return result
+
+    @app.get("/api/asset-metadata", response_model=list[AssetMetadataOut])
+    def list_asset_metadata_endpoint(
+        missing_cnpj: bool = Query(False),
+        missing_name: bool = Query(False),
+    ) -> list[AssetMetadataOut]:
+        """Lista o registro fiscal de todos os ativos.
+
+        Filtros opcionais úteis para skills de enriquecimento:
+        - ``missing_cnpj=true`` retorna apenas linhas sem CNPJ.
+        - ``missing_name=true`` retorna apenas linhas sem ``asset_name_oficial``.
+        """
+
+        db = get_db()
+        repo = AssetMetadataRepository(db.connection)
+        rows = repo.list_all()
+
+        def _keep(meta: AssetMetadata) -> bool:
+            if missing_cnpj and meta.cnpj:
+                return False
+            return not (missing_name and meta.asset_name_oficial)
+
+        return [
+            AssetMetadataOut(
+                assetCode=meta.asset_code,
+                cnpj=meta.cnpj,
+                assetClassIrpf=meta.asset_class_irpf,
+                assetNameOficial=meta.asset_name_oficial,
+                source=meta.source,
+                notes=meta.notes,
+            )
+            for meta in rows
+            if _keep(meta)
+        ]
+
+    @app.patch("/api/asset-metadata/{asset_code}", response_model=AssetMetadataOut)
+    def update_asset_metadata_endpoint(
+        asset_code: str,
+        payload: AssetMetadataPatch,
+    ) -> AssetMetadataOut:
+        normalized = (asset_code or "").upper().strip()
+        if not normalized:
+            raise HTTPException(status_code=400, detail="asset_code is required")
+
+        db = get_db()
+        repo = AssetMetadataRepository(db.connection)
+        current = repo.get(normalized)
+
+        # Linha pode ainda não existir (caso o usuário abra o editor antes do
+        # bootstrap rodar). Inferimos uma classe e cnpj NULL como base.
+        if current is None:
+            current = AssetMetadata(
+                asset_code=normalized,
+                cnpj=None,
+                asset_class_irpf=infer_asset_class_irpf(normalized, None),
+                asset_name_oficial=None,
+                source="manual",
+                notes=None,
+            )
+
+        new_class = payload.assetClassIrpf or current.asset_class_irpf
+        new_cnpj = payload.cnpj if payload.cnpj is not None else current.cnpj
+        # Strings vazias do form viram NULL para manter o schema limpo.
+        if isinstance(new_cnpj, str) and not new_cnpj.strip():
+            new_cnpj = None
+        new_name = (
+            payload.assetNameOficial
+            if payload.assetNameOficial is not None
+            else current.asset_name_oficial
+        )
+        if isinstance(new_name, str) and not new_name.strip():
+            new_name = None
+        new_notes = (
+            payload.notes if payload.notes is not None else current.notes
+        )
+        if isinstance(new_notes, str) and not new_notes.strip():
+            new_notes = None
+
+        try:
+            updated = AssetMetadata(
+                asset_code=normalized,
+                cnpj=new_cnpj,
+                asset_class_irpf=new_class,  # type: ignore[arg-type]
+                asset_name_oficial=new_name,
+                source="manual",
+                notes=new_notes,
+            )
+            repo.upsert(updated)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        return AssetMetadataOut(
+            assetCode=updated.asset_code,
+            cnpj=updated.cnpj,
+            assetClassIrpf=updated.asset_class_irpf,
+            assetNameOficial=updated.asset_name_oficial,
+            source=updated.source,
+            notes=updated.notes,
+        )
 
     @app.get("/api/portfolios/{portfolio_id}/concentration", response_model=None)
     def concentration_endpoint(portfolio_id: str) -> dict[str, Any]:

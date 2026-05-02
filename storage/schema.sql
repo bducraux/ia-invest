@@ -367,6 +367,27 @@ CREATE TABLE IF NOT EXISTS avenue_symbol_aliases (
 CREATE INDEX IF NOT EXISTS idx_avenue_aliases_code
     ON avenue_symbol_aliases(portfolio_id, asset_code);
 
+-- ---------------------------------------------------------------------------
+-- asset_metadata
+-- Fiscal/IRPF master registry per asset: CNPJ and IRPF classification used
+-- by the IRPF report builder. Decoupled from `operations`/`positions` so a
+-- ticker shared across portfolios reuses the same record.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS asset_metadata (
+    asset_code          TEXT PRIMARY KEY,
+    cnpj                TEXT,
+    asset_class_irpf    TEXT NOT NULL
+                            CHECK (asset_class_irpf IN ('acao','fii','fiagro','bdr','etf')),
+    asset_name_oficial  TEXT,
+    source              TEXT NOT NULL DEFAULT 'manual',
+    notes               TEXT,
+    created_at          TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    updated_at          TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_asset_metadata_class
+    ON asset_metadata(asset_class_irpf);
+
 -- Record this baseline schema version
 INSERT OR IGNORE INTO schema_migrations (version, description)
 VALUES ('0001', 'initial schema — all tables, indexes, and constraints');
@@ -382,3 +403,6 @@ VALUES ('0004', 'previdencia snapshots keep history per period_month');
 
 INSERT OR IGNORE INTO schema_migrations (version, description)
 VALUES ('0005', 'historical_prices cache for equity-curve reporting');
+
+INSERT OR IGNORE INTO schema_migrations (version, description)
+VALUES ('0006', 'asset_metadata registry for IRPF classification (cnpj, asset_class_irpf)');

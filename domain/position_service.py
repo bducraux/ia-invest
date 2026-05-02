@@ -49,6 +49,23 @@ class PositionService:
 
         return positions
 
+    def calculate_as_of(
+        self,
+        operations: list[dict[str, Any]],
+        portfolio_id: str,
+        as_of_date: str,
+    ) -> list[Position]:
+        """Recalculate positions considering only operations on/before ``as_of_date``.
+
+        ``as_of_date`` is an ISO-8601 ``YYYY-MM-DD`` string (inclusive). Operations
+        with ``operation_date > as_of_date`` are ignored. Returns one ``Position``
+        per asset that had at least one operation in the window — including
+        positions whose final quantity is zero (useful for IRPF "Bens e Direitos"
+        snapshots that need to compare 31/12 of two consecutive years).
+        """
+        filtered = [op for op in operations if op["operation_date"] <= as_of_date]
+        return self.calculate(filtered, portfolio_id)
+
     def _calculate_asset_position(
         self,
         asset_code: str,

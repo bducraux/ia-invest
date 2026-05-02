@@ -1,4 +1,4 @@
-.PHONY: help install init migrate reset-db clear-cache create-portfolio adjust-balance check-balance import-all portfolio-overview lint type-check test clean server api-server start stop logs frontend-install frontend-dev frontend-build frontend-test frontend-lint sync-historical-prices sync-historical-prices-full
+.PHONY: help install init migrate reset-db clear-cache create-portfolio adjust-balance check-balance import-all portfolio-overview bootstrap-asset-metadata lint type-check test clean server api-server start stop logs frontend-install frontend-dev frontend-build frontend-test frontend-lint sync-historical-prices sync-historical-prices-full
 
 API_PORT ?= 8010
 
@@ -23,6 +23,7 @@ help:
 	@echo "  make portfolio-overview   Show a full overview of all assets in a portfolio"
 	@echo "                            Example: make portfolio-overview ARGS=\"--portfolio cripto --sort cost --hide-zero\""
 	@echo "  make import-all           Import all active portfolios"
+	@echo "  make bootstrap-asset-metadata  Classify every ticker into the IRPF table (acao/fii/etc.)"
 	@echo ""
 	@echo "Server:"
 	@echo "  make server               Start MCP server"
@@ -69,6 +70,10 @@ reset-db:
 	done
 	uv run python scripts/import_all.py --verbose
 	@echo ""
+	@echo "Bootstrapping asset_metadata (IRPF classes) for every ticker..."
+	@uv run python scripts/bootstrap_asset_metadata.py || \
+		echo "WARNING: asset_metadata bootstrap failed. Run 'make bootstrap-asset-metadata' later."
+	@echo ""
 	@echo "Bootstrapping CDI historical series from BACEN..."
 	@uv run python scripts/sync_benchmark_rates.py --benchmark CDI --full || \
 		echo "WARNING: CDI sync failed (offline?). Run 'make sync-cdi-full' later."
@@ -92,6 +97,9 @@ adjust-balance:
 
 portfolio-overview:
 	uv run python scripts/portfolio_overview.py $(ARGS)
+
+bootstrap-asset-metadata:
+	uv run python scripts/bootstrap_asset_metadata.py $(ARGS)
 
 import-all:
 	uv run python scripts/import_all.py

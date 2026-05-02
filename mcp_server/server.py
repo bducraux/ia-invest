@@ -42,6 +42,7 @@ from mcp_server.tools.concentration import get_concentration_analysis
 from mcp_server.tools.dividends_summary import get_dividends_summary
 from mcp_server.tools.equity_curve import get_portfolio_equity_curve
 from mcp_server.tools.fixed_income_summary import get_fixed_income_summary
+from mcp_server.tools.irpf_report import get_irpf_report
 from mcp_server.tools.members import (
     compare_members,
     get_consolidated_summary_filtered,
@@ -304,6 +305,29 @@ async def handle_list_tools() -> list[types.Tool]:
                     "portfolio_id": {"type": "string"},
                 },
                 "required": ["portfolio_id"],
+            },
+        ),
+        types.Tool(
+            name="get_irpf_report",
+            description=(
+                "DIRPF (Brazilian income tax) projection of a renda-variavel "
+                "portfolio for a given calendar year. Groups operations and "
+                "positions by Receita Federal section codes (09, 10, 18, 99, "
+                "03-01, 07-03, 07-02, 99-07, 99-99) and pre-renders the "
+                "discriminação string for each Bens e Direitos row."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "portfolio_id": {"type": "string"},
+                    "base_year": {
+                        "type": "integer",
+                        "description": "Calendar year of the declaration (ano-base).",
+                        "minimum": 2000,
+                        "maximum": 2100,
+                    },
+                },
+                "required": ["portfolio_id", "base_year"],
             },
         ),
         types.Tool(
@@ -582,6 +606,12 @@ async def handle_call_tool(
             result = get_fixed_income_summary(db, args["portfolio_id"])
         elif name == "get_portfolio_alerts":
             result = get_portfolio_alerts(db, args["portfolio_id"])
+        elif name == "get_irpf_report":
+            result = get_irpf_report(
+                db,
+                args["portfolio_id"],
+                base_year=int(args["base_year"]),
+            )
         elif name == "get_portfolio_equity_curve":
             result = get_portfolio_equity_curve(
                 db,

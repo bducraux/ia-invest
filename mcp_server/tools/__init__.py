@@ -4,6 +4,7 @@ from mcp_server.tools.app_settings import get_app_settings
 from mcp_server.tools.concentration import get_concentration_analysis
 from mcp_server.tools.dividends_summary import get_dividends_summary
 from mcp_server.tools.fixed_income_summary import get_fixed_income_summary
+from mcp_server.tools.irpf_report import get_irpf_report
 from mcp_server.tools.performance import get_portfolio_performance
 from mcp_server.tools.portfolio_alerts import get_portfolio_alerts
 from mcp_server.tools.portfolios import (
@@ -30,4 +31,5 @@ __all__ = [
     "get_portfolio_performance",
     "get_fixed_income_summary",
     "get_portfolio_alerts",
+    "get_irpf_report",
 ]

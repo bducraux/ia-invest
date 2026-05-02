@@ -171,6 +171,66 @@ export function getEquityCurve(
   return apiFetch<EquityCurveRaw>(path);
 }
 
+// ---------------------------------------------------------------------------
+// IRPF report (DIRPF — Bens e Direitos + Rendimentos)
+// ---------------------------------------------------------------------------
+
+export type IrpfSectionCategory = "isento" | "exclusivo" | "bem_direito";
+
+export interface IrpfBemDireitoExtra {
+  quantity: number;
+  avg_price_cents: number;
+  total_cents: number;
+  previous_total_cents: number;
+  previous_quantity: number;
+}
+
+export interface IrpfRow {
+  asset_code: string;
+  asset_name: string | null;
+  cnpj: string | null;
+  value_cents: number;
+  extra: IrpfBemDireitoExtra | null;
+  discriminacao: string | null;
+  warnings: string[];
+}
+
+export interface IrpfSection {
+  code: string;
+  title: string;
+  category: IrpfSectionCategory;
+  total_cents: number;
+  rows: IrpfRow[];
+}
+
+export interface IrpfReport {
+  portfolio_id: string;
+  base_year: number;
+  generated_at: string;
+  warnings: string[];
+  sections: IrpfSection[];
+}
+
+export function getIrpfReport(
+  portfolioId: string,
+  year: number,
+): Promise<IrpfReport> {
+  return apiFetch<IrpfReport>(
+    `/api/portfolios/${portfolioId}/irpf?year=${year}`,
+  );
+}
+
+export type AssetClassIrpf = "acao" | "fii" | "fiagro" | "bdr" | "etf";
+
+export interface AssetMetadata {
+  assetCode: string;
+  cnpj: string | null;
+  assetClassIrpf: AssetClassIrpf;
+  assetNameOficial: string | null;
+  source: string;
+  notes: string | null;
+}
+
 export async function updatePortfolioName(
   portfolioId: string,
   payload: { name: string; ownerId?: string },

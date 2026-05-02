@@ -29,7 +29,7 @@ def _seed(db_path: Path, *, allowed_asset_types: list[str]) -> str:
         AssetMetadata(
             asset_code="ITSA4",
             cnpj="61.532.644/0001-15",
-            asset_class_irpf="acao",
+            asset_class="acao",
             asset_name_oficial="ITAUSA S.A.",
             source="manual",
         )

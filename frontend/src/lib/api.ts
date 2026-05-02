@@ -220,15 +220,27 @@ export function getIrpfReport(
   );
 }
 
-export type AssetClassIrpf = "acao" | "fii" | "fiagro" | "bdr" | "etf";
+export type AssetClass =
+  | "acao"
+  | "fii"
+  | "fiagro"
+  | "bdr"
+  | "etf"
+  | "cripto"
+  | "stocks";
 
 export interface AssetMetadata {
   assetCode: string;
   cnpj: string | null;
-  assetClassIrpf: AssetClassIrpf;
+  assetClass: AssetClass;
   assetNameOficial: string | null;
+  sectorCategory: string | null;
+  sectorSubcategory: string | null;
+  siteRi: string | null;
   source: string;
   notes: string | null;
+  dataSource: string | null;
+  lastSyncedAt: string | null;
 }
 
 export async function updatePortfolioName(

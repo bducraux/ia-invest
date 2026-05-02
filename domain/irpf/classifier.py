@@ -1,4 +1,4 @@
-"""Pure mapping (asset_class_irpf, operation_type) → DIRPF section.
+"""Pure mapping (asset_class, operation_type) → DIRPF section.
 
 The classifier returns a stable identifier for each section. The builder is
 then responsible for grouping rows under the matching `IrpfSection`.
@@ -20,18 +20,18 @@ from __future__ import annotations
 
 from typing import Literal
 
-AssetClassIrpf = Literal["acao", "fii", "fiagro", "bdr", "etf"]
+AssetClass = Literal["acao", "fii", "fiagro", "bdr", "etf", "cripto", "stocks"]
 ProventoOpType = Literal["dividend", "jcp", "rendimento", "split_bonus"]
 
 
-def classify(asset_class_irpf: str | None, operation_type: str) -> str | None:
-    """Map ``(asset_class_irpf, operation_type)`` to a DIRPF section code.
+def classify(asset_class: str | None, operation_type: str) -> str | None:
+    """Map ``(asset_class, operation_type)`` to a DIRPF section code.
 
     Returns ``None`` when the combination falls outside V1 scope (e.g. JCP on
     a FII — not legal — or any operation on a class not yet supported like
     BDR/ETF).
     """
-    cls = (asset_class_irpf or "").lower()
+    cls = (asset_class or "").lower()
     op = (operation_type or "").lower()
 
     if op == "dividend":
@@ -60,9 +60,9 @@ def classify(asset_class_irpf: str | None, operation_type: str) -> str | None:
     return None
 
 
-def bem_direito_section(asset_class_irpf: str | None) -> str | None:
+def bem_direito_section(asset_class: str | None) -> str | None:
     """Return the Bens e Direitos section code for an asset class."""
-    cls = (asset_class_irpf or "").lower()
+    cls = (asset_class or "").lower()
     if cls == "acao":
         return "03-01"
     if cls == "fii":

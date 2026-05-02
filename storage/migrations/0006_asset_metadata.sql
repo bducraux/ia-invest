@@ -1,10 +1,11 @@
 -- 0006 — asset_metadata
 --
--- Master registry of fiscal/IRPF metadata per asset. Decouples CNPJ and
--- IRPF classification from `operations`/`positions` so the same ticker
--- shared across multiple portfolios reuses the same record.
+-- Cross-domain master registry per asset. Decouples CNPJ and the structural
+-- classification (`asset_class`) from `operations`/`positions` so the same
+-- ticker shared across multiple portfolios reuses the same record.
 --
--- `asset_class_irpf` drives the section/code mapping in the IRPF report:
+-- `asset_class` drives the section/code mapping in the IRPF report (when
+-- applicable) and groups assets for sector / portfolio analytics:
 --   - acao   → Bens 03▷01, Rend. Isentos 09 (dividendos), Trib. Excl. 10 (JCP),
 --              Rend. Isentos 18 (bonificação)
 --   - fii    → Bens 07▷03, Rend. Isentos 99
@@ -18,8 +19,8 @@
 CREATE TABLE IF NOT EXISTS asset_metadata (
     asset_code          TEXT PRIMARY KEY,
     cnpj                TEXT,
-    asset_class_irpf    TEXT NOT NULL
-                            CHECK (asset_class_irpf IN ('acao','fii','fiagro','bdr','etf')),
+    asset_class         TEXT NOT NULL
+                            CHECK (asset_class IN ('acao','fii','fiagro','bdr','etf')),
     asset_name_oficial  TEXT,
     source              TEXT NOT NULL DEFAULT 'manual',
     notes               TEXT,
@@ -28,7 +29,7 @@ CREATE TABLE IF NOT EXISTS asset_metadata (
 );
 
 CREATE INDEX IF NOT EXISTS idx_asset_metadata_class
-    ON asset_metadata(asset_class_irpf);
+    ON asset_metadata(asset_class);
 
 INSERT OR IGNORE INTO schema_migrations (version, description)
-VALUES ('0006', 'asset_metadata registry for IRPF classification (cnpj, asset_class_irpf)');
+VALUES ('0006', 'asset_metadata registry for IRPF classification (cnpj, asset_class)');

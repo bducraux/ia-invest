@@ -60,35 +60,45 @@ Cada item retornado tem este shape (camelCase):
 {
   "assetCode": "ITSA4",
   "cnpj": null,
-  "assetClassIrpf": "acao",
+  "assetClass": "acao",
   "assetNameOficial": null,
+  "sectorCategory": null,
+  "sectorSubcategory": null,
+  "siteRi": null,
   "source": "auto",
-  "notes": null
+  "notes": null,
+  "dataSource": "auto",
+  "lastSyncedAt": null
 }
 ```
 
 Junte os dois resultados em uma lista única `ativos_a_enriquecer`.
 
-### 2. ANTES de pesquisar, consulte o seed colaborativo
+### 2. ANTES de pesquisar, consulte o catálogo versionado
 
-Existe um CSV versionado no repositório com tickers já validados pela comunidade
-local do projeto:
+Existe um catálogo CSV versionado dividido por classe de ativo:
 
 ```
-domain/irpf/data/asset_metadata_seed.csv
+data/asset_catalog/acoes.csv      ← acao
+data/asset_catalog/fiis.csv       ← fii + fiagro
+data/asset_catalog/criptos.csv    ← cripto
+data/asset_catalog/stocks.csv     ← stocks (US equities)
 ```
 
-**Sempre leia este arquivo primeiro** (`read_file`) e cheque se o ticker pendente já
+Schema canônico (8 colunas): `ticker,cnpj,razao_social,asset_class,sector_category,sector_subcategory,site_ri,fonte`.
+
+**Sempre leia o arquivo da classe certa primeiro** (`read_file`) e cheque se o ticker pendente já
 está lá. Se estiver:
 
-- Use os dados do seed direto no PATCH (sem busca web).
-- Se a `notes` de uma linha existente do banco estiver em conflito com o seed, **avise
+- Use os dados do catálogo direto no PATCH (sem busca web).
+- Se houver `siteRi` no catálogo, **use essa URL como fonte primária** antes de fazer `web_search`.
+- Se a `notes` de uma linha existente do banco estiver em conflito com o catálogo, **avise
   o usuário** — pode ser ticker renomeado (ex.: `GALG11` foi renomeado para `GARE11`,
-  ambos com o mesmo CNPJ; nesse caso o seed deve ter as DUAS linhas).
+  ambos com o mesmo CNPJ; nesse caso o catálogo deve ter as DUAS linhas).
 
 ### 3. Para cada ativo NOVO, identificar a fonte certa pela classe
 
-| `assetClassIrpf` | Onde buscar (em ordem de preferência) |
+| `assetClass` | Onde buscar (em ordem de preferência) |
 |---|---|
 | `acao` | Site de RI da empresa → B3 → CVM. CNPJ = CNPJ da companhia listada. |
 | `fii` / `fiagro` | Página da B3 do fundo (`/produtos-e-servicos/negociacao/renda-variavel/fundos-de-investimentos/...`) ou ficha CVM. CNPJ = CNPJ do **fundo** (não do administrador). |
@@ -127,31 +137,41 @@ Campos do payload (todos opcionais — só envie o que você apurou):
 
 - `cnpj` — string formatada `NN.NNN.NNN/NNNN-NN` ou `null` para limpar.
 - `assetNameOficial` — razão social exata.
-- `assetClassIrpf` — `"acao" | "fii" | "fiagro" | "bdr" | "etf"`. Só envie se tiver
+- `assetClass` — `"acao" | "fii" | "fiagro" | "bdr" | "etf" | "cripto" | "stocks"`. Só envie se tiver
   certeza que a inferência automática estava errada (ex.: ticker `XPTO11` que é FIAGRO,
   não FII).
+- `sectorCategory` / `sectorSubcategory` — taxonomia setorial (ex.: `"Tijolo"` / `"Lajes Corporativas"`
+  para FII; `"Financeiro"` / `"Bancos"` para ação). Use os mesmos rótulos do catálogo.
+- `siteRi` — URL canônica da página de Relações com Investidores.
 - `notes` — texto curto opcional para registrar a fonte (ex.: `"B3, consulta em 2026-04-30"`).
 
 A resposta devolve o registro completo atualizado. O endpoint cria a linha se ainda não
 existir.
 
-### 5. Atualizar o seed colaborativo
+### 5. Atualizar o catálogo versionado
 
-**Para ativos novos descobertos via web (não vindos do seed)**, sempre adicione uma linha
-ao seed `domain/irpf/data/asset_metadata_seed.csv` para que o próximo usuário do projeto
-não precise refazer a pesquisa. Formato:
+**Para ativos novos descobertos via web (não vindos do catálogo)**, sempre adicione uma linha
+ao arquivo da classe certa em `data/asset_catalog/` para que o próximo usuário do projeto
+não precise refazer a pesquisa. Formato (8 colunas):
 
 ```csv
-ticker,cnpj,razao_social,asset_class_irpf,fonte
-ITSA4,61.532.644/0001-15,ITAÚSA S.A.,acao,B3 + RI Itausa 2026-04
+ticker,cnpj,razao_social,asset_class,sector_category,sector_subcategory,site_ri,fonte
+ITSA4,61.532.644/0001-15,ITAÚSA S.A.,acao,Financeiro,Holdings,https://www.itausa.com.br/ri,B3 + RI Itausa 2026-04
 ```
 
-Ordene as linhas alfabeticamente por ticker. Se o ticker foi renomeado (ex.: `GALG11`
-→ `GARE11`), **mantenha as duas linhas** com o mesmo CNPJ — o ticker antigo preserva o
-histórico de operações.
+Dicas:
 
-Avise o usuário no fim: *"Adicionei N linhas ao seed CSV — considere commitar para
-ajudar futuros usuários."*
+- Vá ao arquivo correto: `acoes.csv` (acao), `fiis.csv` (fii/fiagro), `criptos.csv` (cripto),
+  `stocks.csv` (stocks).
+- Ordene as linhas alfabeticamente por ticker.
+- Se o ticker foi renomeado (ex.: `GALG11` → `GARE11`), **mantenha as duas linhas** com o
+  mesmo CNPJ — o ticker antigo preserva o histórico de operações.
+- Alternativa programática: depois de gravar via PATCH, rode
+  `uv run python scripts/dump_asset_metadata_seed.py --write` para regenerar todos os CSVs
+  do catálogo a partir do banco.
+
+Avise o usuário no fim: *"Adicionei N linhas ao catálogo (`data/asset_catalog/...`) — considere
+commitar para ajudar futuros usuários."*
 
 ### 6. Reportar ao usuário
 
@@ -171,7 +191,7 @@ Ao terminar, mostre:
 Usuário: "Tem ativo sem CNPJ no IRPF, dá pra preencher?"
 
 1. GET /api/asset-metadata?missing_cnpj=true
-   → [{ "assetCode": "ITSA4", "assetClassIrpf": "acao", ... }]
+   → [{ "assetCode": "ITSA4", "assetClass": "acao", ... }]
 
 2. web_search: "ITSA4 CNPJ site:b3.com.br"
    → top-1: página da B3 do ITSA4
@@ -208,7 +228,7 @@ Usuário: "Tem ativo sem CNPJ no IRPF, dá pra preencher?"
 ## Pré-requisitos
 
 - API local rodando: `make api-server` (default `http://localhost:8010`).
-- Bootstrap inicial já executado: `make bootstrap-asset-metadata` (cria a linha base com
-  classe inferida).
+- Sync inicial já executado: `make sync-asset-catalog` (cria as linhas a partir do catálogo
+  e do ledger; o legado `make bootstrap-asset-metadata` ainda funciona como alias).
 - Tabela `asset_metadata` populada: se `GET /api/asset-metadata` retornar lista vazia, peça
-  para o usuário rodar `make bootstrap-asset-metadata` antes.
+  para o usuário rodar `make sync-asset-catalog` antes.

@@ -1,0 +1,8 @@
+# Catálogo de ações/ETFs/REITs internacionais (asset_class=stocks)
+#
+# Cobre tickers com asset_type em {stock_us, etf_us, reit_us, bdr_us}. CNPJ
+# não se aplica (não há registro CNPJ no Brasil); deixe vazio. Razão social
+# = nome legal da empresa (ex.: Apple Inc., Vanguard S&P 500 ETF).
+#
+# Schema canônico: ver data/asset_catalog/README.md.
+ticker,cnpj,razao_social,asset_class,sector_category,sector_subcategory,site_ri,fonte

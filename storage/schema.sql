@@ -369,16 +369,23 @@ CREATE INDEX IF NOT EXISTS idx_avenue_aliases_code
 
 -- ---------------------------------------------------------------------------
 -- asset_metadata
--- Fiscal/IRPF master registry per asset: CNPJ and IRPF classification used
--- by the IRPF report builder. Decoupled from `operations`/`positions` so a
--- ticker shared across portfolios reuses the same record.
+-- Cross-domain master registry per asset: CNPJ, structural classification
+-- (`asset_class`) and sector hints. Used by the IRPF report builder, the
+-- sector exposure analytics and the asset-metadata-enrich skill. Decoupled
+-- from `operations`/`positions` so a ticker shared across portfolios reuses
+-- the same record.
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS asset_metadata (
     asset_code          TEXT PRIMARY KEY,
     cnpj                TEXT,
-    asset_class_irpf    TEXT NOT NULL
-                            CHECK (asset_class_irpf IN ('acao','fii','fiagro','bdr','etf')),
+    asset_class         TEXT NOT NULL
+                            CHECK (asset_class IN ('acao','fii','fiagro','bdr','etf','cripto','stocks')),
     asset_name_oficial  TEXT,
+    sector_category     TEXT,
+    sector_subcategory  TEXT,
+    site_ri             TEXT,
+    data_source         TEXT,
+    last_synced_at      TEXT,
     source              TEXT NOT NULL DEFAULT 'manual',
     notes               TEXT,
     created_at          TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
@@ -386,7 +393,9 @@ CREATE TABLE IF NOT EXISTS asset_metadata (
 );
 
 CREATE INDEX IF NOT EXISTS idx_asset_metadata_class
-    ON asset_metadata(asset_class_irpf);
+    ON asset_metadata(asset_class);
+CREATE INDEX IF NOT EXISTS idx_asset_metadata_sector
+    ON asset_metadata(sector_category, sector_subcategory);
 
 -- Record this baseline schema version
 INSERT OR IGNORE INTO schema_migrations (version, description)
@@ -405,4 +414,7 @@ INSERT OR IGNORE INTO schema_migrations (version, description)
 VALUES ('0005', 'historical_prices cache for equity-curve reporting');
 
 INSERT OR IGNORE INTO schema_migrations (version, description)
-VALUES ('0006', 'asset_metadata registry for IRPF classification (cnpj, asset_class_irpf)');
+VALUES ('0006', 'asset_metadata registry for IRPF classification (cnpj, asset_class)');
+
+INSERT OR IGNORE INTO schema_migrations (version, description)
+VALUES ('0007', 'asset_metadata cross-domain extension (sector, site_ri, data_source) and cripto/stocks classes');

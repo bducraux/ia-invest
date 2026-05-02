@@ -28,7 +28,7 @@ from domain.irpf.models import (
 from domain.position_service import PositionService
 from storage.repository.asset_metadata import (
     AssetMetadataRepository,
-    infer_asset_class_irpf,
+    infer_asset_class,
 )
 from storage.repository.operations import OperationRepository
 
@@ -67,8 +67,8 @@ class IrpfReportBuilder:
         def get_class(asset_code: str, asset_type: str | None) -> str:
             metadata = meta_map.get(asset_code.upper())
             if metadata is not None:
-                return metadata.asset_class_irpf
-            return infer_asset_class_irpf(asset_code, asset_type)
+                return metadata.asset_class
+            return infer_asset_class(asset_code, asset_type)
 
         def get_cnpj(asset_code: str) -> str | None:
             metadata = meta_map.get(asset_code.upper())
@@ -168,11 +168,18 @@ class IrpfReportBuilder:
         }
 
         bem_rows: dict[str, list[IrpfRow]] = defaultdict(list)
+        unsupported_classes: set[str] = set()
         for pos in positions_now:
             cls = get_class(pos.asset_code, pos.asset_type)
             section_code = bem_direito_section(cls)
             if section_code is None:
-                # Fora do escopo V1 (BDR/ETF/etc.) — ignorar silenciosamente.
+                # Classes ainda sem seção DIRPF mapeada (cripto, stocks, bdr,
+                # etf). Emite warning explícito para o usuário saber que o
+                # ticker existe mas foi pulado intencionalmente.
+                if cls in {"cripto", "stocks", "bdr", "etf"}:
+                    unsupported_classes.add(
+                        f"asset_class_unsupported_irpf:{pos.asset_code}:{cls}"
+                    )
                 continue
 
             quantity = float(pos.quantity)
@@ -318,6 +325,7 @@ class IrpfReportBuilder:
             report_warnings.append(
                 "asset_metadata_missing:" + ",".join(missing_meta)
             )
+        report_warnings.extend(sorted(unsupported_classes))
 
         all_sections = provent_sections + bem_sections + provisioned_sections
 

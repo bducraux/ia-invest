@@ -31,7 +31,7 @@ def portfolio_with_data(tmp_db: Database) -> tuple[Database, str]:
         AssetMetadata(
             asset_code="ITSA4",
             cnpj="61.532.644/0001-15",
-            asset_class_irpf="acao",
+            asset_class="acao",
             asset_name_oficial="ITAUSA S.A.",
             source="manual",
         )
@@ -40,7 +40,7 @@ def portfolio_with_data(tmp_db: Database) -> tuple[Database, str]:
         AssetMetadata(
             asset_code="SAPR11",
             cnpj="76.484.013/0001-45",
-            asset_class_irpf="fii",
+            asset_class="fii",
             asset_name_oficial="CIA SANEAMENTO DO PARANA - SANEPAR",
             source="manual",
         )

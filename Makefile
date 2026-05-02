@@ -1,4 +1,4 @@
-.PHONY: help install init migrate reset-db clear-cache create-portfolio adjust-balance check-balance import-all export-all portfolio-overview bootstrap-asset-metadata lint type-check test clean server api-server start stop logs frontend-install frontend-dev frontend-build frontend-test frontend-lint sync-historical-prices sync-historical-prices-full
+.PHONY: help install init migrate reset-db reset-db-empty clear-cache create-portfolio adjust-balance check-balance import-all export-all portfolio-overview bootstrap-asset-metadata sync-asset-catalog dump-asset-metadata-seed lint type-check test clean server api-server start stop logs frontend-install frontend-dev frontend-build frontend-test frontend-lint sync-historical-prices sync-historical-prices-full
 
 API_PORT ?= 8010
 
@@ -12,6 +12,7 @@ help:
 	@echo "  make init                 Initialize database (fresh schema)"
 	@echo "  make migrate              Apply pending migrations to an existing database"
 	@echo "  make reset-db             Delete + reinit DB, import all portfolios, sync CDI from BACEN"
+	@echo "  make reset-db-empty       Delete + reinit DB only (no import, no sync) - starts empty"
 	@echo "  make clear-cache          Delete extraction caches (portfolios/*/.cache/)"
 	@echo ""
 	@echo "Portfolios:"
@@ -24,7 +25,9 @@ help:
 	@echo "                            Example: make portfolio-overview ARGS=\"--portfolio cripto --sort cost --hide-zero\""
 	@echo "  make import-all           Import all active portfolios"
 	@echo "  make export-all           Export every portfolio to re-importable CSVs in portfolios/<owner>/<slug>/exports/"
-	@echo "  make bootstrap-asset-metadata  Classify every ticker into the IRPF table (acao/fii/etc.)"
+	@echo "  make sync-asset-catalog        Sync asset_metadata from data/asset_catalog/ + ledger (acoes/fii/cripto/stocks)"
+	@echo "  make bootstrap-asset-metadata  Deprecated alias of sync-asset-catalog"
+	@echo "  make dump-asset-metadata-seed  Export asset_metadata back into the versioned catalog CSVs (use ARGS=--write to persist)"
 	@echo ""
 	@echo "Server:"
 	@echo "  make server               Start MCP server"
@@ -72,8 +75,8 @@ reset-db:
 	uv run python scripts/import_all.py --verbose
 	@echo ""
 	@echo "Bootstrapping asset_metadata (IRPF classes) for every ticker..."
-	@uv run python scripts/bootstrap_asset_metadata.py || \
-		echo "WARNING: asset_metadata bootstrap failed. Run 'make bootstrap-asset-metadata' later."
+	@uv run python scripts/sync_asset_catalog.py || \
+		echo "WARNING: asset_metadata sync failed. Run 'make sync-asset-catalog' later."
 	@echo ""
 	@echo "Bootstrapping CDI historical series from BACEN..."
 	@uv run python scripts/sync_benchmark_rates.py --benchmark CDI --full || \
@@ -87,6 +90,15 @@ reset-db:
 	@uv run python scripts/sync_historical_prices.py --full || \
 		echo "WARNING: historical prices sync failed (offline?). Run 'make sync-historical-prices-full' later."
 
+reset-db-empty:
+	rm -f ia_invest.db ia_invest.db-wal ia_invest.db-shm
+	uv run python scripts/init_db.py
+	@echo ""
+	@echo "Bootstrapping members from portfolios/ folder layout..."
+	uv run python scripts/bootstrap_members_from_fs.py
+	@echo ""
+	@echo "Database is empty (no operations imported). Drop files in portfolios/<owner>/<slug>/inbox/ and run 'make import-all' when ready."
+
 create-portfolio:
 	uv run python scripts/create_portfolio.py
 
@@ -99,8 +111,13 @@ adjust-balance:
 portfolio-overview:
 	uv run python scripts/portfolio_overview.py $(ARGS)
 
-bootstrap-asset-metadata:
-	uv run python scripts/bootstrap_asset_metadata.py $(ARGS)
+bootstrap-asset-metadata: sync-asset-catalog
+
+sync-asset-catalog:
+	uv run python scripts/sync_asset_catalog.py $(ARGS)
+
+dump-asset-metadata-seed:
+	uv run python scripts/dump_asset_metadata_seed.py $(ARGS)
 
 import-all:
 	uv run python scripts/import_all.py

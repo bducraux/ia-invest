@@ -41,7 +41,7 @@ def _format_brl_amount(cents: int) -> str:
 
 
 def format_discriminacao(
-    asset_class_irpf: str,
+    asset_class: str,
     *,
     asset_code: str,
     asset_name: str | None,
@@ -50,7 +50,7 @@ def format_discriminacao(
     total_cents: int,
 ) -> str:
     """Generate the discriminação string for a Bens e Direitos row."""
-    cls = (asset_class_irpf or "").lower()
+    cls = (asset_class or "").lower()
     qty_text = _format_quantity(quantity)
     qty_int = int(quantity) if float(quantity).is_integer() else None
 

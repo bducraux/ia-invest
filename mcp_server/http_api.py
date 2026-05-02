@@ -50,7 +50,7 @@ from normalizers.fixed_income_csv import FixedIncomeCSVImporter
 from storage.repository.asset_metadata import (
     AssetMetadata,
     AssetMetadataRepository,
-    infer_asset_class_irpf,
+    infer_asset_class,
 )
 from storage.repository.benchmark_rates import BenchmarkRatesRepository
 from storage.repository.db import Database
@@ -249,22 +249,30 @@ class FxSyncResultOut(BaseModel):
     lastFetchedAt: str | None = None
 
 
-# --- Asset metadata (IRPF registry) ------------------------------------------
+# --- Asset metadata (cross-domain registry) ----------------------------------
 
 
 class AssetMetadataOut(BaseModel):
     assetCode: str
     cnpj: str | None
-    assetClassIrpf: str
+    assetClass: str
     assetNameOficial: str | None
+    sectorCategory: str | None = None
+    sectorSubcategory: str | None = None
+    siteRi: str | None = None
     source: str
     notes: str | None
+    dataSource: str | None = None
+    lastSyncedAt: str | None = None
 
 
 class AssetMetadataPatch(BaseModel):
     cnpj: str | None = None
-    assetClassIrpf: str | None = None
+    assetClass: str | None = None
     assetNameOficial: str | None = None
+    sectorCategory: str | None = None
+    sectorSubcategory: str | None = None
+    siteRi: str | None = None
     notes: str | None = None
 
 
@@ -1846,10 +1854,15 @@ def create_http_app(
             AssetMetadataOut(
                 assetCode=meta.asset_code,
                 cnpj=meta.cnpj,
-                assetClassIrpf=meta.asset_class_irpf,
+                assetClass=meta.asset_class,
                 assetNameOficial=meta.asset_name_oficial,
+                sectorCategory=meta.sector_category,
+                sectorSubcategory=meta.sector_subcategory,
+                siteRi=meta.site_ri,
                 source=meta.source,
                 notes=meta.notes,
+                dataSource=meta.data_source,
+                lastSyncedAt=meta.last_synced_at,
             )
             for meta in rows
             if _keep(meta)
@@ -1874,13 +1887,13 @@ def create_http_app(
             current = AssetMetadata(
                 asset_code=normalized,
                 cnpj=None,
-                asset_class_irpf=infer_asset_class_irpf(normalized, None),
+                asset_class=infer_asset_class(normalized, None),
                 asset_name_oficial=None,
                 source="manual",
                 notes=None,
             )
 
-        new_class = payload.assetClassIrpf or current.asset_class_irpf
+        new_class = payload.assetClass or current.asset_class
         new_cnpj = payload.cnpj if payload.cnpj is not None else current.cnpj
         # Strings vazias do form viram NULL para manter o schema limpo.
         if isinstance(new_cnpj, str) and not new_cnpj.strip():
@@ -1898,14 +1911,33 @@ def create_http_app(
         if isinstance(new_notes, str) and not new_notes.strip():
             new_notes = None
 
+        def _opt_str(provided: str | None, fallback: str | None) -> str | None:
+            if provided is None:
+                return fallback
+            stripped = provided.strip()
+            return stripped or None
+
+        new_sector_cat = _opt_str(payload.sectorCategory, current.sector_category)
+        new_sector_sub = _opt_str(
+            payload.sectorSubcategory, current.sector_subcategory
+        )
+        new_site_ri = _opt_str(payload.siteRi, current.site_ri)
+
+        from datetime import UTC, datetime
+
         try:
             updated = AssetMetadata(
                 asset_code=normalized,
                 cnpj=new_cnpj,
-                asset_class_irpf=new_class,  # type: ignore[arg-type]
+                asset_class=new_class,  # type: ignore[arg-type]
                 asset_name_oficial=new_name,
                 source="manual",
                 notes=new_notes,
+                sector_category=new_sector_cat,
+                sector_subcategory=new_sector_sub,
+                site_ri=new_site_ri,
+                data_source="manual",
+                last_synced_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
             )
             repo.upsert(updated)
         except ValueError as exc:
@@ -1914,10 +1946,15 @@ def create_http_app(
         return AssetMetadataOut(
             assetCode=updated.asset_code,
             cnpj=updated.cnpj,
-            assetClassIrpf=updated.asset_class_irpf,
+            assetClass=updated.asset_class,
             assetNameOficial=updated.asset_name_oficial,
+            sectorCategory=updated.sector_category,
+            sectorSubcategory=updated.sector_subcategory,
+            siteRi=updated.site_ri,
             source=updated.source,
             notes=updated.notes,
+            dataSource=updated.data_source,
+            lastSyncedAt=updated.last_synced_at,
         )
 
     @app.get("/api/portfolios/{portfolio_id}/concentration", response_model=None)

@@ -222,3 +222,6 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 .dev-logs/
+
+# Crawler runtime output (regenerated on each run)
+scripts/crawler/fundsexplorer/fiis_failed.csv

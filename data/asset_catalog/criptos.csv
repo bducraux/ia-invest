@@ -1,0 +1,7 @@
+# Catálogo de criptomoedas (asset_class=cripto)
+#
+# CNPJ não se aplica (cripto não tem registro CNPJ no Brasil); deixe vazio.
+# Razão social pode receber o nome "humano" do ativo (ex.: Bitcoin, Ethereum).
+#
+# Schema canônico: ver data/asset_catalog/README.md.
+ticker,cnpj,razao_social,asset_class,sector_category,sector_subcategory,site_ri,fonte

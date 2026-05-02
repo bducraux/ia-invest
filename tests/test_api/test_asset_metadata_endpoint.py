@@ -30,7 +30,7 @@ def test_patch_creates_row_when_missing(tmp_path: Path) -> None:
     body = response.json()
     assert body["assetCode"] == "ITSA4"
     assert body["cnpj"] == "61.532.644/0001-15"
-    assert body["assetClassIrpf"] == "acao"
+    assert body["assetClass"] == "acao"
     assert body["source"] == "manual"
 
 
@@ -42,7 +42,7 @@ def test_patch_updates_existing_row(tmp_path: Path) -> None:
         AssetMetadata(
             asset_code="HGLG11",
             cnpj=None,
-            asset_class_irpf="fii",
+            asset_class="fii",
             asset_name_oficial=None,
             source="auto",
         )
@@ -62,14 +62,14 @@ def test_patch_updates_existing_row(tmp_path: Path) -> None:
     assert body["cnpj"] == "11.728.688/0001-47"
     assert body["assetNameOficial"] == "CSHG LOGÍSTICA FII"
     assert body["source"] == "manual"
-    assert body["assetClassIrpf"] == "fii"  # preservado
+    assert body["assetClass"] == "fii"  # preservado
 
 
 def test_patch_rejects_invalid_class(tmp_path: Path) -> None:
     client = _client(tmp_path)
     response = client.patch(
         "/api/asset-metadata/ITSA4",
-        json={"assetClassIrpf": "invalida"},
+        json={"assetClass": "invalida"},
     )
     assert response.status_code == 400
 
@@ -82,7 +82,7 @@ def test_patch_normalises_empty_string_to_null(tmp_path: Path) -> None:
         AssetMetadata(
             asset_code="ITSA4",
             cnpj="61.532.644/0001-15",
-            asset_class_irpf="acao",
+            asset_class="acao",
             asset_name_oficial=None,
             source="manual",
         )

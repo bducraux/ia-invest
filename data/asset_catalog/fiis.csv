@@ -1,0 +1,758 @@
+# Catálogo de FIIs e FIAGROs (asset_class=fii|fiagro)
+#
+# Arquivo gerado/atualizado pelo crawler do FundsExplorer:
+#   uv run python scripts/crawler/fundsexplorer/generate_fiis_csv.py
+#
+# O crawler é não-destrutivo: nunca sobrescreve uma célula já preenchida
+# (ex.: reclassificação manual de FII → FIAGRO permanece intacta).
+#
+# Schema canônico: ver data/asset_catalog/README.md.
+ticker,cnpj,razao_social,asset_class,sector_category,sector_subcategory,site_ri,fonte
+AAGR11,44.585.001/0001-10,ASSET BANK AGRONEGÓCIOS FIAGRO IMOBILIARIO,fiagro,Fiagro,,,FundsExplorer 2026-05
+AATH11,40.884.088/0001-76,ATHON ENERGIA ESG I FDO INV PART EM INFRAESTRUTURA,fii,Fip,,,FundsExplorer 2026-05
+AAZQ11,44.625.826/0001-11,AZ Quest Sole,fiagro,Fiagro,,,FundsExplorer 2026-05
+ABCP11,01.201.140/0001-90,Grand Plaza Shopping,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+AEFI11,13.873.457/0001-52,FII AESAPAR,fii,Fundo Misto,Educacional,,FundsExplorer 2026-05
+AFCR11,,FII AFINVCR,fii,Papel,Papéis,,FundsExplorer 2026-05
+AFHI11,36.642.293/0001-58,AF INVEST CRI,fii,Papel,Papéis,,FundsExplorer 2026-05
+AFOF11,,ALIANZA FOF,fii,Papel,Fundo de Fundos,,FundsExplorer 2026-05
+AGCX11,15.576.907/0001-70,FII AG CAIXA,fii,Tijolo,Agências de Bancos,,FundsExplorer 2026-05
+AGRX11,43.951.911/0001-07,Exes Araguaia,fiagro,Fiagro,,,FundsExplorer 2026-05
+AIEC11,35.765.826/0001-26,AUTONOMY EDIFÍCIOS CORPORATIVOS FUND. INV. IMOB.,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+AJFI11,51.472.985/0001-99,AJ MALLS FUNDO DE INVESTIMENTO IMOBILIÁRIO RESPONSABILIDADE LIMITADA,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+ALMI11,07.122.725/0001-00,Torre Almirante,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+ALMI11B,,FII TORRE AL,fii,Outros,,,FundsExplorer 2026-05
+ALZC11,40.011.324/0001-40,FII ALI CRED,fii,Papel,Papéis,,FundsExplorer 2026-05
+ALZM11,34.847.063/0001-08,FII ALIANZME,fii,Multiestratégia,Fundo de Fundos,,FundsExplorer 2026-05
+ALZR11,28.737.771/0001-85,Alianza Trust Renda Imobiliária,fii,Tijolo,Misto,,FundsExplorer 2026-05
+AMAZ11,39.405.730/0001-08,BLOXS AMAZON GREEN LEG FDO INV NAS CAD PROD AGRO,fiagro,Fiagro,,,FundsExplorer 2026-05
+ANCR11B,07.789.135/0001-27,Ancar CI,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+APTO11,42.432.327/0001-82,NAVI RESIDENCIAL FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Fundo Misto,Imóveis Residenciais,,FundsExplorer 2026-05
+APXM11,43.010.485/0001-07,FUNDO DE INVESTIMENTO IMOBILIÁRIO APEX MALLS,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+APXR11,52.446.271/0001-79,APEX REALTY FDO DE INV IMOB RESP LTDA,fii,Sem categoria,Imóveis Residenciais,,FundsExplorer 2026-05
+APXU11,52.521.137/0001-95,APEX URB FDO DE INV IMOB RESP LTDA,fii,Tijolo,Imóveis Residenciais,,FundsExplorer 2026-05
+AQLL11,13.555.918/0001-49,FII AQUILLA,fii,Outros,Fundo de Fundos,,FundsExplorer 2026-05
+ARCT11,28.267.696/0001-36,RIZA ARCTIUM REAL ESTATE FDO INV IMOB,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+ARFI11B,14.069.202/0001-02,FII AQUIL RD,fii,Outros,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+AROA11,44.674.528/0001-11,AROEIRA 333 RENDA LOGÍSTICA FDO DE INV IMOB,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+ARRI11,32.006.821/0001-21,FDO. INV. IMOB. ÁTRIO REIT RECEBÍVEIS IMOBILIÁRIOS,fii,Papel,Papéis,,FundsExplorer 2026-05
+ARTE11,53.193.237/0001-00,ÁRTEMIS FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Multiestratégia,Misto,,FundsExplorer 2026-05
+ARXD11,44.527.494/0001-32,ARX DOVER RECEBÍVEIS FDO DE INV IMOB,fii,Papel,Papéis,,FundsExplorer 2026-05
+ASMT11,38.293.921/0001-62,ASA METROPOLIS FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+ASRF11,45.188.033/0001-45,ASA RETROFITS I FDO DE INV IMOB,fii,Tijolo,,,FundsExplorer 2026-05
+ATCR11,14.631.148/0001-39,HAZ,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+ATSA11,12.809.972/0001-00,Hedge Atrium Shopping Santo André,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+ATSA11B,,FII CSHGATSA,fii,Outros,,,FundsExplorer 2026-05
+ATWN11,27.773.327/0001-52,FDO. INV. IMOB. A–TOWN,fii,Tijolo,,,FundsExplorer 2026-05
+AURB11,41.076.823/0001-88,FII ALI URB,fii,Tijolo,Imóveis Comerciais - Outros,,FundsExplorer 2026-05
+AZIN11,04.506.394/0001-05,,fii,Fip,FIP-IE,,FundsExplorer 2026-05
+AZPE11,55.985.307/0001-80,FII AZPE,fii,Papel,Papéis,,FundsExplorer 2026-05
+AZPL11,51.890.054/0001-00,AZ QUEST PANORAMA LOGISTICA FDO INV IMOB RESP LIM,fii,Fundo Misto,Serviços Financeiros Diversos,,FundsExplorer 2026-05
+BARI11,29.267.567/0001-00,FDO INV IMOB BARIGUI RENDIMENTOS IMOB I FII,fii,Papel,Papéis,,FundsExplorer 2026-05
+BBFI11B,07.000.400/0001-46,BB Progressivo,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+BBFO11,37.180.091/0001-02,BB FUNDO DE FUNDOS,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+BBGO11,42.592.257/0001-20,FIAGRO BBGO,fiagro,Fiagro,,,FundsExplorer 2026-05
+BBIG11,54.375.187/0001-37,BB PREMIUM MALLS FDO DE INV IMOB RESP LIM,fii,Tijolo,Serviços Financeiros Diversos,,FundsExplorer 2026-05
+BBIM11,20.716.161/0001-93,BB Recebíveis Imobiliários,fii,Papel,Papéis,,FundsExplorer 2026-05
+BBPO11,14.410.722/0001-29,BB Progressivo II,fii,Tijolo,Agências de Bancos,,FundsExplorer 2026-05
+BBRC11,12.681.340/0001-04,BB Renda Corporativa,fii,Tijolo,Agências de Bancos,,FundsExplorer 2026-05
+BBVJ11,,FII C JARDIM,fii,Tijolo,,,FundsExplorer 2026-05
+BCFF11,11.026.627/0001-38,BTG Fundo de Fundos,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+BCFF11B,,FII BC FFII,fii,Outros,,,FundsExplorer 2026-05
+BCIA11,20.216.935/0001-17,Bradesco Carteira Imobiliária Ativa,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+BCRI11,22.219.335/0001-38,Banestes Recebíveis Imobiliários,fii,Papel,Papéis,,FundsExplorer 2026-05
+BDIV11,35.640.741/0001-11,BTG PACTUAL IE DIV. FDO INV. PART. IE,fii,Fip,,,FundsExplorer 2026-05
+BETW11,51.666.294/0001-26,FII BETW,fii,Tijolo,,,FundsExplorer 2026-05
+BGRB11,57.216.258/0001-47,BGR B32 FUNDO DE INVEST IMOB RESP LIM,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+BICE11,39.332.032/0001-20,BRIO CRÉDITO ESTRUTURADO,fii,Papel,Fundo de Fundos,,FundsExplorer 2026-05
+BICR11,34.007.109/0001-72,INTER TÍTULOS IMOB. FDO INV. IMOB.,fii,Papel,Papéis,,FundsExplorer 2026-05
+BIME11,41.081.356/0001-84,BRIO MULTIESTRATÉGIA FUNDO DE INVESTIMENTO IMOB,fii,Multiestratégia,,,FundsExplorer 2026-05
+BINR11,35.360.651/0001-77,BRIX FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Tijolo,,,FundsExplorer 2026-05
+BIPD11,42.869.892/0001-01,FII BRIO IV,fii,Tijolo,,,FundsExplorer 2026-05
+BIPE11,51.817.522/0001-11,FII BRIO V,fii,Multiestratégia,Imóveis Residenciais,,FundsExplorer 2026-05
+BLCA11,41.076.748/0001-55,BLUEMACAW CATUAÍ TRIPLE A FDO DE INV IMOB,fii,Tijolo,,,FundsExplorer 2026-05
+BLCP11,35.652.060/0001-73,BLUECAP RENDA LOG. FDO INV. IMOB. - FII,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+BLMC11,38.294.221/0001-92,BLUEMACAW CRÉDITO IMOBILIÁRIO,fii,Papel,Papéis,,FundsExplorer 2026-05
+BLMG11,34.081.637/0001-71,BLUEMACAW LOGÍSTICA,fii,Multiestratégia,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+BLMO11,34.895.894/0001-47,BLUEMACAW OFFICE FUND II - FDO. INVEST. IMOB.,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+BLMR11,36.368.869/0001-30,BLUEMACAW RENDA + FOF,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+BLOG11,49.592.781/0001-40,BLUECAP LOG FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Tijolo,Misto,,FundsExplorer 2026-05
+BLUR11,38.051.307/0001-94,FII BLUE REC,fii,Papel,Papéis,,FundsExplorer 2026-05
+BMII11,02.027.437/0001-44,Brasilio Machado,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+BMLC11,14.376.247/0001-11,BM Brascan Lajes Corporativas,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+BMLC11B,,FII BMBRC LC,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+BNFS11,15.570.431/0001-60,Banrisul Novas Fronteiras,fii,Tijolo,Agências de Bancos,,FundsExplorer 2026-05
+BPFF11,17.324.357/0001-28,Brasil Plural Absoluto Fundo de Fundos,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+BPLC11,28.267.555/0001-13,FII BASILICA,fii,Tijolo,Misto,,FundsExplorer 2026-05
+BPML11,33.046.142/0001-49,FDO INV IMOB BTG PACTUAL SHOPPINGS,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+BPRP11,29.800.650/0001-01,FDO INV IMOB - FII BRLPROP,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+BRCO11,20.748.515/0001-81,BRESCO LOGÍSTICA - FDO INV IMOB,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+BRCR11,08.924.783/0001-01,BTG Pactual Corporate Office,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+BREV11,26.195.121/0001-20,BRAZIL REAL ESTATE VICTORY FUND I - FDO. INV. IMOB,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+BRFT11,52.512.069/0001-06,BRADESCO FARMTECH FIDC DC RESP LIMITADA,fiagro,Fiagro,Misto,,FundsExplorer 2026-05
+BRHT11B,15.461.076/0001-91,BR Hotéis,fii,Tijolo,Hotéis,,FundsExplorer 2026-05
+BRIM11,23.964.843/0001-03,BRIO REAL ESTATE II - FDO INV IMOB,fii,Multiestratégia,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+BRIP11,34.895.752/0001-80,BRIO REAL ESTATE III,fii,Tijolo,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+BRIX11,35.360.651/0001-77,FII BRIX,fii,Fundo Misto,,,FundsExplorer 2026-05
+BRLA11,35.652.278/0001-28,FUNDO DE INVESTIMENTO IMOBILIÁRIO BRL PROP II,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+BROF11,48.978.859/0001-04,BRPR CORPORATE OFFICES FDO DE INV IMOB,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+BROL11,39.317.150/0001-69,FII BR PROPE,fii,Outros,,,FundsExplorer 2026-05
+BRSE11,40.944.736/0001-32,BR7 SENADO FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Tijolo,,,FundsExplorer 2026-05
+BRZP11,,,fii,Fip,,,FundsExplorer 2026-05
+BSLT11,60.373.688/0001-87,FUNDO DE INVESTIMENTOS IMOBILIÁRIOS DE PERMUTA FINANCEIRA LOTE5 (SENIOR) RESPONSABILIDADE LIMITADA,fii,Tijolo,,,FundsExplorer 2026-05
+BTAG11,40.771.109/0001-47,BTG PACTUAL CRÉDITO AGRÍCOLA FIAGRO - DIREITOS CREDITÓRIOS,fiagro,Fiagro,,,FundsExplorer 2026-05
+BTAL11,36.642.244/0001-15,BTG PACTUAL AGRO LOGÍSTICA,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+BTCI11,09.552.812/0001-14,FII BTG CRI,fii,Papel,Papéis,,FundsExplorer 2026-05
+BTCR11,29.787.928/0001-40,BTG Pactual Crédito Imobiliário,fii,Papel,Papéis,,FundsExplorer 2026-05
+BTGM11,,FII BTGMALLS,fii,Outros,,,FundsExplorer 2026-05
+BTHF11,45.188.176/0001-57,BTG PACTUAL REAL ESTATE HEDGE FUND FII - RESP LTDA,fii,Multiestratégia,Papéis,,FundsExplorer 2026-05
+BTHI11,18.308.516/0001-63,BTG PACTUAL HOTÉIS FII,fii,Tijolo,Hotéis,,FundsExplorer 2026-05
+BTHR11,60.329.826/0001-20,BTG HOSPITALIDADE RETORNO TOTAL FUNDO DE INVESTIMENTO IMOBILIARIO RESPONSABILIDADE LIMITADA,fii,Tijolo,Hotéis,,FundsExplorer 2026-05
+BTLG11,11.839.593/0001-09,BTG PACTUAL LOGISTICA FDO INV IMOB - FII,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+BTML11,36.501.210/0001-00,BARRA MALLS FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+BTRA11,41.076.607/0001-32,FDO INV IMOB BTG PACTUAL TERRAS AGRÍCOLAS,fiagro,Fiagro,Fazendas,,FundsExplorer 2026-05
+BTSG11,36.098.375/0001-83,BTSP I FDO. INVEST. IMOB,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+BTSI11,36.930.464/0001-44,BTSP II FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Multiestratégia,Misto,,FundsExplorer 2026-05
+BTWR11,20.132.453/0001-89,BTOWERS FII,fii,Tijolo,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+BTYU11,54.645.216/0001-33,BTG PACTUAL YOU,fii,Tijolo,Incorporações,,FundsExplorer 2026-05
+BVAR11,21.126.204/0001-43,Brasil Varejo,fii,Tijolo,Varejo,,FundsExplorer 2026-05
+BZEL11,35.507.610/0001-60,BARZEL FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Tijolo,Misto,,FundsExplorer 2026-05
+BZLI11,14.074.706/0001-02,Brazil Realty,fii,Fundo Misto,Misto,,FundsExplorer 2026-05
+CACR11,32.065.364/0001-46,CARTESIA FII,fii,Papel,Papéis,,FundsExplorer 2026-05
+CAFE11,51.764.889/0001-14,BIGTRADE SUNO FIAGRO RESPONSABILIDADE LIMITADA–DC,fiagro,Fiagro,Misto,,FundsExplorer 2026-05
+CARE11,13.584.584/0001-31,Brazilian Graveyard and Death Care,fii,Fundo Misto,Misto,,FundsExplorer 2026-05
+CBOP11,17.144.039/0001-85,Castello Branco Office Park,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+CCFA11,42.537.470/0001-39,CANVAS FDO DE INV NAS CAD PROD AGRO,fiagro,Fiagro,,,FundsExplorer 2026-05
+CCLB11,45.777.347/0001-83,FII CENTRAL LEBLON,fii,Sem categoria,,,FundsExplorer 2026-05
+CCME11,43.010.844/0001-26,FII CANUMA,fii,Multiestratégia,,,FundsExplorer 2026-05
+CCRF11,40.011.268/0001-43,CANVAS CRI,fii,Papel,Papéis,,FundsExplorer 2026-05
+CCVA11,52.713.882/0001-36,Canuma Capital Renda Varejo,fii,Tijolo,,,FundsExplorer 2026-05
+CDHY11,,,fii,Papel,Papéis,,FundsExplorer 2026-05
+CENU11,37.899.356/0001-19,CENU - FDO DE INV IMOB,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+CEOC11,15.799.397/0001-09,Cyrela Commercial Properties,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+CEOC11B,,FII CEO CCP,fii,Outros,,,FundsExplorer 2026-05
+CFHI11,34.508.923/0001-70,CF2 FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Tijolo,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+CFII11,41.325.993/0001-59,FII CF3 IMOB,fii,Fundo Misto,,,FundsExplorer 2026-05
+CIXF11,,,fii,Fundo Misto,multiestratégia,,FundsExplorer 2026-05
+CIXM11,48.389.780/0001-30,CIX MUIRAQUITAN FDO DE INV IMOB,fii,Fundo Misto,Misto,,FundsExplorer 2026-05
+CIXR11,47.086.230/0001-89,CIX RENDIMENTO FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Sem categoria,,,FundsExplorer 2026-05
+CJCT11,10.347.985/0001-80,CIDADE JARDIM CONTINENAL TOWER,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+CJFI11,23.582.914/0001-03,FDO INV IMOB CJ,fii,Fundo Misto,Misto,,FundsExplorer 2026-05
+CLIN11,49.005.348/0001-60,CLAVE ÍNDICES DE PREÇOS FDO DE INV IMOB,fii,Papel,Fundo de Fundos,,FundsExplorer 2026-05
+CLSM11,,,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+CNES11,13.551.286/0001-45,CENESP,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+CNES11B,,FII CENESP,fii,Outros,,,FundsExplorer 2026-05
+COPP11,48.916.699/0001-60,CORPORATE OFFICE PROPERTIES FII - FDO DE INV IMOB,fii,Sem categoria,Lajes Corporativas,,FundsExplorer 2026-05
+CORM11,,CORE METROPOLIS FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+CPFF11,34.081.611/0001-23,CAPITÂNIA REIT FOF - FDO. INVEST. IMOB,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+CPFO11,48.916.246/0001-34,CAPITÂNIA REIT FOF - FDO INV IMOB II,fii,Sem categoria,Fundo de Fundos,,FundsExplorer 2026-05
+CPLG11,52.371.756/0001-40,CAPITÂNIA LOGÍSTICA FDO DE INV IMOB,fii,Tijolo,Misto,,FundsExplorer 2026-05
+CPOF11,48.916.699/0001-60,CAPITÂNIA OFFICE FII - FDO DE INV IMOB,fii,Tijolo,Misto,,FundsExplorer 2026-05
+CPSH11,47.896.665/0001-99,SHOPPINGS AAA FDO DE INV IMOB,fii,Tijolo,,,FundsExplorer 2026-05
+CPTA11,60.607.442/0001-22,CAPITANIA AGRO STRATEGIES FIAGRO IMOBILIARIO CLOSED FUND,fiagro,Fiagro,Fiagro,,FundsExplorer 2026-05
+CPTR11,42.537.579/0001-76,Capitania Agro Strategies,fiagro,Fiagro,,,FundsExplorer 2026-05
+CPTS11,18.979.895/0001-13,Capitania Securities II,fii,Multiestratégia,Papéis,,FundsExplorer 2026-05
+CPTS11B,,FII CAPI SEC,fii,Papel,Papéis,,FundsExplorer 2026-05
+CPUR11,34.691.520/0001-00,VBI CONSUMO ESSEN,fii,Tijolo,Misto,,FundsExplorer 2026-05
+CRAA11,48.903.610/0001-21,SPARTA FIAGRO FDO INV NAS CAD PROD AGRO,fiagro,Fiagro,,,FundsExplorer 2026-05
+CRFF11,31.887.401/0001-39,CAIXA RIO BRAVO FDO DE FDOS INV IMOB II,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+CSMC11,41.081.336/0001-03,COSMIC FDO DE INV IMOB,fii,Fundo Misto,,,FundsExplorer 2026-05
+CTNP11,33.827.762/0001-15,FII FED HY,fii,Papel,Papéis,,FundsExplorer 2026-05
+CTXT11,00.762.723/0001-28,Centro Têxtil Internacional,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+CVBI11,28.729.197/0001-13,FDO INV. IMOB. VBI CRI,fii,Papel,Papéis,,FundsExplorer 2026-05
+CVPR11,38.294.329/0001-85,FII CVPAR,fii,Papel,,,FundsExplorer 2026-05
+CXAG11,40.189.596/0001-34,FII CAIXA AG,fii,Tijolo,Agências de Bancos,,FundsExplorer 2026-05
+CXCE11,10.991.914/0001-15,Caixa Cedae,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+CXCE11B,10.991.914/0001-15,Caixa Cedae,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+CXCI11,42.066.916/0001-94,FDO DE INVST IMOB CAIXA CARTEIRA IMOBILIÁRIA,fii,Fundo de Fundos,,,FundsExplorer 2026-05
+CXCO11,38.658.984/0001-75,FDO. INV. IMOB. CAIXA IMÓVEIS CORPORATIVOS,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+CXRI11,17.098.794/0001-70,Caixa Rio Bravo,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+CXTL11,12.887.506/0001-43,Caixa TRX Logística Renda,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+CYCR11,36.501.233/0001-15,CYRELA CRÉDITO - FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Papel,,,FundsExplorer 2026-05
+CYLD11,43.010.601/0001-98,FII CYLD,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+DAMA11,53.866.872/0001-01,DAMA FUNDO DE INVESTIMENTO IMOBILIÁRIO RESP LIMITA,fii,Fundo de Fundos,Misto,,FundsExplorer 2026-05
+DAMT11B,26.642.727/0001-66,DIAMANTE FDO INV IMOB,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+DAYM11,38.293.921/0001-62,Daycoval Real Estate Multiestratégia FII,fii,Multiestratégia,Lajes Corporativas,,FundsExplorer 2026-05
+DCRA11,42.888.360/0001-11,Devant,fiagro,Fiagro,,,FundsExplorer 2026-05
+DEVA11,37.087.810/0001-37,DEVANT RECEBÍVEIS IMOBILIÁRIOS,fii,Papel,Papéis,,FundsExplorer 2026-05
+DLMT11,28.108.193/0001-18,DEL MONTE AJAX FDO INV IMOB,fii,Tijolo,Varejo,,FundsExplorer 2026-05
+DMAC11,30.579.348/0001-46,FII MAC,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+DOMC11,17.374.696/0001-19,FII DOMO,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+DOVL11B,10.522.648/0001-81,DOVEL FDO INV IMOB,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+DPRO11,42.922.127/0001-08,FII DEVA PRO,fii,Tijolo,,,FundsExplorer 2026-05
+DRIT11B,10.456.810/0001-00,Multigestão Renda Comercial,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+DVFF11,39.863.059/0001-49,FDO. INVEST. IMOB. DEVANT FOF IMOBILIÁRIOS,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+DVLP11,42.537.601/0001-88,SPECIALE REAL ESTATE DEVELOPMENT FDO DE INV IMOB,fii,Outros,Lajes Corporativas,,FundsExplorer 2026-05
+DVLT11,54.635.301/0001-10,FII DVLT,fii,Tijolo,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+EAGL11,54.422.883/0001-57,FII EAGL,fii,Outros,Outros,,FundsExplorer 2026-05
+EDFO11B,06.175.262/0001-73,Edifício Ouroinvest,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+EDGA11,15.333.306/0001-37,Edifício Galeria,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+EDGA11B,,FII GALERIA,fii,Outros,,,FundsExplorer 2026-05
+EDGE11,54.306.150/0001-57,FII EDGE,fii,Multiestratégia,Papéis,,FundsExplorer 2026-05
+EGAF11,41.224.330/0001-48,Ecoagro I,fiagro,Fiagro,,,FundsExplorer 2026-05
+EGDB11,53.866.393/0001-87,FII EGDB,fii,Tijolo,Imóveis Comerciais - Outros,,FundsExplorer 2026-05
+EGYR11,36.969.658/0001-53,ENERGY RESORT FDO. INVEST. IMOB,fii,Tijolo,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+EIRA11,59.202.651/0001-07,AROEIRA FUNDO DE INVESTIMENTO IMOBILIÁRIO - RESPONSABILIDADE LIMITADA,fii,Papel,Outros,,FundsExplorer 2026-05
+ELDO11B,13.022.994/0001-99,Eldorado,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+EMET11,53.523.736/0001-00,EMET MULTIESTRATÉGIA FDO DE INV IMOB,fii,Multiestratégia,Misto,,FundsExplorer 2026-05
+ENDD11,35.641.061/0001-12,ENDURANCE DEBT FDO. INVEST. PART. INFRA.,fii,Fip,,,FundsExplorer 2026-05
+EQIA11,,FIAGRO EQIA,fiagro,Fiagro,Fiagro,,FundsExplorer 2026-05
+EQIN11,,FII NCH EQI,fii,Papel,Papéis,,FundsExplorer 2026-05
+EQIR11,41.076.380/0001-25,EQI RECEBÍVEIS IMOBILIÁRIOS FDO DE INV IMOBILIÁRIO,fii,Papel,,,FundsExplorer 2026-05
+ERCR11,37.266.902/0001-84,ESTOQUE RESIDENCIAL E COMERCIAL RJ,fii,Tijolo,Varejo,,FundsExplorer 2026-05
+ERPA11,31.469.385/0001-64,EUROPA 105 - FDO INV IMOB,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+ESTQ11,18.497.672/0001-10,FDO INV IMOB POLO ESTOQUE II,fii,Fundo Misto,Misto,,FundsExplorer 2026-05
+ESUD11,13.301.359/0001-40,FDO INV PART IE BB VOTORANTIM ENERG SUSTENT II,fii,Fip,,,FundsExplorer 2026-05
+ESUT11,13.301.410/0001-14,FDO INV PART IE BB VOTORANTIM ENERG SUSTENT III,fii,Fip,,,FundsExplorer 2026-05
+ESUU11,13.301.469/0001-02,FDO INV PART IE BB VOTORANTIM ENERG SUSTENT I,fii,Fip,,,FundsExplorer 2026-05
+EURO11,05.437.916/0001-27,EUROPAR,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+EVBI11,34.691.520/0001-00,VBI CONSUMO ESSEN,fii,Tijolo,renda urbana,,FundsExplorer 2026-05
+EXES11,41.076.851/0001-03,FII EXES,fii,Papel,Papéis,,FundsExplorer 2026-05
+FAED11,11.179.118/0001-45,Anhanguera Educacional,fii,Tijolo,Educacional,,FundsExplorer 2026-05
+FAED11B,,FII ANH EDUC,fii,Outros,,,FundsExplorer 2026-05
+FAGL11,29.614.033/0001-03,FII FATOR GP,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+FAMB11B,05.562.312/0001-02,Edifício Almirante Barroso,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+FAOE11,49.553.783/0001-20,FATOR RENDA ESTRUTURADA,fii,Sem categoria,,,FundsExplorer 2026-05
+FARM11,42.043.633/0001-27,SANTA FÉ TERRA MATER,fiagro,Fiagro,,,FundsExplorer 2026-05
+FARU11,47.240.652/0001-67,FATOR RENDA URBANA FDO DE INV IMOB,fii,Sem categoria,,,FundsExplorer 2026-05
+FATN11,30.567.216/0001-02,FUNDO DE INVESTIMENTO IMOBILIÁRIO ATHENA I,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+FCAS11,10.993.386/0001-33,FII CASTELO,fii,Outros,Lajes Corporativas,,FundsExplorer 2026-05
+FCFL11,11.602.654/0001-01,Campus Faria Lima,fii,Tijolo,Educacional,,FundsExplorer 2026-05
+FCFL11B,,FII CAMPUSFL,fii,Outros,,,FundsExplorer 2026-05
+FEXC11,09.552.812/0001-14,BTG Pactual Fundo de CRI,fii,Papel,Papéis,,FundsExplorer 2026-05
+FEXC11B,,FII EXCELLEN,fii,Outros,,,FundsExplorer 2026-05
+FFCI11,,FII RIOB RC,fii,Tijolo,,,FundsExplorer 2026-05
+FGAA11,42.405.905/0001-91,FG/Agro,fiagro,Fiagro,,,FundsExplorer 2026-05
+FGPM11,23.781.227/0001-17,FDO INVEST IMOB GRAND PLAZA MALL,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+FIGS11,17.590.518/0001-25,General Shopping Ativo e Renda,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+FIIB11,14.217.108/0001-45,Industrial do Brasil,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+FIIP11,08.696.175/0001-97,RB Capital Renda I,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+FIIP11B,08.696.175/0001-97,RB Capital Renda I,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+FINF11,18.369.510/0001-04,Infra Real State,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+FISC11,12.804.013/0001-00,FDO INV IMOB SC 401,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+FISD11,16.543.270/0001-89,São Domingos,fii,Papel,Papéis,,FundsExplorer 2026-05
+FIVN11,17.854.016/0001-64,Vida Nova,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+FIXX11,,FII FATORFIX,fii,Fundo de Fundos,,,FundsExplorer 2026-05
+FLCI11,,FII LCI PREM,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+FLCR11,33.884.145/0001-51,FARIA LIMA CAPITAL RECEB. IMOB. I,fii,Papel,Papéis,,FundsExplorer 2026-05
+FLEM11,48.565.175/0001-72,051 Agro Fazendas II,fiagro,Fiagro,,,FundsExplorer 2026-05
+FLFL11,50.808.042/0001-21,VBI TR FARIA LIMA 4440 FII,fii,Tijolo,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+FLMA11,04.141.645/0001-03,Continental Square Faria Lima,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+FLNR11,41.820.693/0001-46,FII FLNR,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+FLRP11,10.375.382/0001-91,Floripa Shopping,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+FLRP11B,,FII FLORIPA,fii,Outros,,,FundsExplorer 2026-05
+FMOF11,01.633.741/0001-72,Memorial Office,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+FOFT11,16.875.388/0001-04,FII CSHGFOFT,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+FPAB11,03.251.720/0001-18,Projeto Água Branca,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+FPNG11,17.161.979/0001-82,Pedra Negra Renda Imobiliária,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+FPOR11,20.082.573/0001-19,PORTO SUDESTE ROYALTIES - FIP-IE,fii,Fip,FIP-IE,,FundsExplorer 2026-05
+FRHY11,41.251.077/0001-11,FII FRONT,fii,Tijolo,,,FundsExplorer 2026-05
+FTCA11,,NCH EQI Recebíveis do Agronegócio,fiagro,Fiagro,,,FundsExplorer 2026-05
+FTCE11B,01.235.622/0001-61,Oportunity,fii,Fundo Misto,Misto,,FundsExplorer 2026-05
+FTRE11,,,fii,Tijolo,,,FundsExplorer 2026-05
+FVBI11,13.022.993/0001-44,FII VBI 4440,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+FVBI11B,,FII VBI 4440,fii,Outros,,,FundsExplorer 2026-05
+FVPQ11,00.332.266/0001-31,Via Parque Shopping,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+FYTO11,18.085.673/0001-57,FII NCH BRASIL RECEBÍVEIS IMOBILIÁRIOS,fii,Papel,Papéis,,FundsExplorer 2026-05
+FZDA11,44.625.694/0001-28,051 Agro,fiagro,Fiagro,,,FundsExplorer 2026-05
+FZDB11,49.489.928/0001-70,051 AGRO FAZIII FDO INV NAS CAD PROD AGRO,fiagro,Fiagro,,,FundsExplorer 2026-05
+GALG11,37.295.919/0001-60,GUARDIAN LOGISTICA,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+GAME11,41.269.052/0001-45,FDO DE INVEST IMOB GUARDIAN MULTIESTRATÉGIA I,fii,Papel,,,FundsExplorer 2026-05
+GARE11,37.295.919/0001-60,GUARDIAN LOGISTICA,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+GCDL11,56.061.587/0001-01,FII GCDL,fii,Tijolo,Logística,,FundsExplorer 2026-05
+GCFF11,35.652.154/0001-42,GALAPAGOS FDO DE FDO - FII FDO INV. IMOB.,fii,Papel,Fundo de Fundos,,FundsExplorer 2026-05
+GCOI11,46.285.299/0001-79,GALAPAGOS SPECIAL OPORTUNITIES FII,fii,Sem categoria,,,FundsExplorer 2026-05
+GCRA11,37.037.297/0001-70,FIAGRO GLPG,fiagro,Fiagro,,,FundsExplorer 2026-05
+GCRI11,38.293.897/0001-61,GALAPAGOS RECEBÍVEIS IMOBILIÁRIOS,fii,Papel,Papéis,,FundsExplorer 2026-05
+GESE11B,17.007.528/0001-95,FDO INV IMOB GENERAL SEVERIANO,fii,Tijolo,Educacional,,FundsExplorer 2026-05
+GFDL11,58.523.711/0001-20,GALAPAGOS FEEDER DES LOG FII RESP LIM,fii,Fundo Misto,Logística,,FundsExplorer 2026-05
+GGRC11,26.614.291/0001-00,Zagros Renda Imobiliária,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+GLCR11,59.669.570/0001-11,GALAPAGOS CRÉDITO ESTRUTURADO,fii,Papel,Papéis,,FundsExplorer 2026-05
+GLOG11,36.501.198/0001-34,PLURAL LOGÍSTICA FDO. INV. IMOB.,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+GLPF11,58.378.463/0001-71,FII GLPF,fii,Fundo Misto,Logística,,FundsExplorer 2026-05
+GLPL11,39.979.154/0001-02,FII GLP LOG,fii,Tijolo,,,FundsExplorer 2026-05
+GRLV11,17.143.998/0001-86,FII LOUVEIRA,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+GRUL11,54.483.412/0001-59,FII GRUL,fii,Tijolo,Logística,,FundsExplorer 2026-05
+GRWA11,47.240.671/0001-93,GREENWICH AGRO FIAGRO,fiagro,Fiagro,,,FundsExplorer 2026-05
+GSFI11,11.769.604/0001-13,GENERAL SHOP E OUTLETS DO BRASIL FDO INV IMOB,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+GTLG11,36.200.677/0001-10,GTIS BRAZIL LOGISTICS,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+GTWR11,23.740.527/0001-58,FDO INV IMOB GREEN TOWERS,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+GURB11,36.501.210/0001-00,GENIAL RENDA URBANA FDO DE INV IMOB,fii,Tijolo,,,FundsExplorer 2026-05
+GVBI11,49.581.652/0001-56,FUNDO DE INVESTIMENTO IMOBILIÁRIO – VBI GREENPOWER,fii,Tijolo,,,FundsExplorer 2026-05
+GWIR11,14.733.211/0001-48,FII GWI RI,fii,Outros,Shoppings,,FundsExplorer 2026-05
+GZIT11,15.447.108/0001-02,FII GAZIT,fii,Tijolo,,,FundsExplorer 2026-05
+HAAA11,27.445.482/0001-40,HEDGE AAA,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+HABT11,30.578.417/0001-05,HABITAT II - FDO INV IMOB,fii,Papel,Papéis,,FundsExplorer 2026-05
+HBCR11,36.501.159/0001-37,HBC RENDA URBANA,fii,Tijolo,,,FundsExplorer 2026-05
+HBRH11,30.871.698/0001-81,FDO.INVEST. IMOB. MULTI RENDA URBANA,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+HBTT11,26.846.202/0001-42,Habitat I,fii,Papel,Papéis,,FundsExplorer 2026-05
+HCHG11,34.508.959/0001-54,HECTARE RECEBÍVEIS HIGH GRADE,fii,Papel,Papéis,,FundsExplorer 2026-05
+HCPR11,42.537.363/0001-00,FII HECT PRP,fii,Tijolo,,,FundsExplorer 2026-05
+HCRA11,44.668.806/0001-28,HEDGE CRÉDITO AGRO FIAGRO-DIREITOS CREDITÓRIOS,fiagro,Fiagro,,,FundsExplorer 2026-05
+HCRI11,04.066.582/0001-60,Hospital da Criança,fii,Tijolo,Hospitalar,,FundsExplorer 2026-05
+HCRI11B,,FII CRIANCA,fii,Tijolo,Hospitalar,,FundsExplorer 2026-05
+HCST11,31.152.015/0001-07,HECTARE DESENV. STUDENT HOUSING,fii,Tijolo,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+HCTR11,30.248.180/0001-96,HECTARE CE - FDO INV IMOB,fii,Papel,Papéis,,FundsExplorer 2026-05
+HDEL11,44.514.162/0001-13,FII HEDGE DV,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+HDOF11,35.688.460/0001-39,FII HEDGE OF,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+HFOF11,18.307.582/0001-19,Hedge Top FOFII 3,fii,Papel,Fundo de Fundos,,FundsExplorer 2026-05
+HGAG11,40.343.867/0001-64,High Fundo de Investimento Agro,fiagro,Fiagro,,,FundsExplorer 2026-05
+HGBL11,53.466.467/0001-98,HEDGE BRASIL LOGÍSTICO IND FUND INV IMOB RESP LIM,fii,Tijolo,Misto,,FundsExplorer 2026-05
+HGBS11,08.431.747/0001-06,CSHG Brasil Shopping,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+HGCR11,11.160.521/0001-22,PÁTRIA RECEBÍVEIS IMOBILIÁRIOS,fii,Papel,Papéis,,FundsExplorer 2026-05
+HGFF11,32.784.898/0001-22,CSHG IMOB. FOF - FDO INV. IMOB. - FII,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+HGIC11,38.456.508/0001-71,HGI CRÉDITOS IMOBILIÁRIOS,fii,Papel,Papéis,,FundsExplorer 2026-05
+HGJH11,11.260.134/0001-68,FII CSHGJHSF,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+HGLG11,11.728.688/0001-47,Pátria Logística,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+HGPO11,11.260.134/0001-68,PATRIA PRIME OFFICES,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+HGRE11,09.072.017/0001-29,PATRIA ESCRITÓRIOS,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+HGRS11,41.922.239/0001-04,FII CSHG RSD,fii,Tijolo,Imóveis Residenciais,,FundsExplorer 2026-05
+HGRU11,29.641.226/0001-53,PÁTRIA RENDA URBANA,fii,Tijolo,Misto,,FundsExplorer 2026-05
+HILG11,34.867.728/0001-37,HIRE LOG I FDO DE INV IMOB,fii,Tijolo,,,FundsExplorer 2026-05
+HLMB11,40.944.707/0001-70,FRAM CAPITAL HELMER MULTI RENDA PREF FDO INV IMOB,fii,Tijolo,Misto,,FundsExplorer 2026-05
+HLOG11,27.486.542/0001-72,HEDGE LOGÍSTICA FDO. INV. IMOB.,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+HMOC11,14.733.211/0001-48,FII HEDMOCA,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+HOFC11,31.894.369/0001-19,FII HEDGE OFFICE INCOME,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+HOMS11,55.793.516/0001-22,FII HOMS,fii,Tijolo,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+HOSI11,34.081.631/0001-02,FDO. INV. IMOB. HOUSI,fii,Tijolo,Imóveis Residenciais,,FundsExplorer 2026-05
+HPDP11,35.586.415/0001-73,HEDGE SHOPPING PARQUE DOM PEDRO FDO. DE INV. IMOB.,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+HPDR11,60.195.941/0001-50,HEDGE PALADIN DESENVOLVIMENTO RESIDENCIAL FUNDO DE INVESTIMENTO IMOBILIARIO DE RESPONSABILIDADE LTDA,fii,Tijolo,Imóveis Residenciais,,FundsExplorer 2026-05
+HRDF11,16.929.519/0001-99,HEDGE REALTY DEVELOPMENT FDO INV IMOB,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+HREC11,35.507.262/0001-21,HEDGE RECEBIVEIS IMOB,fii,Papel,Papéis,,FundsExplorer 2026-05
+HRES11,42.869.853/0001-04,FII HIRE RES,fii,Multiestratégia,Imóveis Residenciais,,FundsExplorer 2026-05
+HSAF11,35.360.687/0001-50,HSI ATIVOS FINANCEIROS FUNDO DE INVESTIMENTO IMOBI,fii,Multiestratégia,Papéis,,FundsExplorer 2026-05
+HSLG11,32.903.621/0001-71,HSI LOGÍSTICA,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+HSML11,32.892.018/0001-31,HSI MALL FDO INV IMOB,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+HSRE11,08.098.114/0001-28,HSI RENDA IMOB,fii,Tijolo,Misto,,FundsExplorer 2026-05
+HTMX11,08.706.065/0001-69,Hotel Maxinvest,fii,Tijolo,Hotéis,,FundsExplorer 2026-05
+HTMX11B,,FII HOTEL MX,fii,Outros,,,FundsExplorer 2026-05
+HUCG11,39.347.413/0001-82,FII UNIMED C,fii,Tijolo,Hospitalar,,FundsExplorer 2026-05
+HUSC11,28.851.767/0001-43,Hospital Unimed Sul Capixaba,fii,Tijolo,Hospitalar,,FundsExplorer 2026-05
+HUSI11,30.017.492/0001-99,HUSI FDO INV. IMOB.,fii,Tijolo,Hospitalar,,FundsExplorer 2026-05
+HYPI11,28.899.178/0001-35,FII HYPI,fii,Multiestratégia,Outros,,FundsExplorer 2026-05
+IAAG11,42.692.399/0001-69,INTER AMERRA - FIAGRO,fiagro,Fiagro,,,FundsExplorer 2026-05
+IAGR11,44.286.898/0001-81,FIAGRO SFI,fiagro,Fiagro,,,FundsExplorer 2026-05
+IBBP11,52.551.605/0001-74,FII IBBP,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+IBCR11,40.011.251/0001-96,FDO DE INV IMOBILIÁRIO DE CRI INTEGRAL BREI,fii,Papel,Papéis,,FundsExplorer 2026-05
+IBFF11,33.721.517/0001-29,FDO INV. IMOB. FOF INTEGRAL BREI,fii,Papel,Fundo de Fundos,,FundsExplorer 2026-05
+ICNE11,53.137.434/0001-02,ÍCONE - FUNDO DE INVEST IMOB RES LIMITADA,fii,Sem categoria,Imóveis Residenciais,,FundsExplorer 2026-05
+ICRI11,51.294.441/0001-84,ITAÚ CRÉDITO IMOB IPCA FDO DE INV IMOB,fii,Papel,Misto,,FundsExplorer 2026-05
+IDFI11,32.774.914/0001-04,FII UNIDADES,fii,Fundo Misto,,,FundsExplorer 2026-05
+IDGO11,49.112.611/0001-10,ID GOIANA,fiagro,Fiagro,Misto,,FundsExplorer 2026-05
+IDGR11,44.177.538/0001-41,FDO DE INV IMOBILIÁRIO DE UNIDADES AUTÔNOMAS II,fii,Tijolo,Misto,,FundsExplorer 2026-05
+IDUA11,52.324.762/0001-47,FDO DE INV IMOBILIÁRIO DE UNIDADES AUTÔNOMAS IV,fii,Multiestratégia,Imóveis Comerciais - Outros,,FundsExplorer 2026-05
+IFID11,,FII IFI-D,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+IFIE11,,FII IFI-E,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+IMOV11,46.437.903/0001-35,Navi Hedge Fund,fii,Multiestratégia,,,FundsExplorer 2026-05
+INDE11,52.635.194/0001-03,INTER DESENVOLVIMENTO FDO DE INV IMOB,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+INLG11,34.598.181/0001-11,INTER LOG FDO INV IMOB,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+INRD11,34.835.191/0001-23,INTER RESIDENCE FDO. INV. IMOB.,fii,Tijolo,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+IRDM11,28.830.325/0001-10,Iridium Recebíveis Imobiliários,fii,Papel,Papéis,,FundsExplorer 2026-05
+IRIM11,41.076.564/0001-95,IRIDIUM FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Multiestratégia,,,FundsExplorer 2026-05
+ISCJ11,50.418.740/0001-10,INVISTA SCJ - FII,fii,Sem categoria,Papéis,,FundsExplorer 2026-05
+ITIP11,36.312.772/0001-06,FII INTER IP,fii,Fundo de Fundos,Papéis,,FundsExplorer 2026-05
+ITIT11,36.293.425/0001-83,FII INTER IT,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+ITRI11,52.270.671/0001-76,ITAÚ TOTAL RETURN FDO DE INV IMOB,fii,Multiestratégia,Shoppings,,FundsExplorer 2026-05
+IVCI11,53.305.536/0001-81,FII IVCI,fii,Papel,Papéis,,FundsExplorer 2026-05
+JASC11,40.886.241/0001-02,FII JASC REN,fii,Tijolo,Imóveis Comerciais - Outros,,FundsExplorer 2026-05
+JBFO11,36.615.915/0001-59,JBFO FOF FDO INV. IMOB.,fii,Fundo Misto,Papéis,,FundsExplorer 2026-05
+JCCJ11,50.701.686/0001-16,JHSF CAPITAL CIDADE JARDIM – FDO DE INV IMOB,fii,Tijolo,Papéis,,FundsExplorer 2026-05
+JCDA11,31.772.231/0001-47,FII JCDA I,fii,Tijolo,Misto,,FundsExplorer 2026-05
+JCDB11,35.705.542/0001-44,JACARANDÁ 02 FUNDO DE INVESTIMENTO IMOBILIÁRIO FII,fii,Tijolo,Imóveis Comerciais - Outros,,FundsExplorer 2026-05
+JCIN11,50.718.976/0001-72,FII JCIN,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+JFLL11,36.501.181/0001-87,JFL LIVING FDO. INV. IMOB.,fii,Tijolo,Imóveis Residenciais,,FundsExplorer 2026-05
+JGPX11,42.888.292/0001-90,FIAGRO JGP,fiagro,Fiagro,,,FundsExplorer 2026-05
+JPPA11,30.982.880/0001-00,JPP ALLOCATION MOGNO - FDO INV IMOB,fii,Papel,Papéis,,FundsExplorer 2026-05
+JPPC11,17.216.625/0001-98,JPP Capital,fii,Tijolo,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+JRDM11,14.879.856/0001-93,Shopping Jardim Sul,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+JRDM11B,,FII SHOPJSUL,fii,Outros,,,FundsExplorer 2026-05
+JSAF11,42.085.661/0001-07,JS ATIVOS FINANCEIROS FUNDO DE INVESTIMENTO IMOBIL,fii,Multiestratégia,Fundo de Fundos,,FundsExplorer 2026-05
+JSCR11,54.866.214/0001-74,FII JSCR,fii,Papel,Papéis,,FundsExplorer 2026-05
+JSRE11,13.371.132/0001-71,JS Real Estate Multigestão,fii,Tijolo,Misto,,FundsExplorer 2026-05
+JTPR11,23.876.086/0001-16,JT Prev FII Desenvolvimento Habitacional,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+KCRE11,42.502.802/0001-40,FII KINEA CR,fii,Papel,,,FundsExplorer 2026-05
+KDOL11,51.641.681/0001-08,KINEA AGRO INCOME USD,fiagro,Fiagro,Misto,,FundsExplorer 2026-05
+KEVE11,32.317.313/0001-64,EVEN II KINEA,fii,Tijolo,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+KFEN11,55.753.193/0001-43,KINEA FÊNIX,fii,Papel,,,FundsExplorer 2026-05
+KFOF11,30.091.444/0001-40,FUNDO DE FDO INV IMOB KINEA FII,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+KINP11,24.070.076/0001-51,Even Permuta Kinea,fii,Tijolo,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+KISU11,36.669.660/0001-07,KILIMA FIC FDO. IMOB. SUNO 30,fii,Papel,Fundo de Fundos,,FundsExplorer 2026-05
+KIVO11,42.273.325/0001-98,FII KIVO,fii,Papel,Papéis,,FundsExplorer 2026-05
+KLOG11,51.734.924/0001-52,FII KINEA DL,fii,Tijolo,Logística,,FundsExplorer 2026-05
+KNCA11,41.745.701/0001-37,FIAGRO KINEA,fiagro,Fiagro,,,FundsExplorer 2026-05
+KNCR11,16.706.958/0001-32,Kinea Rendimentos Imobiliários,fii,Papel,Papéis,,FundsExplorer 2026-05
+KNHF11,42.754.342/0001-47,KINEA HEDGE FUND FDO DE INV IMOB,fii,Multiestratégia,,,FundsExplorer 2026-05
+KNHY11,30.130.708/0001-28,Kinea High Yield CRI,fii,Papel,Papéis,,FundsExplorer 2026-05
+KNIP11,24.960.430/0001-13,Kinea Índice de Preços,fii,Papel,Papéis,,FundsExplorer 2026-05
+KNOX11,36.642.570/0001-22,KNOX DEBT FDO. INVEST. PART. INFRAESTRUTURA,fii,Fip,FIP-IE,,FundsExplorer 2026-05
+KNPR11,42.737.059/0001-07,FII KINEA PR,fii,Fundo de Fundos,,,FundsExplorer 2026-05
+KNRE11,14.423.780/0001-97,Kinea II Real Estate Equity,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+KNRI11,12.005.956/0001-65,Kinea Renda Imobiliária,fii,Tijolo,Misto,,FundsExplorer 2026-05
+KNSC11,35.864.448/0001-38,KINEA SECURITIES FDO. DE INV. IMOB. - FII,fii,Papel,Papéis,,FundsExplorer 2026-05
+KNUQ11,42.754.362/0001-18,KINEA UNIQUE HY CDI FUNDO DE INVESTIMENTO IMOB,fii,Papel,,,FundsExplorer 2026-05
+KOPA11,51.475.461/0001-51,FIAGRO KOPA,fiagro,Fiagro,,,FundsExplorer 2026-05
+KOPI11,51.869.200/0001-16,KINEA OPOR IMOB I FUNDO DE INVEST IMB LTDA,fii,Sem categoria,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+KORE11,52.219.978/0001-42,KINEA OPORTUNIDADES REAL ESTATE FDO DE INV IMOB,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+KRES11,53.654.501/0001-58,KINEA AQUISIÇÕES RESIDENCIAIS FII RESP LIM,fii,Tijolo,Misto,,FundsExplorer 2026-05
+LAFI11,51.710.043/0001-00,LAVOURA I,fiagro,Fiagro,Misto,,FundsExplorer 2026-05
+LASC11,30.248.158/0001-46,LEGATUS SHOPPINGS FDO. INV. IMOB. - FII,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+LATR11B,17.209.378/0001-00,Lateres,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+LAVF11,37.467.733/0001-40,FII LAVOURA,fii,Fundo Misto,,,FundsExplorer 2026-05
+LFTT11,24.796.967/0001-90,LOFT II FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Tijolo,Papéis,,FundsExplorer 2026-05
+LGCP11,34.598.181/0001-11,LOGCP INTER FDO INV IMOB,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+LIFE11,39.753.295/0001-02,FII LIFE,fii,Tijolo,Imóveis Comerciais - Outros,,FundsExplorer 2026-05
+LKDV11,40.102.445/0001-05,FUNDO DE INVESTIMENTO IMOBILIÁRIO DEVELOPMENT V1,fii,Multiestratégia,Papéis,,FundsExplorer 2026-05
+LLAO11,41.218.404/0001-33,FII BS2,fii,Multiestratégia,Misto,,FundsExplorer 2026-05
+LOFT11,,,fii,Tijolo,,,FundsExplorer 2026-05
+LOFT11B,19.722.048/0001-31,LOFT I - FDO INV IMOB,fii,Tijolo,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+LPLP11,37.262.752/0001-30,FII LAGO PDR,fii,Tijolo,,,FundsExplorer 2026-05
+LRDI11,41.088.534/0001-07,FII LEBLON,fii,Fundo Misto,,,FundsExplorer 2026-05
+LRED11,55.089.373/0001-72,LCP Real Estate Development,fii,Tijolo,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+LSAG11,42.592.476/0001-09,Leste,fiagro,Fiagro,,,FundsExplorer 2026-05
+LSOI11,53.087.126/0001-01,LCP SPECIAL OPPORTUNITIES I FDO INV IMOB RESP,fii,Tijolo,Misto,,FundsExplorer 2026-05
+LSPA11,31.847.293/0001-70,LESTE RIVA EQUITY PREFERENCIAL I,fii,Fundo Misto,Papéis,,FundsExplorer 2026-05
+LTMT11,46.449.786/0001-20,FII SPECIALE,fii,Tijolo,Imóveis Residenciais,,FundsExplorer 2026-05
+LUGG11,34.835.191/0001-23,LUGGO FDO. INV. IMOB.,fii,Tijolo,Imóveis Residenciais,,FundsExplorer 2026-05
+LVBI11,30.629.603/0001-18,FDO INV IMOB - VBI LOGÍSTICO,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+MADS11,35.652.035/0001-90,MAUÁ CAPITAL DESENV I,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+MALL11,26.499.833/0001-32,Malls Brasil Plural,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+MANA11,42.888.583/0001-89,FII MANATI,fii,Multiestratégia,,,FundsExplorer 2026-05
+MATV11,41.076.678/0001-35,MORE GESTÃO ATIVA DE RECEBÍVEIS FDO DE INV IMOB,fii,Papel,,,FundsExplorer 2026-05
+MAVC11,40.911.470/0001-21,MAV CRÉDITO - FIAGRO-IMOBILIÁRIO,fiagro,Fiagro,Papéis,,FundsExplorer 2026-05
+MAXR11,11.274.415/0001-70,Max Retail,fii,Tijolo,Varejo,,FundsExplorer 2026-05
+MAXR11B,,FII MAX RET,fii,Outros,,,FundsExplorer 2026-05
+MBRF11,,Mercantil do Brasil,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+MCCI11,23.648.935/0001-84,FDO INV. MAUA CAPITAL RECEBIVEIS IMOB. - FII,fii,Papel,Papéis,,FundsExplorer 2026-05
+MCEM11,46.157.247/0001-17,MÉRITO CEMITÉRIOS FII - FDO DE INV IMOB,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+MCFF11,,FII MAUA FOF,fii,Outros,,,FundsExplorer 2026-05
+MCHF11,36.642.139/0001-86,MAUÁ CAPITAL HEDGE FUND,fii,Multiestratégia,Papéis,,FundsExplorer 2026-05
+MCHY11,36.655.973/0001-06,FDO DE INV IMOB MAUÁ CAPITAL HIGH YIELD - FII,fii,Papel,Papéis,,FundsExplorer 2026-05
+MCLO11,57.466.934/0001-30,MAUA CAPITAL LOGISTICA FII,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+MCMV11,,,fii,Tijolo,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+MCRE11,36.655.973/0001-06,FDO DE INV IMOB MAUÁ CAPITAL HIGH YIELD - FII,fii,Multiestratégia,Papéis,,FundsExplorer 2026-05
+MFAI11,32.397.369/0001-76,MERITO FDO. AÇÕES IMOB. FII - FDO INV. IMOB.,fii,Multiestratégia,Fundo de Fundos,,FundsExplorer 2026-05
+MFCR11,45.403.337/0001-88,FII MERITO R,fii,Papel,,,FundsExplorer 2026-05
+MFII11,16.915.968/0001-88,Mérito Desenvolvimento Imobiliário,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+MGCR11,35.652.204/0001-91,MOGNO CRI HIGH GRADE,fii,Papel,Papéis,,FundsExplorer 2026-05
+MGFF11,29.216.463/0001-77,Mogno Fundo de Fundos,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+MGHT11,34.197.776/0001-65,FDO. INV. IMOB. MOGNO HOTEIS,fii,Fundo Misto,Hotéis,,FundsExplorer 2026-05
+MGLC11,40.011.210/0001-08,MOGNO PROPERTIES,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+MGLG11,40.041.711/0001-29,MOGNO LOGÍSTICA FUNDO DE INVEST. IMOBILIARIO,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+MGRI11,41.320.997/0001-44,FII MGRI,fii,Fundo Misto,,,FundsExplorer 2026-05
+MINT11,19.872.887/0001-36,MINT EDUCACIONAL,fii,Tijolo,Educacional,,FundsExplorer 2026-05
+MMPD11,41.080.968/0001-52,FII MAUA MPD,fii,Fundo Misto,,,FundsExplorer 2026-05
+MMVE11,41.251.337/0001-59,FII MMVE OP,fii,Fundo Misto,,,FundsExplorer 2026-05
+MOFF11,31.508.219/0001-20,MULTIOFFICES 2 - FDO. INV. IMOB.,fii,Fundo de Fundos,Lajes Corporativas,,FundsExplorer 2026-05
+MORC11,40.102.474/0001-69,MORE RECEBÍVEIS IMOBILIÁRIOS FII,fii,Papel,Papéis,,FundsExplorer 2026-05
+MORE11,34.197.727/0001-22,MORE REAL ESTATE FOF FII FDO. INV. IMOB.,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+MTOF11,22.862.226/0001-34,MULTIOFFICES 1,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+MTRS11,32.740.844/0001-65,FDO INV IMOB - BTG PACTUAL METROPOLIS,fii,Fundo Misto,Papéis,,FundsExplorer 2026-05
+MVFI11,23.537.203/0001-17,FDO INV IMOB MV9,fii,Fundo Misto,Misto,,FundsExplorer 2026-05
+MXRF11,97.521.225/0001-25,Maxi Renda,fii,Papel,Papéis,,FundsExplorer 2026-05
+MYDW11,,,fii,Sem categoria,,,FundsExplorer 2026-05
+N4V111,52.372.013/0001-95,FII INTERMEDIÁRIO NAVI TOT,fii,Sem categoria,Fundo de Fundos,,FundsExplorer 2026-05
+NAGR11,55.426.823/0001-75,NEVES FIAGRO,fiagro,Fiagro,Agricultura,,FundsExplorer 2026-05
+NAUI11,49.649.500/0001-48,FII NAUI,fii,Tijolo,Outros,,FundsExplorer 2026-05
+NAVT11,35.652.252/0001-80,NAVI IMOBILIÁRIO TOTAL RETURN,fii,Multiestratégia,Papéis,,FundsExplorer 2026-05
+NCHB11,18.085.673/0001-57,FII NCH EQI,fii,Papel,Papéis,,FundsExplorer 2026-05
+NCHB11B,,FII NCH BRA,fii,Papel,Papéis,,FundsExplorer 2026-05
+NCRI11,40.041.603/0001-56,NAVI CRÉDITO IMOBILIÁRIO,fii,Papel,Papéis,,FundsExplorer 2026-05
+NELO11,30.495.165/0001-42,FII NE LOG,fiagro,Fiagro,Logística,,FundsExplorer 2026-05
+NEWL11,32.527.626/0001-47,Newport Logística,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+NEWU11,14.793.782/0001-78,NEWPORT RENDA URBANA FDO INV IMOB,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+NEXG11,52.044.477/0001-72,FIAGRO NEXG,fiagro,Fiagro,Agricultura,,FundsExplorer 2026-05
+NIVT11,52.966.340/0001-75,ONDA INVEST MULTIESTRATÉGIA FII,fii,Fundo de Fundos,Exploração de Imóveis,,FundsExplorer 2026-05
+NSLU11,08.014.513/0001-63,Hospital Nossa Sra Lourdes,fii,Tijolo,Hospitalar,,FundsExplorer 2026-05
+NSLU11B,,FII LOURDES,fii,Outros,,,FundsExplorer 2026-05
+NVHO11,17.025.970/0001-44,Novo Horizonte,fii,Tijolo,Hospitalar,,FundsExplorer 2026-05
+NVIF11,22.003.469/0001-17,FII NOVA I,fii,Tijolo,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+NVIF11B,22.003.469/0001-17,FII NOVA I,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+NVRP11,21.498.349/0001-75,FDO INV PART NOVA RAPOSO - MULTIESTRATEGIA,fii,Fip,,,FundsExplorer 2026-05
+OBAL11,42.273.290/0001-97,FII OPPBAL,fii,Tijolo,Imóveis Residenciais,,FundsExplorer 2026-05
+OCRE11,44.680.435/0001-08,OCTO FDO DE INV IMOB,fii,Multiestratégia,Papéis,,FundsExplorer 2026-05
+OGHY11,47.240.631/0001-41,ÓRAMA HIGH YIELD FDO INV IMOB,fii,Papel,,,FundsExplorer 2026-05
+OIAG11,41.218.352/0001-03,Ourinvest Innovation,fiagro,Fiagro,,,FundsExplorer 2026-05
+ONDA11,52.966.340/0001-75,ONDA INVEST MULTIESTRATÉGIA FII,fii,Multiestratégia,Exploração de Imóveis,,FundsExplorer 2026-05
+ONDV11,52.966.340/0001-75,ONDA INVEST MULTIESTRATÉGIA FII,fii,Fundo Misto,Exploração de Imóveis,,FundsExplorer 2026-05
+ONEF11,12.948.291/0001-23,The One,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+OPEQ11,,,fii,Fip,,,FundsExplorer 2026-05
+OPHF11,,,fii,Fip,,,FundsExplorer 2026-05
+OPTM11,09.150.967/0001-24,FUNDO DE INVESTIMENTO IMOBILIARIO PATRIMONIAL IV,fii,Sem categoria,Misto,,FundsExplorer 2026-05
+ORPD11,19.107.604/0001-60,FII OURO PRT,fii,Papel,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+OUCY11,,FII OURICYRE,fii,Papel,Papéis,,FundsExplorer 2026-05
+OUFF11,30.791.386/0001-68,FDO INV IMOB - OURINVEST FUNDO DE FUNDOS,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+OUJP11,26.091.656/0001-50,OURINVEST JPP,fii,Papel,Papéis,,FundsExplorer 2026-05
+OULG11,13.974.819/0001-00,FDO INV IMOB OURINVEST LOGÍSTICA,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+OULG11B,,FII OURILOG,fii,Tijolo,,,FundsExplorer 2026-05
+OURE11,28.516.650/0001-03,Ourinvest Cyrela,fii,Fundo Misto,Misto,,FundsExplorer 2026-05
+PABY11,00.613.094/0001-74,Panamby,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+PATA11,53.764.894/0001-52,PATAGÔNIA CAPITAL MULTIESTRATÉGIA FDO DE INV IMOB,fii,Sem categoria,Misto,,FundsExplorer 2026-05
+PATB11,14.788.492/0001-36,FDO INV IMOB - FII PATEO BANDEIRANTES,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+PATC11,30.048.651/0001-12,PÁTRIA-EDIFÍCIOS-CORPORATIVOS-FDO-INV-IMOB,fii,Tijolo,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+PATL11,35.754.164/0001-99,PÁTRIA LOGÍSTICA FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+PBLV11,31.962.875/0001-06,PROLOGIS BRAZIL LOGISTICS VENTURE FDO INV IMOB,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+PCAS11,24.514.406/0001-50,FII PRAIA CS,fii,Fundo Misto,,,FundsExplorer 2026-05
+PCIP11,28.729.197/0001-13,Patria Crédito Imobiliário Índice de Preços Fundo de Investimento Imobiliário - Responsabilidade Limitada,fii,Papel,Papéis,,FundsExplorer 2026-05
+PDBM11,56.978.773/0001-00,PDB MALLS FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+PDDA11B,,FII PEDRA D,fii,Outros,,,FundsExplorer 2026-05
+PEMA11,34.736.510/0001-43,PERFORMA REAL ESTATE,fii,Papel,Papéis,,FundsExplorer 2026-05
+PFIN11,34.218.291/0001-00,PERFIN APOLLO ENERGIA FIP EM INFRAESTRUTURA,fii,Fip,,,FundsExplorer 2026-05
+PICE11,34.027.597/0001-80,PATRIA INFRAESTRUTURA ENERGIA CORE FIP INFRA,fii,Fip,,,FundsExplorer 2026-05
+PLAG11,32.754.734/0001-52,QUASAR AGRO - FDO INV. IMOB.,fii,Tijolo,,,FundsExplorer 2026-05
+PLCA11,41.272.747/0001-86,Plural BRB Crédito Agro,fiagro,Fiagro,,,FundsExplorer 2026-05
+PLCR11,32.527.683/0001-26,FDO INV. IMOB. PLURAL RECEBIVEIS,fii,Papel,Papéis,,FundsExplorer 2026-05
+PLOG11,36.501.198/0001-34,PLURAL LOGÍSTICA FDO. INV. IMOB.,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+PLRI11,14.080.689/0001-16,Polo Recebíveis Imobiliários I,fii,Papel,Papéis,,FundsExplorer 2026-05
+PMFO11,50.135.849/0001-40,SPECIALE REAL ESTATE FUND OF FUNDS FDO DE INV IMOB,fii,Sem categoria,Misto,,FundsExplorer 2026-05
+PMIS11,51.868.778/0001-58,PARAMIS HEDGE FUND FDO DE INV IMOB,fii,Multiestratégia,Misto,,FundsExplorer 2026-05
+PMLL11,26.499.833/0001-32,Patria Malls FII,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+PNCR11,50.569.855/0001-06,PANORAMA CREDITO RESIDENCIAL FDO DE INV IMOB,fii,Papel,Imóveis Residenciais,,FundsExplorer 2026-05
+PNDL11,37.899.400/0001-90,PANORAMA DESENVOLVIMENTO LOGÍSTICO,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+PNLM11,04.506.394/0001-05,,fii,Sem categoria,,,FundsExplorer 2026-05
+PNLN11,40.887.170/0001-54,FII LASTMILE,fii,Fundo Misto,,,FundsExplorer 2026-05
+PNPR11,26.813.118/0001-22,PANORAMA PROPERTIES FDO. INVEST. IMOB.,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+PNRC11,46.157.348/0001-98,PANORAMA REAL ESTATE CRÉDITO FDO INV IMOB,fii,Sem categoria,,,FundsExplorer 2026-05
+PORD11,17.156.502/0001-09,Polo Recebíveis Imobiliários II,fii,Papel,Papéis,,FundsExplorer 2026-05
+PPEI11,35.640.942/0001-19,PRISMA PROTON ENERGIA FDO. INVEST. PART. INFRA.,fii,Fip,,,FundsExplorer 2026-05
+PQAG11,12.978.943/0001-72,PARQUE ANHANGUERA FDO. INVEST. IMOB.,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+PQDP11,10.869.155/0001-12,Parque Dom Pedro Shopping Center,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+PRSN11B,14.056.001/0001-62,Lateres,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+PRSV11,11.281.322/0001-72,Presidente Vargas,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+PRTS11,22.957.521/0001-74,Multi Properties FII,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+PRZS11,30.258.790/0001-70,PRAZO - FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Fundo Misto,Papéis,,FundsExplorer 2026-05
+PSEC11,35.507.457/0001-71,PÁTRIA SECURITIES - FDO. INV. IMOB,fii,Multiestratégia,Fundo de Fundos,,FundsExplorer 2026-05
+PULV11,53.018.363/0001-10,FUNDO DE INV IMOB RBR CRÉD PULVERIZADO RESP LTDA,fii,Papel,Papéis,,FundsExplorer 2026-05
+PURB11,,,fii,Sem categoria,,,FundsExplorer 2026-05
+PVBI11,35.652.102/0001-76,FDO. INV. IMOB. VBI PRIME PROPERTIES,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+QAGR11,32.754.734/0001-52,QUASAR AGRO - FDO INV. IMOB.,fii,Tijolo,agro,,FundsExplorer 2026-05
+QAMI11,32.400.264/0001-29,QUASAR CRÉDITO IMOBILIÁRIO,fii,Papel,Papéis,,FundsExplorer 2026-05
+QIFF11,,FII QUATA,fii,Fundo de Fundos,,,FundsExplorer 2026-05
+QIRI11,34.736.432/0001-87,QUATA IMOB RECEBÍVEIS IMOB,fii,Papel,Papéis,,FundsExplorer 2026-05
+QMFF11,,FII QUATA,fii,Fundo de Fundos,,,FundsExplorer 2026-05
+QNTS11,27.368.617/0001-10,FII QUINTAS,fii,Outros,,,FundsExplorer 2026-05
+QTZD11,55.115.058/0001-72,FII QTZD,fii,Tijolo,Imóveis Comerciais - Outros,,FundsExplorer 2026-05
+RBBV11,16.915.868/0001-51,FII JHSF FBV,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+RBCB11,12.659.641/0001-31,FII RIOBRCIB,fii,Papel,Papéis,,FundsExplorer 2026-05
+RBCO11,,RB CAPITAL OFFICE INCOME FDO INV. IMOB.,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+RBDS11,11.945.604/0001-27,RB Capital Desenvolvimento Residencial II,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+RBED11,13.873.457/0001-52,Rio Bravo Renda Educacional,fii,Tijolo,Educacional,,FundsExplorer 2026-05
+RBFF11,17.329.029/0001-14,RIO BRAVO IFIX FDO INV IMOB,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+RBFM11,17.329.029/0001-14,FII RIOB MT,fii,Multiestratégia,Fundo de Fundos,,FundsExplorer 2026-05
+RBFY11,62.662.477/0001-90,FII RIO BRAVO FOR YOU,fii,Tijolo,Imóveis Residenciais,,FundsExplorer 2026-05
+RBGS11,13.652.006/0001-95,FII RB GSB I,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+RBHG11,30.647.758/0001-87,RIO BRAVO CREDITO IMOB HIGH GRADE,fii,Papel,Papéis,,FundsExplorer 2026-05
+RBHY11,37.899.479/0001-50,RIO BRAVO CRÉDITO IMOB. HIGH YIELD,fii,Papel,Papéis,,FundsExplorer 2026-05
+RBIR11,31.161.410/0001-48,RB CAPITAL DESENV. RESIDENCIAL IV FDO. INV. IMOB.,fii,Tijolo,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+RBIV11,,FII RBCRI IV,fii,Papel,Papéis,,FundsExplorer 2026-05
+RBLG11,35.652.227/0001-04,RB CAPITAL LOGÍSTICO,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+RBOP11,13.500.306/0001-59,FII MERC BR,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+RBRD11,09.006.914/0001-34,RB Capital Renda II,fii,Tijolo,Varejo,,FundsExplorer 2026-05
+RBRF11,27.529.279/0001-51,RBR ALPHA MULTIESTRATÉGIA REAL ESTATE FDO INV IMOB,fii,Papel,Fundo de Fundos,,FundsExplorer 2026-05
+RBRI11,32.441.656/0001-36,FII RBR III,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+RBRK11,53.391.653/0001-05,RBR PRIME OFFICES - FUNDO DE INVESTIMENTO IMOBILIÁRIO RESPONSABILIDADE LIMITADA,fii,Tijolo,,,FundsExplorer 2026-05
+RBRL11,35.705.463/0001-33,RBR LOG FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+RBRM11,26.314.437/0001-93,FDO INV IMOB - FII RBR DESENVOLVIMENTO,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+RBRP11,21.408.063/0001-51,RBR Properties,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+RBRR11,29.467.977/0001-03,RBR Rendimento High Grade,fii,Papel,Papéis,,FundsExplorer 2026-05
+RBRS11,36.517.660/0001-91,RIO BRAVO RENDA RESIDENCIAL FDO. INVEST. IMOB.,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+RBRX11,41.088.458/0001-21,FII RBR MULT,fii,Multiestratégia,,,FundsExplorer 2026-05
+RBRY11,30.166.700/0001-11,FDO INV IMOB RBR PRIVATE CRÉDITO IMOB,fii,Papel,Papéis,,FundsExplorer 2026-05
+RBTS11,29.299.737/0001-39,RB CAPITAL TFO SITUS FDO INV IMOB - FII,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+RBVA11,15.576.907/0001-70,Rio Bravo Renda Varejo,fii,Tijolo,Varejo,,FundsExplorer 2026-05
+RBVO11,15.769.670/0001-44,Rio Bravo Crédito Imobiliário II,fii,Papel,Papéis,,FundsExplorer 2026-05
+RCFA11,27.771.586/0001-44,GRUPO RCFA FDO INV IMOB,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+RCFF11,35.689.670/0001-41,RBR DESENV COMERCIAL FEEDER FOF FDO INVEST IMOB,fii,Fundo Misto,Fundo de Fundos,,FundsExplorer 2026-05
+RCKF11,43.010.139/0001-29,ROCK – FII FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Sem categoria,,,FundsExplorer 2026-05
+RCRB11,03.683.056/0001-86,FDO INV IMOB RIO BRAVO RENDA CORPORATIVA,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+RDCI11,34.736.474/0001-18,FII RDCI,fii,Tijolo,,,FundsExplorer 2026-05
+RDES11,,FII RD ESCRI,fii,Outros,,,FundsExplorer 2026-05
+RDIV11,36.642.275/0001-76,FII RBRDESIV,fii,Tijolo,Outros,,FundsExplorer 2026-05
+RDLI11,53.391.567/0001-00,RBR DESENVOLVIMENTO LOGÍSTICO I - FII RESP LIMITAD,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+RDLS11,53.724.231/0001-04,JGP DESENVOLVIMENTO I FDO INV IMOB RESP LIMIT,fii,Tijolo,Serviços Financeiros Diversos,,FundsExplorer 2026-05
+RDPD11,23.120.027/0001-13,BB Renda de Papeis Imobiliários II,fii,Papel,Papéis,,FundsExplorer 2026-05
+RECD11,53.260.548/0001-37,FII RECD,fii,Papel,Papéis,,FundsExplorer 2026-05
+RECH11,35.652.306/0001-07,FII REC HTL,fii,Outros,Hotéis,,FundsExplorer 2026-05
+RECM11,56.430.935/0001-62,FII RECM,fii,Papel,Papéis,,FundsExplorer 2026-05
+RECR11,28.152.272/0001-26,FII REC Recebíveis Imobiliários,fii,Papel,Papéis,,FundsExplorer 2026-05
+RECT11,32.274.163/0001-59,FDO INV IMOB - FII UBS (BR) OFFICE,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+RECX11,36.642.356/0001-76,FDO. INV. IMOB. REC FUNDO DE FUNDOS,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+REIT11,16.841.067/0001-99,Socopa Fundo de Investimento Imobiliário,fii,Papel,Papéis,,FundsExplorer 2026-05
+REIT11B,,FII REIT RIV,fii,Outros,,,FundsExplorer 2026-05
+RELG11,37.112.770/0001-36,REC LOGISTICA,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+RENV11,54.174.907/0001-04,CPV ENERGIA FDO DE INV IMOB RESP LIM,fii,Fundo Misto,Serviços Financeiros Diversos,,FundsExplorer 2026-05
+REON11,20.173.064/0001-00,RESIDENCIAIS ONE FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Fip,,,FundsExplorer 2026-05
+RFOF11,34.027.774/0001-28,FDO. INVEST. IMOB. RB CAPITAL I FUNDO DE FUNDOS,fii,Papel,Fundo de Fundos,,FundsExplorer 2026-05
+RINV11,44.625.612/0001-45,REAL INVESTOR FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Multiestratégia,,,FundsExplorer 2026-05
+RMAI11,17.374.696/0001-19,REAG MULTI ATIVOS IMOBILIÁRIOS,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+RNDP11,15.394.563/0001-89,BB Renda de Papéis Imobiliários,fii,Papel,Papéis,,FundsExplorer 2026-05
+RNGO11,15.006.286/0001-90,Rio Negro,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+ROOF11,38.456.598/0001-09,FUNDO DE INVESTIMENTO IMOBILIÁRIO ROOFTOP I,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+RPRI11,42.502.842/0001-91,FII RBR PR,fii,Papel,Papéis,,FundsExplorer 2026-05
+RRCI11,35.689.733/0001-60,RB Capital Recebíveis Imobiliários,fii,Papel,Papéis,,FundsExplorer 2026-05
+RSPD11,19.249.989/0001-08,RB CAPITAL DESENV RESID III FDO INV IMOB - FII,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+RTEL11,43.862.625/0001-75,BRC - II FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Multiestratégia,Misto,,FundsExplorer 2026-05
+RURA11,42.479.593/0001-60,Itau Asset Rural,fiagro,Fiagro,,,FundsExplorer 2026-05
+RVBI11,35.507.457/0001-71,VBI REITS FOF - FDO. INV. IMOB,fii,Multiestratégia,Fundo de Fundos,,FundsExplorer 2026-05
+RZAG11,40.413.979/0001-44,FIAGRO RIZA,fiagro,Fiagro,,,FundsExplorer 2026-05
+RZAK11,36.642.219/0001-31,RIZA AKIN,fii,Papel,Papéis,,FundsExplorer 2026-05
+RZAT11,28.267.696/0001-36,RIZA ARCTIUM REAL ESTATE FDO INV IMOB,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+RZDS11,,,fii,Multiestratégia,,,FundsExplorer 2026-05
+RZEO11,45.718.511/0001-81,RIZA EOS FDO DE INV NAS CAD PROD - FIAGROO,fiagro,Fiagro,,,FundsExplorer 2026-05
+RZLC11,56.212.023/0001-14,FII RZLC,fii,Papel,Papéis,,FundsExplorer 2026-05
+RZTR11,36.501.128/0001-86,FUNDO DE INVESTIMENTO IMOBILIÁRIO RIZA TERRAX,fii,Fundo Misto,Misto,,FundsExplorer 2026-05
+RZZI11,54.134.474/0001-55,RAIZZ DESENVOLVIMENTO II FII RESP. LIMITADA,fii,Sem categoria,Misto,,FundsExplorer 2026-05
+RZZR11,35.652.278/0001-28,RAIZZ RENDA LOGÍSTICA FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+RZZV11,51.786.271/0001-55,RAIZZ DESENVOLVIMENTO I FII RESP LIM,fii,Tijolo,Misto,,FundsExplorer 2026-05
+SAAG11,16.915.840/0001-14,FII SANT AGE,fii,Outros,Agências de Bancos,,FundsExplorer 2026-05
+SACL11,41.833.927/0001-90,FII S CARLOS,fii,Fundo Misto,,,FundsExplorer 2026-05
+SADI11,32.903.521/0001-45,SANTANDER PAPEIS IMOB CDI FDO INV IMOB,fii,Papel,Papéis,,FundsExplorer 2026-05
+SAIC11B,17.311.079/0001-74,Sia Corporate,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+SALI11,36.669.535/0001-05,VENUS - FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Fundo Misto,Misto,,FundsExplorer 2026-05
+SAPI11,51.646.298/0001-42,SANTANDER CACEIS,fii,Papel,Misto,,FundsExplorer 2026-05
+SARE11,32.903.702/0001-71,SANTANDER RENDA DE ALUGUÉIS FDO. INVEST. IMOB.,fii,Fundo Misto,Misto,,FundsExplorer 2026-05
+SAUS11,,,fii,Sem categoria,,,FundsExplorer 2026-05
+SBCL11,34.471.719/0001-22,FRAM CAPITAL SBCLOG,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+SCPF11,01.657.856/0001-05,SCP,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+SDIL11,16.671.412/0001-93,SDI Logística Rio,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+SDIP11,,FII SDI PROP,fii,Outros,,,FundsExplorer 2026-05
+SEED11,35.689.497/0001-81,FII HEDGE SD,fii,Fundo Misto,,,FundsExplorer 2026-05
+SEQR11,09.517.273/0001-82,SEQUOIA III RENDA IMOBILIÁRIA,fii,Tijolo,Misto,,FundsExplorer 2026-05
+SFND11,09.350.920/0001-04,São Fernando,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+SHDP11B,07.224.019/0001-60,Shopping Parque Dom Pedro,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+SHOP11,22.459.737/0001-00,Multi Shoppings,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+SHPH11,03.507.519/0001-59,Shopping Patio Higienopolis,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+SHPP11,59.090.726/0001-05,SHOPPING PATIO PAULISTA FUNDO DE INVESTIMENTO IMOBILIARIO RESPONSABILIDADE LIMITADA,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+SHSO11,44.527.168/0001-25,FII HEDGE SH,fii,Fundo Misto,,,FundsExplorer 2026-05
+SIGR11,40.011.324/0001-40,FII SIG CAP,fii,Fundo Misto,,,FundsExplorer 2026-05
+SJAU11,27.771.547/0001-47,SJ AU LOGÍSTICA,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+SLDZ11,49.361.020/0001-87,FII LAV SLDZ,fii,Sem categoria,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+SMRE11,53.730.029/0001-95,FDO INV IMOB SMART REAL ESTATE - FII RESP LIMITADA,fii,Multiestratégia,Incorporações,,FundsExplorer 2026-05
+SNAG11,28.152.777/0001-90,SUNO AGRO – FIAGRO-IMOBILIÁRIO,fiagro,Fiagro,Papéis,,FundsExplorer 2026-05
+SNCI11,41.076.710/0001-82,SUNO RECEBÍVEIS IMOBILIÁRIOS FDO DE INV IMOB,fii,Fundo Misto,Papéis,,FundsExplorer 2026-05
+SNEL11,43.741.171/0001-84,SUNO ENERGIAS LIMPAS FII,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+SNFF11,40.011.225/0001-68,SUNO FUNDO DE FUNDOS,fii,Papel,Fundo de Fundos,,FundsExplorer 2026-05
+SNFZ11,53.313.475/0001-02,SUNO FAZENDAS FIAGRO – IMOBILIÁRIO,fiagro,Fiagro,Misto,,FundsExplorer 2026-05
+SNLG11,40.041.711/0001-29,FII SUNO LG,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+SNME11,52.227.760/0001-30,SUNO MULTIESTRATÉGIA FII,fii,Multiestratégia,,,FundsExplorer 2026-05
+SOFF11,57.811.221/0001-67,FUNDO DE INVESTIMENTO IMOBILIÁRIO SOFIA,fii,Tijolo,Misto,,FundsExplorer 2026-05
+SOLR11,22.169.671/0001-13,SOLARIUM FII,fii,Tijolo,Imóveis Comerciais - Outros,,FundsExplorer 2026-05
+SPAF11,18.311.024/0001-27,SPA Fundo de Investimento Imobiliário – FII,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+SPDE11,43.741.150/0001-69,WHG FINVEST SP REALTY FDO DE INV IMOB,fii,Sem categoria,,,FundsExplorer 2026-05
+SPGM11,53.127.942/0001-00,FII SPGM,fii,Tijolo,Incorporações,,FundsExplorer 2026-05
+SPMO11,40.225.262/0001-79,SUPREMO FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Sem categoria,,,FundsExplorer 2026-05
+SPTW11,15.538.445/0001-05,SP Downtown,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+SPVJ11,27.538.422/0001-71,FUND. INVEST. IMOB. SUCCESPAR VAREJO,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+SPXC11,53.452.048/0001-05,FII IMOBILIÁRIO SPX SYN CRÉDITO IMOB RESP LTDA,fii,Outros,Lajes Corporativas,,FundsExplorer 2026-05
+SPXG11,55.611.150/0001-23,Spx Syn Desenvolvimento Feeder Private,fii,Tijolo,Logística,,FundsExplorer 2026-05
+SPXL11,55.074.554/0001-25,FII SPXL,fii,Tijolo,Logística,,FundsExplorer 2026-05
+SPXS11,43.010.543/0001-00,FII SPX SYN,fii,Multiestratégia,,,FundsExplorer 2026-05
+SRVD11,38.082.796/0001-41,SERRA VERDE FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Fundo Misto,,,FundsExplorer 2026-05
+STMB11,49.935.515/0001-72,STONEX MB CRÉDITO AGRO FIAGRO-IMOBILIÁRIO,fiagro,Fiagro,,,FundsExplorer 2026-05
+STRX11,11.044.355/0001-07,STARX FDO INV IMOB,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+SURE11,46.334.715/0001-81,SULAMÉRICA REAL ESTATE FUNDO DE INVESTIMENTO IMOBILIÁRIO DE RESPONSABILIDADE LIMITADA,fii,Multiestratégia,,,FundsExplorer 2026-05
+TBOF11,17.365.105/0001-47,TB Office,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+TCIN11,34.197.700/0001-30,FDO. INVEST. IMOB. TOURMALET V - ED. CIDADE NOVA,fii,Papel,Fundo de Fundos,,FundsExplorer 2026-05
+TCPF11,26.990.011/0001-50,TREECORP REAL ESTATE FDO INV IMOB - I,fii,Fundo Misto,Misto,,FundsExplorer 2026-05
+TELD11,36.200.701/0001-11,TELLUS DESENVOLVIMENTO LOGÍSTICO,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+TELF11,41.080.994/0001-80,FII-TELF,fii,Fundo Misto,,,FundsExplorer 2026-05
+TELM11,45.188.099/0001-35,TELLUS MULTIESTRATÉGIA – FDO INV IMOB,fii,Multiestratégia,,,FundsExplorer 2026-05
+TEPP11,26.681.370/0001-25,TELLUS PROPERTIES - FDO INV. IMOB,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+TFOF11,20.834.884/0001-97,FII HTOPFOF,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+TGAR11,25.032.881/0001-53,TG Ativo Real,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+THRA11,13.966.653/0001-71,FII BM THERA,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+THRA11B,,FII BM THERA,fii,Outros,,,FundsExplorer 2026-05
+TJKB11,39.714.024/0001-48,FII TJK REND,fii,Tijolo,,,FundsExplorer 2026-05
+TMPS11,42.737.077/0001-99,ITAÚ TEMPUS FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+TOPP11,56.805.391/0001-76,FII TOPP,fii,Tijolo,Imóveis Comerciais - Outros,,FundsExplorer 2026-05
+TORD11,30.230.870/0001-18,TORDESILHAS EI FDO. INV. IMOB.,fii,Fundo Misto,Misto,,FundsExplorer 2026-05
+TRBL11,16.671.412/0001-93,FDO DE INVEST IMOB TELLUS RIO BRAVO RENDA LOGISTIC,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+TRNT11,04.722.883/0001-02,Torre Norte,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+TRNT11B,,FII TORRE NO,fii,Outros,,,FundsExplorer 2026-05
+TRXB11,36.368.925/0001-37,TRX REAL ESTATE II FDO. INVEST. IMOB.,fii,Tijolo,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+TRXF11,28.548.288/0001-52,TRX Real Estate,fii,Tijolo,Imóveis Comerciais - Outros,,FundsExplorer 2026-05
+TRXL11,,FII TRX LOG,fii,Tijolo,,,FundsExplorer 2026-05
+TRXY11,43.985.938/0001-10,FII TRXY,fii,Multiestratégia,Outros,,FundsExplorer 2026-05
+TSER11,34.847.042/0001-84,TISHMAN SPEYER RENDA CORPORATIVA,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+TSNC11,17.007.443/0001-07,Transinc,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+TSNM11,38.294.008/0001-80,TS NEW MARGINAL,fii,Fundo Misto,,,FundsExplorer 2026-05
+TVRI11,14.410.722/0001-29,TIVIO RENDA IMOBILIÁRIA FUNDO DE INVESTIMENTO IMOB,fii,Tijolo,Agências de Bancos,,FundsExplorer 2026-05
+UBSR11,,FII UBS (BR),fii,Papel,Papéis,,FundsExplorer 2026-05
+UMED11,,,fii,Sem categoria,,,FundsExplorer 2026-05
+URHF11,52.649.350/0001-87,Urca Hedge Fund,fii,Multiestratégia,Outros,,FundsExplorer 2026-05
+URPR11,34.508.872/0001-87,URCA PRIME RENDA FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Papel,Papéis,,FundsExplorer 2026-05
+VCHG11,55.633.339/0001-17,Vera Cruz CRI Residencial High Grade,fii,Tijolo,Outros,,FundsExplorer 2026-05
+VCJR11,32.400.250/0001-05,VECTIS JUROS REAL FDO INV. IMOB. - FII,fii,Papel,Papéis,,FundsExplorer 2026-05
+VCRA11,42.502.827/0001-43,FIAGRO VCRA,fiagro,Fiagro,,,FundsExplorer 2026-05
+VCRI11,41.081.374/0001-66,FII VINCI CR,fii,Papel,Papéis,,FundsExplorer 2026-05
+VCRR11,40.041.723/0001-53,VECTIS RENDA RESIDENCIAL,fii,Tijolo,Imóveis Residenciais,,FundsExplorer 2026-05
+VCTH11,52.714.934/0001-99,VERA CRUZ THREE FDO DE INV IMOB,fii,Sem categoria,Incorporações,,FundsExplorer 2026-05
+VDSV11,43.951.875/0001-81,FII VIC VIN,fii,Fundo Misto,,,FundsExplorer 2026-05
+VERE11,08.693.497/0001-82,Vereda,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+VGHF11,36.771.692/0001-19,VALORA HEDGE FUND,fii,Multiestratégia,Misto,,FundsExplorer 2026-05
+VGIA11,41.081.088/0001-09,FIAGRO VGIA,fiagro,Fiagro,,,FundsExplorer 2026-05
+VGII11,52.649.680/0001-72,VALORA CRI INFRA II FII DE RESP. LTDA,fii,Sem categoria,Tecidos. Vestuário e Calçados,,FundsExplorer 2026-05
+VGIP11,34.197.811/0001-46,VALORA CRI ÍNDICE DE PREÇO FDO INVEST. IMOB. FII,fii,Papel,Papéis,,FundsExplorer 2026-05
+VGIR11,29.852.732/0001-91,Valora RE III,fii,Papel,Papéis,,FundsExplorer 2026-05
+VGPR11,,,fii,Multiestratégia,Hedge Fund Imobiliário,,FundsExplorer 2026-05
+VGRI11,53.656.482/0001-07,VALORA RENDA IMOB FUNDO DE INVES IMOB -RESP LIMIT,fii,Tijolo,Misto,,FundsExplorer 2026-05
+VHFA11,51.658.280/0001-60,VALORA HEDGE FUND AGRO – FIAGRO–IMOBILIÁRIO,fiagro,Fiagro,Misto,,FundsExplorer 2026-05
+VIDS11,32.527.552/0001-49,VIC DESENVOLVIMENTO VINTAGE 20/21,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+VIFI11,31.547.855/0001-60,VINCI INSTRUMENTOS FINANCEIROS FDO INV IMOB - FII,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+VIGT11,33.601.138/0001-03,VINCI ENERGIA FDO INV PART IE,fii,Fip,,,FundsExplorer 2026-05
+VILG11,24.853.044/0001-22,VINCI LOGÍSTICA FDO INV IMOB,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+VINO11,12.516.185/0001-70,VINCI OFFICES FDO INV IMOB,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+VISC11,17.554.274/0001-25,Vinci Shopping Centers,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+VIUR11,36.445.587/0001-90,VINCI IMÓVEIS URBANOS,fii,Tijolo,Misto,,FundsExplorer 2026-05
+VJFD11,15.489.509/0001-17,JFDCAM FUNDO DE INVESTIMENTO IMOBILIÁRIO FII,fii,Fundo Misto,Papéis,,FundsExplorer 2026-05
+VLIQ11,45.338.526/0001-14,FII VIFI 2,fii,Fundo Misto,,,FundsExplorer 2026-05
+VLJS11,13.842.683/0001-76,Vector Queluz Lajes Corporativas,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+VLOL11,15.296.696/0001-12,Vila Olímpia Corporate,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+VOTS11,17.870.926/0001-30,Votorantim Securities Master,fii,Papel,Papéis,,FundsExplorer 2026-05
+VPPR11,30.654.849/0001-40,XP PROPERTIES FDO. INV. IMOB.,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+VPSI11,14.721.889/0001-00,Polo Shopping Indaiatuba,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+VRTA11,11.664.201/0001-00,Fator Verita,fii,Papel,Papéis,,FundsExplorer 2026-05
+VRTM11,51.870.412/0001-13,FATOR VERITÀ MULTIESTRATÉGIA FDO INV IMOB,fii,Multiestratégia,Misto,,FundsExplorer 2026-05
+VSEC11,10.347.505/0001-80,FDO INV IMOB VOTORANTIM SECURITIES,fii,Papel,Papéis,,FundsExplorer 2026-05
+VSHO11,23.740.595/0001-17,FDO INV IMOB VOTORANTIM SHOPPING,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+VSLH11,36.244.015/0001-42,VERSALHES RECEBÍVEIS IMOBILIÁRIOS,fii,Papel,Papéis,,FundsExplorer 2026-05
+VTBL11,20.265.467/0001-70,FII HIERON BERLIM,fii,Multiestratégia,Outros,,FundsExplorer 2026-05
+VTLT11,27.368.600/0001-63,Votorantim Logística,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+VTPA11,21.500.481/0001-74,FDO. INVEST. IMOB. VOTORANTIM PATRIMONIAL V,fii,Papel,Fundo de Fundos,,FundsExplorer 2026-05
+VTPL11,15.098.422/0001-19,FDO INV. IMOB. PLUS,fii,Papel,Papéis,,FundsExplorer 2026-05
+VTVI11,21.500.514/0001-86,PARKING PARTNERS FDO. INVEST. IMOB.,fii,Fundo Misto,,,FundsExplorer 2026-05
+VTXI11,23.740.552/0001-31,FDO. INVEST. IMOB. VOTORANTIM PATRIMONIAL XII,fii,Fundo Misto,Misto,,FundsExplorer 2026-05
+VVCO11,15.006.267/0001-63,FII V2EDCORP,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+VVCR11,23.120.027/0001-13,BB Renda de Papeis Imobiliários II,fii,Fundo Misto,Papéis,,FundsExplorer 2026-05
+VVMR11,30.871.698/0001-81,FDO.INVEST. IMOB. MULTI RENDA URBANA,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+VVPR11,33.045.581/0001-37,FDO INV IMOB - V2 PROPERTIES,fii,Tijolo,Misto,,FundsExplorer 2026-05
+VVRI11,49.184.940/0001-77,V2 RENDA IMOBILIÁRIA FDO DE INV IMOB,fii,Fundo Misto,,,FundsExplorer 2026-05
+VXXV11,30.982.974/0001-89,VX XVI - FDO INV. IMOB.,fii,Multiestratégia,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+WHGR11,41.256.643/0001-88,FII WHG REAL,fii,Multiestratégia,,,FundsExplorer 2026-05
+WMRB11B,,FII WM RBCAP,fii,Outros,,,FundsExplorer 2026-05
+WPLZ11,09.326.861/0001-39,Shopping West Plaza,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+WPLZ11B,,FII W PLAZA,fii,Outros,,,FundsExplorer 2026-05
+WSEC11,43.440.579/0001-16,WARREN SECURITIES FDO DE INV IMOB,fii,Multiestratégia,,,FundsExplorer 2026-05
+WTSP11B,28.693.595/0001-27,Ourinvest RE I,fii,Fundo Misto,Misto,,FundsExplorer 2026-05
+WVSC11,,FII WARREN,fii,Fundo Misto,,,FundsExplorer 2026-05
+XBXO11,36.814.809/0001-02,R CAP 1810 FUNDO DE FUNDOS,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+XLPR11,35.689.733/0001-60,FII XLPR RI,fii,Multiestratégia,Papéis,,FundsExplorer 2026-05
+XPCA11,41.269.527/0001-01,FIAGRO XP CA,fiagro,Fiagro,,,FundsExplorer 2026-05
+XPCI11,28.516.301/0001-91,XP CREDITO IMOBILIÁRIO - FDO INV IMOB,fii,Papel,Papéis,,FundsExplorer 2026-05
+XPCM11,16.802.320/0001-03,XP Corporate Macaé,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+XPGA11,,FII XP GAIA,fii,Papel,Papéis,,FundsExplorer 2026-05
+XPHT11,18.308.516/0001-63,XP HOTÉIS - FDO INV IMOB,fii,Tijolo,Hotéis,,FundsExplorer 2026-05
+XPIE11,30.317.464/0001-97,XP INFRA II FDO DE INV PART IE,fii,Fip,,,FundsExplorer 2026-05
+XPIN11,28.516.325/0001-40,XP Industrial,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+XPLG11,26.502.794/0001-85,XP Log,fii,Tijolo,Imóveis Industriais e Logísticos,,FundsExplorer 2026-05
+XPML11,28.757.546/0001-00,XP Malls,fii,Tijolo,Shoppings,,FundsExplorer 2026-05
+XPPR11,30.654.849/0001-40,XP PROPERTIES FDO. INV. IMOB.,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+XPSF11,30.983.020/0001-90,XP SELECTION FDO DE FUNDOS INV IMOB - FII,fii,Fundo de Fundos,Fundo de Fundos,,FundsExplorer 2026-05
+XTED11,15.006.267/0001-63,TRX Edifícios Corporativos,fii,Tijolo,Lajes Corporativas,,FundsExplorer 2026-05
+YCHY11,,FII YAGUARA,fii,Outros,,,FundsExplorer 2026-05
+YEES11,51.385.174/0001-50,HEDGE YEES HABITAÇÕES ECON FDO DE INV IMOB RESP L,fii,Sem categoria,Papéis,,FundsExplorer 2026-05
+YUFI11,36.445.551/0001-06,YUCA FDO INV. IMOB.,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05
+YUFI11B,,FII YUCA,fii,Tijolo,,,FundsExplorer 2026-05
+ZAGH11,45.188.066/0001-95,ZAGROS MULTIESTRATÉGIA FDO DE INV IMOB,fii,Multiestratégia,Serviços Financeiros Diversos,,FundsExplorer 2026-05
+ZAVC11,52.101.897/0001-43,ZAVIT CRÉDITO IMOBILIÁRIO – FDO INV IMOB,fii,Papel,,,FundsExplorer 2026-05
+ZAVI11,40.575.940/0001-23,FII-ZAVIT-R,fii,Tijolo,,,FundsExplorer 2026-05
+ZIFI11,35.820.768/0001-96,ZION CAPITAL FUNDO DE INVESTIMENTO IMOBILIÁRIO,fii,Fundo Misto,Fundo de Desenvolvimento,,FundsExplorer 2026-05

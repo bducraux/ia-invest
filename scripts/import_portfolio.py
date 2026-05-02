@@ -31,6 +31,13 @@ from domain.previdencia import PrevidenciaSnapshot
 from extractors import get_extractor, list_source_types
 from extractors.avenue_apex_pdf import AvenueApexPdfExtractor
 from extractors.cache import load_cached_extraction, save_cached_extraction
+from extractors.ia_invest_export_csv import (
+    IaInvestExportCsvExtractor,
+    is_ia_invest_export_csv,
+)
+from extractors.ia_invest_previdencia_export_csv import (
+    IaInvestPrevidenciaExportCsvExtractor,
+)
 from extractors.previdencia_ibm_pdf import PrevidenciaIbmPdfExtractor
 from mcp_server.services.fx_rates import FxRateService
 from normalizers.fixed_income_csv import REQUIRED_COLUMNS as FIXED_INCOME_REQUIRED_COLUMNS
@@ -60,7 +67,11 @@ structlog.configure(
 log = structlog.get_logger()
 
 _PORTFOLIOS_DIR = Path("portfolios")
-_SPECIAL_SOURCE_TYPES = {"fixed_income_csv", "previdencia_ibm_pdf"}
+_SPECIAL_SOURCE_TYPES = {
+    "fixed_income_csv",
+    "previdencia_ibm_pdf",
+    "ia_invest_previdencia_export_csv",
+}
 
 
 def _sha256(path: Path) -> str:
@@ -78,7 +89,14 @@ def _find_extractor_for_file(
     portfolio_id: str | None = None,
     alias_repo: AvenueAliasesRepository | None = None,
 ) -> Any | None:
-    """Find the first enabled extractor that can handle the file."""
+    """Find the first enabled extractor that can handle the file.
+
+    Special case: IA-Invest export CSVs (produced by the export feature)
+    are auto-detected regardless of ``portfolio.yml`` so that disaster-
+    recovery re-imports always work.
+    """
+    if is_ia_invest_export_csv(file_path):
+        return IaInvestExportCsvExtractor()
     for source_type in enabled_sources:
         if source_type in _SPECIAL_SOURCE_TYPES:
             continue
@@ -181,7 +199,7 @@ def _import_previdencia_ibm_file(
     job_id: int | None,
     job_repo: ImportJobRepository,
     prev_repo: PrevidenciaSnapshotRepository,
-    extractor: PrevidenciaIbmPdfExtractor,
+    extractor: PrevidenciaIbmPdfExtractor | IaInvestPrevidenciaExportCsvExtractor,
     file_hash: str | None = None,
 ) -> dict[str, int]:
     cached = load_cached_extraction(staged_path, extractor, file_hash=file_hash)
@@ -487,12 +505,20 @@ def import_portfolio(
                 "fixed_income_csv" in enabled_sources and _is_fixed_income_csv(file_path)
             )
             is_previdencia_file = False
-            previdencia_extractor: PrevidenciaIbmPdfExtractor | None = None
-            if "previdencia_ibm_pdf" in enabled_sources:
-                maybe_prev_extractor = get_extractor("previdencia_ibm_pdf")
-                if isinstance(maybe_prev_extractor, PrevidenciaIbmPdfExtractor):
+            previdencia_extractor: PrevidenciaIbmPdfExtractor | IaInvestPrevidenciaExportCsvExtractor | None = None
+            previdencia_source_type = "previdencia_ibm_pdf"
+            for prev_source_type, prev_cls in (
+                ("previdencia_ibm_pdf", PrevidenciaIbmPdfExtractor),
+                ("ia_invest_previdencia_export_csv", IaInvestPrevidenciaExportCsvExtractor),
+            ):
+                if prev_source_type not in enabled_sources:
+                    continue
+                maybe_prev_extractor = get_extractor(prev_source_type)
+                if isinstance(maybe_prev_extractor, prev_cls) and maybe_prev_extractor.can_handle(file_path):
                     previdencia_extractor = maybe_prev_extractor
-                    is_previdencia_file = previdencia_extractor.can_handle(file_path)
+                    previdencia_source_type = prev_source_type
+                    is_previdencia_file = True
+                    break
 
             extractor = None if (is_fixed_income_file or is_previdencia_file) else _find_extractor_for_file(
                 file_path,
@@ -522,7 +548,7 @@ def import_portfolio(
                 source_type=(
                     "fixed_income_csv"
                     if is_fixed_income_file
-                    else "previdencia_ibm_pdf"
+                    else previdencia_source_type
                     if is_previdencia_file
                     else extractor.source_type
                 ),

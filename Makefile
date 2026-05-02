@@ -1,4 +1,4 @@
-.PHONY: help install init migrate reset-db clear-cache create-portfolio adjust-balance check-balance import-all portfolio-overview bootstrap-asset-metadata lint type-check test clean server api-server start stop logs frontend-install frontend-dev frontend-build frontend-test frontend-lint sync-historical-prices sync-historical-prices-full
+.PHONY: help install init migrate reset-db clear-cache create-portfolio adjust-balance check-balance import-all export-all portfolio-overview bootstrap-asset-metadata lint type-check test clean server api-server start stop logs frontend-install frontend-dev frontend-build frontend-test frontend-lint sync-historical-prices sync-historical-prices-full
 
 API_PORT ?= 8010
 
@@ -23,6 +23,7 @@ help:
 	@echo "  make portfolio-overview   Show a full overview of all assets in a portfolio"
 	@echo "                            Example: make portfolio-overview ARGS=\"--portfolio cripto --sort cost --hide-zero\""
 	@echo "  make import-all           Import all active portfolios"
+	@echo "  make export-all           Export every portfolio to re-importable CSVs in portfolios/<owner>/<slug>/exports/"
 	@echo "  make bootstrap-asset-metadata  Classify every ticker into the IRPF table (acao/fii/etc.)"
 	@echo ""
 	@echo "Server:"
@@ -103,6 +104,9 @@ bootstrap-asset-metadata:
 
 import-all:
 	uv run python scripts/import_all.py
+
+export-all:
+	uv run python scripts/export_all.py $(ARGS)
 
 clear-cache:
 	@count=$$(find portfolios -type d -name .cache 2>/dev/null | wc -l); \

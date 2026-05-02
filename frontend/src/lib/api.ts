@@ -295,6 +295,27 @@ export function refreshQuotes(portfolioId?: string): Promise<QuoteRefreshRespons
   return apiPost<QuoteRefreshResponse>("/api/quotes/refresh");
 }
 
+export interface PortfolioExportFile {
+  kind: string;
+  path: string;
+  rows: number;
+}
+
+export interface PortfolioExportResponse {
+  portfolioId: string;
+  outputDir: string;
+  totalFiles: number;
+  files: PortfolioExportFile[];
+}
+
+export function exportPortfolio(
+  portfolioId: string,
+): Promise<PortfolioExportResponse> {
+  return apiPost<PortfolioExportResponse>(
+    `/api/portfolios/${portfolioId}/export`,
+  );
+}
+
 export interface BenchmarkCoverage {
   benchmark: string;
   coverageStart: string | null;

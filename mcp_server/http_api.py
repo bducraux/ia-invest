@@ -33,6 +33,7 @@ from mcp_server.services.fixed_income_lifecycle import FixedIncomeLifecycleServi
 from mcp_server.services.fx_rates import SUPPORTED_PAIRS as FX_SUPPORTED_PAIRS
 from mcp_server.services.fx_rates import FxRateService
 from mcp_server.services.fx_sync import FxSyncError, FxSyncResult, FxSyncService
+from mcp_server.services.portfolio_export import PortfolioExportService
 from mcp_server.services.position_lifecycle import PositionLifecycleService
 from mcp_server.services.quotes import MarketQuoteService
 from mcp_server.tools.app_settings import get_app_settings
@@ -2183,6 +2184,45 @@ def create_http_app(
                     "sourceFile": snap.source_file,
                 }
                 for snap in snapshots
+            ],
+        }
+
+    @app.post(
+        "/api/portfolios/{portfolio_id}/export",
+        response_model=None,
+    )
+    def export_portfolio(
+        portfolio_id: str,
+        db: Database = Depends(get_db),  # noqa: B008
+    ) -> dict[str, Any]:
+        """Generate a re-importable CSV snapshot of the portfolio.
+
+        Files are written to ``portfolios/<owner>/<slug>/exports/`` and can
+        be moved back into ``inbox/`` to rebuild the portfolio after a
+        full database wipe.
+        """
+        require_portfolio(portfolio_id, db)
+        service = PortfolioExportService(
+            operation_repo=OperationRepository(db.connection),
+            fixed_income_repo=FixedIncomePositionRepository(db.connection),
+            portfolio_repo=PortfolioRepository(db.connection),
+            previdencia_repo=PrevidenciaSnapshotRepository(db.connection),
+        )
+        try:
+            result = service.export(portfolio_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return {
+            "portfolioId": result.portfolio_id,
+            "outputDir": str(result.output_dir),
+            "totalFiles": result.total_files,
+            "files": [
+                {
+                    "kind": entry["kind"],
+                    "path": entry["path"],
+                    "rows": entry["rows"],
+                }
+                for entry in result.files
             ],
         }
 

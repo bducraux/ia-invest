@@ -20,6 +20,8 @@ import {
   syncBenchmark,
   getFxCoverage,
   syncFx,
+  exportPortfolio,
+  type PortfolioExportResponse,
 } from "@/lib/api";
 import { usePortfolios } from "@/lib/queries";
 
@@ -27,6 +29,26 @@ export default function SettingsPage() {
   const portfoliosQuery = usePortfolios();
   const queryClient = useQueryClient();
   const [draftPortfolioNames, setDraftPortfolioNames] = useState<Record<string, string>>({});
+  const [exportResults, setExportResults] = useState<Record<string, PortfolioExportResponse>>({});
+  const [exportErrors, setExportErrors] = useState<Record<string, string>>({});
+
+  const exportPortfolioMutation = useMutation({
+    mutationFn: (portfolioId: string) => exportPortfolio(portfolioId),
+    onSuccess: (data, portfolioId) => {
+      setExportResults((prev) => ({ ...prev, [portfolioId]: data }));
+      setExportErrors((prev) => {
+        const next = { ...prev };
+        delete next[portfolioId];
+        return next;
+      });
+    },
+    onError: (error, portfolioId) => {
+      setExportErrors((prev) => ({
+        ...prev,
+        [portfolioId]: error instanceof Error ? error.message : "Falha ao exportar.",
+      }));
+    },
+  });
 
   const renamePortfolioMutation = useMutation({
     mutationFn: ({ portfolioId, name }: { portfolioId: string; name: string }) =>
@@ -155,7 +177,45 @@ export default function SettingsPage() {
                     >
                       Renomear
                     </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={
+                        exportPortfolioMutation.isPending
+                        && exportPortfolioMutation.variables === p.id
+                      }
+                      onClick={() => exportPortfolioMutation.mutate(p.id)}
+                      title="Gera CSVs com todos os dados desta carteira em portfolios/<owner>/<slug>/exports/"
+                    >
+                      {exportPortfolioMutation.isPending && exportPortfolioMutation.variables === p.id
+                        ? "Exportando..."
+                        : "Exportar dados"}
+                    </Button>
                   </div>
+                  {exportResults[p.id] ? (
+                    <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                      {exportResults[p.id].totalFiles === 0 ? (
+                        <p>Nenhum dado para exportar nesta carteira.</p>
+                      ) : (
+                        <>
+                          <p className="text-emerald-600">
+                            {exportResults[p.id].totalFiles} arquivo(s) gerado(s) em{" "}
+                            <span className="font-mono">{exportResults[p.id].outputDir}</span>:
+                          </p>
+                          <ul className="list-disc pl-4">
+                            {exportResults[p.id].files.map((file) => (
+                              <li key={file.path} className="font-mono">
+                                {file.path.split("/").slice(-1)[0]} ({file.rows} linha{file.rows === 1 ? "" : "s"})
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
+                    </div>
+                  ) : null}
+                  {exportErrors[p.id] ? (
+                    <p className="mt-2 text-xs text-destructive">{exportErrors[p.id]}</p>
+                  ) : null}
                 </div>
                 <span className="text-xs text-muted-foreground">SQLite local</span>
               </div>

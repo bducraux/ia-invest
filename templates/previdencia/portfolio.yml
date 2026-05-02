@@ -1,0 +1,25 @@
+id: previdencia
+name: Previdencia
+description: Previdencia privada (PGBL/VGBL) por extrato mensal
+base_currency: BRL
+status: active
+owner_id: default  # Member who owns this portfolio (must exist in DB; create with scripts/create_member.py)
+
+rules:
+  allowed_asset_types:
+    - previdencia
+
+sources:
+  - type: previdencia_ibm_pdf
+    enabled: true
+  - type: ia_invest_previdencia_export_csv
+    enabled: true
+
+import:
+  move_processed_files: true
+  deduplicate_by:
+    - source
+    - external_id
+    - operation_date
+    - asset_code
+    - operation_type

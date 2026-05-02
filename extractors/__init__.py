@@ -16,6 +16,10 @@ from extractors.base import BaseExtractor, ExtractionResult
 from extractors.binance_csv import BinanceCsvExtractor
 from extractors.binance_simple_earn import BinanceSimpleEarnExtractor
 from extractors.broker_csv import BrokerCsvExtractor
+from extractors.ia_invest_export_csv import IaInvestExportCsvExtractor
+from extractors.ia_invest_previdencia_export_csv import (
+    IaInvestPrevidenciaExportCsvExtractor,
+)
 from extractors.manual_dividends_csv import ManualDividendsCsvExtractor
 from extractors.manual_xlsx_b3 import ManualXlsxB3Extractor
 from extractors.manual_xlsx_crypto import ManualXlsxCryptoExtractor
@@ -27,6 +31,8 @@ _REGISTRY: dict[str, type[BaseExtractor]] = {
     "broker_csv": BrokerCsvExtractor,
     "binance_csv": BinanceCsvExtractor,
     "binance_simple_earn": BinanceSimpleEarnExtractor,
+    "ia_invest_export_csv": IaInvestExportCsvExtractor,
+    "ia_invest_previdencia_export_csv": IaInvestPrevidenciaExportCsvExtractor,
     "avenue_apex_pdf": AvenueApexPdfExtractor,
     "manual_dividends_csv": ManualDividendsCsvExtractor,
     "manual_xlsx_b3": ManualXlsxB3Extractor,
@@ -56,6 +62,8 @@ __all__ = [
     "B3CsvExtractor",
     "B3MovimentacaoXlsxExtractor",
     "BrokerCsvExtractor",
+    "IaInvestExportCsvExtractor",
+    "IaInvestPrevidenciaExportCsvExtractor",
     "BinanceCsvExtractor",
     "AvenueApexPdfExtractor",
     "ManualDividendsCsvExtractor",

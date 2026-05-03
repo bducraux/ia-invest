@@ -1,0 +1,10 @@
+{
+  "servers": {
+    "ia-invest": {
+      "type": "stdio",
+      "command": "${env:HOME}/.local/bin/uv",
+      "args": ["run", "python", "-m", "mcp_server.server"],
+      "cwd": "${workspaceFolder}"
+    }
+  }
+}

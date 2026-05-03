@@ -2,6 +2,39 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Skills sincronizadas com GitHub Copilot
+
+Este repositório suporta **dois agentes de IA em paralelo**: Claude Code e GitHub Copilot.
+Cada skill é **duplicada** — uma versão otimizada para cada ferramenta — para extrair o
+máximo de cada uma sem comprometer a paridade de comportamento.
+
+| Skill | Arquivo Claude (canônico aqui) | Arquivo(s) Copilot |
+|---|---|---|
+| `ia-invest` (analista de portfólio) | `.claude/skills/ia-invest/SKILL.md` | `.github/chatmodes/ia-invest.chatmode.md` + `.github/instructions/ia-invest-trigger.instructions.md` |
+
+Referências compartilhadas (lidas pelos dois agentes, **não duplicar**):
+- `.claude/skills/ia-invest/references/macro-contexto.md` — contexto macro/setorial.
+
+### ⚠️ Regra de sincronização (OBRIGATÓRIA)
+
+**Ao alterar qualquer arquivo de skill, atualize obrigatoriamente o(s) par(es) na outra
+ferramenta na mesma mudança.** Divergências silenciosas entre as duas versões são
+consideradas bug.
+
+Exemplos:
+- Mudou um princípio inegociável no `SKILL.md`? Reflita no chatmode do Copilot.
+- Adicionou uma nova MCP tool ao fluxo? Reflita nos dois lados.
+- Adicionou/removeu vocabulário de auto-invoke na `description` do Claude? Atualize o
+  `instructions/ia-invest-trigger.instructions.md` correspondente.
+
+A divergência aceita é apenas **forma** (frontmatter, voz adaptada à ferramenta, instruções
+de UI específicas). A **intenção** e as **regras** têm que casar.
+
+Quando tiver dúvida se uma mudança precisa propagar, propague — é mais barato sincronizar a
+mais do que descobrir drift depois.
+
+---
+
 ## What this project does
 
 IA-Invest is a **local-first Brazilian investment portfolio manager**. It ingests raw files (PDFs, CSVs, XLSX) from different brokers and exchanges, normalizes them into a single SQLite database, and exposes the consolidated data through two surfaces:
